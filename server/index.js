@@ -175,27 +175,45 @@ app.get('/api/geocode', requireAuth, (req, res) => {
 // ─── Favorites recalculation ─────────────────────────────────────────────────
 
 function recalcFavorites(accountId) {
-  // Delete and rebuild from charges — always accurate
-  db.prepare('DELETE FROM favorite_locations WHERE account_id = ?').run(accountId)
-  db.prepare(`
-    INSERT OR IGNORE INTO favorite_locations (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types, use_count, last_used)
-    SELECT
-      account_id,
-      COALESCE(location_name, provider, 'Borne externe') as label,
-      provider,
-      location_id,
-      lat, lng, ocm_id,
-      provider as operator,
-      power_kw, connector_types,
-      COUNT(*) as use_count,
-      MAX(date) as last_used
-    FROM charges
-    WHERE account_id = ?
-      AND location_id != 'home'
-      AND COALESCE(location_name, provider) IS NOT NULL
-      AND COALESCE(location_name, provider) != ''
-    GROUP BY account_id, COALESCE(location_name, provider)
-  `).run(accountId, accountId)
+  try {
+    db.prepare('DELETE FROM favorite_locations WHERE account_id = ?').run(accountId)
+    // Get all external charges grouped by location label
+    const groups = db.prepare(`
+      SELECT
+        account_id,
+        COALESCE(location_name, provider) as label,
+        provider,
+        location_id,
+        lat, lng, ocm_id,
+        power_kw, connector_types,
+        COUNT(*) as use_count,
+        MAX(date) as last_used
+      FROM charges
+      WHERE account_id = ?
+        AND location_id != 'home'
+        AND COALESCE(location_name, provider) IS NOT NULL
+        AND COALESCE(location_name, provider) != ''
+      GROUP BY COALESCE(location_name, provider)
+    `).all(accountId)
+
+    const insert = db.prepare(`
+      INSERT OR IGNORE INTO favorite_locations
+        (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types, use_count, last_used)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+
+    for (const g of groups) {
+      insert.run(
+        accountId, g.label, g.provider || null, g.location_id,
+        g.lat || null, g.lng || null, g.ocm_id || null,
+        g.provider || null, g.power_kw || null,
+        g.connector_types || null,
+        g.use_count, g.last_used
+      )
+    }
+  } catch(e) {
+    console.error('[recalcFavorites]', e.message)
+  }
 }
 
 // ─── Charges ──────────────────────────────────────────────────────────────────
