@@ -175,12 +175,12 @@ app.get('/api/geocode', requireAuth, (req, res) => {
 // ─── Favorites recalculation ─────────────────────────────────────────────────
 
 function recalcFavorites(accountId) {
-  try {
+  // Runs in a transaction — atomic, logged on error, never blocks the HTTP response
+  const run = db.transaction(() => {
     db.prepare('DELETE FROM favorite_locations WHERE account_id = ?').run(accountId)
-    // Get all external charges grouped by location label
+
     const groups = db.prepare(`
       SELECT
-        account_id,
         COALESCE(location_name, provider) as label,
         provider,
         location_id,
@@ -194,10 +194,11 @@ function recalcFavorites(accountId) {
         AND COALESCE(location_name, provider) IS NOT NULL
         AND COALESCE(location_name, provider) != ''
       GROUP BY COALESCE(location_name, provider)
+      ORDER BY use_count DESC, last_used DESC
     `).all(accountId)
 
     const insert = db.prepare(`
-      INSERT OR IGNORE INTO favorite_locations
+      INSERT INTO favorite_locations
         (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types, use_count, last_used)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
@@ -211,8 +212,13 @@ function recalcFavorites(accountId) {
         g.use_count, g.last_used
       )
     }
+  })
+
+  try {
+    run()
   } catch(e) {
-    console.error('[recalcFavorites]', e.message)
+    // Log but never throw — favorites are non-critical, charge is already saved
+    console.error('[recalcFavorites] account', accountId, ':', e.message)
   }
 }
 
