@@ -1,3 +1,4 @@
+/* ─── Light theme ─────────────────────────────────────────────────────────── */
 :root {
   --bg: #0f1117;
   --surface: #1a1d27;
@@ -25,6 +26,32 @@
   --r-xs: 7px;
   --nav-h: 72px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --map-tiles: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+}
+
+/* ─── Light theme ─────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #f0f2f8;
+  --surface: #ffffff;
+  --surface2: #f5f6fa;
+  --surface3: #eaecf4;
+  --border: #dde1ef;
+  --border-light: #c8cde0;
+  --accent: #2563eb;
+  --accent2: #6d28d9;
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  --green: #16a34a;
+  --green-dim: rgba(22, 163, 74, 0.1);
+  --amber: #d97706;
+  --amber-dim: rgba(217, 119, 6, 0.1);
+  --red: #dc2626;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --muted: #64748b;
+  --mg4: #2563eb;
+  --mg4-dim: rgba(37, 99, 235, 0.1);
+  --xpeng: #6d28d9;
+  --xpeng-dim: rgba(109, 40, 217, 0.1);
 }
 
 *, *::before, *::after {
@@ -34,10 +61,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
-  height: 100%;
-  overscroll-behavior: none;
-}
+html, body { height: 100%; overscroll-behavior: none; }
 
 body {
   background: var(--bg);
@@ -46,87 +70,33 @@ body {
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.2s, color 0.2s;
 }
 
-#root {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
+#root { min-height: 100dvh; display: flex; flex-direction: column; }
 
-.mono {
-  font-family: 'JetBrains Mono', monospace;
-  font-variant-numeric: tabular-nums;
-}
+.mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
 
-input, select, textarea, button {
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
-  border: none;
-  outline: none;
-  background: none;
-}
-
+input, select, textarea, button { font-family: inherit; font-size: inherit; color: inherit; border: none; outline: none; background: none; }
 button { cursor: pointer; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-/* Scrollable page container */
-.page {
-  flex: 1;
-  overflow-y: auto;
-  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
-}
+.page { flex: 1; overflow-y: auto; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px); }
 
-.page-desktop {
-  padding-bottom: 24px;
-}
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; }
 
-/* Cards */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 16px;
-}
-
-/* Pills / badges */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
 .badge-mg4 { background: var(--mg4-dim); color: var(--mg4); }
 .badge-xpeng { background: var(--xpeng-dim); color: var(--xpeng); }
 .badge-home { background: var(--green-dim); color: var(--green); }
 .badge-ext { background: var(--amber-dim); color: var(--amber); }
 
-/* Section title */
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
+.section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
 
-/* Animations */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 .fade-up { animation: fadeUp 0.25s ease both; }
 .slide-in { animation: slideIn 0.2s ease both; }
