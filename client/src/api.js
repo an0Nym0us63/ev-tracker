@@ -47,3 +47,20 @@ export async function apiDeleteCharge(id)   { return req('DELETE', `/api/charges
 
 // ─── Lists ────────────────────────────────────────────────────────────────────
 export async function apiGetLists() { return req('GET', '/api/lists') }
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+export async function apiGetSettings()    { return req('GET', '/api/settings') }
+export async function apiSaveSettings(s)  { return req('PUT', '/api/settings', s) }
+
+// ─── OCM + Geocode ────────────────────────────────────────────────────────────
+export async function apiOcmSearch({ q, lat, lng }) {
+  const params = new URLSearchParams()
+  if (q)   params.set('q', q)
+  if (lat)  params.set('lat', lat)
+  if (lng)  params.set('lng', lng)
+  return req('GET', `/api/ocm/search?${params}`)
+}
+
+export async function apiGeocode(q) {
+  return req('GET', `/api/geocode?q=${encodeURIComponent(q)}`)
+}

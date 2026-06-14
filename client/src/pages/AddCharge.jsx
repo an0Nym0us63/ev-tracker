@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react'
 import { VEHICLES, LOCATIONS } from '../utils.js'
 import ComboBox from '../components/ComboBox.jsx'
+import LocationPicker from '../components/LocationPicker.jsx'
 
 function Field({ label, children, hint }) {
   return (
     <div>
       <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
       {children}
-      {hint && <div style={{ fontSize:11, color:'var(--muted)', marginTop:5 }}>{hint}</div>}
+      {hint && <div style={{ fontSize:11, color: hint.startsWith('⚠') ? 'var(--red)' : 'var(--muted)', marginTop:5 }}>{hint}</div>}
     </div>
   )
 }
 
 function NumInput({ value, onChange, placeholder, unit, error }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'var(--surface)', border:`1.5px solid ${error?'var(--red)':'var(--border)'}`, borderRadius:'var(--r-sm)', padding:'13px 14px' }}>
+    <div style={{ display:'flex', alignItems:'center', background:'var(--surface)', border:`1.5px solid ${error?'var(--red)':'var(--border)'}`, borderRadius:'var(--r-sm)', padding:'13px 14px' }}>
       <input type="number" inputMode="decimal" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
         style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:16, fontWeight:600, fontFamily:"'JetBrains Mono',monospace", color:value?'var(--text)':'var(--muted)' }} />
       {unit && <span style={{ fontSize:12, color:'var(--muted)', marginLeft:8, flexShrink:0 }}>{unit}</span>}
@@ -28,7 +29,6 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
 
   const [vehicleId,    setVehicleId]    = useState(editCharge?.vehicleId    || account.vehicleId)
   const [locationId,   setLocationId]   = useState(editCharge?.locationId   || 'home')
-  const [locationName, setLocationName] = useState(editCharge?.locationName || '')
   const [provider,     setProvider]     = useState(editCharge?.provider     || '')
   const [card,         setCard]         = useState(editCharge?.card         || '')
   const [date,         setDate]         = useState(editCharge?.date         || today)
@@ -40,6 +40,17 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
   const [notes,        setNotes]        = useState(editCharge?.notes || '')
   const [errors,       setErrors]       = useState({})
 
+  // Location (GPS)
+  const [gpsLocation, setGpsLocation] = useState(
+    editCharge?.lat ? {
+      lat: editCharge.lat, lng: editCharge.lng,
+      label: editCharge.locationName || '',
+      approximate: editCharge.locationApproximate,
+      ocmId: editCharge.ocmId,
+    } : null
+  )
+
+  // Auto provider for home
   useEffect(() => {
     if (locationId === 'home' && !isEdit && !provider) setProvider('V2C Trydan')
     else if (locationId !== 'home' && provider === 'V2C Trydan') setProvider('')
@@ -56,15 +67,20 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
     if (!totalCost || isNaN(costNum) || costNum < 0) e.cost = true
     if (!date) e.date = true
     if (Object.keys(e).length) { setErrors(e); return }
+
     onSave({
       ...(isEdit ? { id: editCharge.id } : {}),
       vehicleId, locationId,
-      locationName: locationName.trim() || LOCATIONS[locationId].label,
+      locationName: gpsLocation?.label || LOCATIONS[locationId].label,
       provider: provider.trim(), card: card.trim(),
       date, kwh: kwhNum, totalCost: costNum,
       durationMin: durationMin || null,
       odometer: odometer ? parseInt(odometer) : null,
       notes: notes.trim(),
+      lat:                 gpsLocation?.lat  || null,
+      lng:                 gpsLocation?.lng  || null,
+      locationApproximate: gpsLocation?.approximate || false,
+      ocmId:               gpsLocation?.ocmId || null,
     })
   }
 
@@ -80,7 +96,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
         {Object.values(VEHICLES).map(v => {
           const active = vehicleId === v.id
           return (
-            <button key={v.id} onClick={() => setVehicleId(v.id)} style={{ padding:'12px 14px', borderRadius:'var(--r-sm)', border:`2px solid ${active?v.color:'var(--border)'}`, background:active?`rgba(${v.id==='mg4'?'79,142,247':'124,92,252'},0.08)`:'var(--surface)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+            <button key={v.id} onClick={()=>setVehicleId(v.id)} style={{ padding:'12px 14px', borderRadius:'var(--r-sm)', border:`2px solid ${active?v.color:'var(--border)'}`, background:active?`rgba(${v.id==='mg4'?'79,142,247':'124,92,252'},0.08)`:'var(--surface)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
               <span style={{ fontSize:22 }}>{v.emoji}</span>
               <div style={{ fontSize:13, fontWeight:600, color:active?v.color:'var(--text)' }}>{v.name}</div>
             </button>
@@ -96,7 +112,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
             {Object.values(LOCATIONS).map(loc => {
               const active = locationId === loc.id
               return (
-                <button key={loc.id} onClick={() => setLocationId(loc.id)} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
+                <button key={loc.id} onClick={()=>setLocationId(loc.id)} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
                   <span style={{ fontSize:20 }}>{loc.emoji}</span>{loc.label}
                 </button>
               )
@@ -112,13 +128,12 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           <ComboBox value={card} onChange={setCard} options={lists.cards} placeholder="Chargemap, RFID, CB…" />
         </Field>
 
-        <Field label="Lieu">
-          <div style={{ background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'13px 14px' }}>
-            <input type="text" value={locationName} onChange={e=>setLocationName(e.target.value)}
-              placeholder={locationId==='home'?'Garage, entrée…':'Parking Carrefour, Aire A6 Mâcon…'}
-              style={{ width:'100%', background:'none', border:'none', outline:'none', fontSize:15, color:'var(--text)', fontFamily:'inherit' }} />
-          </div>
-        </Field>
+        {/* GPS location — only for external charges */}
+        {locationId === 'ext' && (
+          <Field label="Localisation" hint="Recherche une borne ou indique une ville pour la carte">
+            <LocationPicker value={gpsLocation} onChange={setGpsLocation} />
+          </Field>
+        )}
 
         <Field label="Date">
           <div style={{ background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'13px 14px' }}>
@@ -162,7 +177,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
         </button>
 
         {isEdit && (
-          <button onClick={() => onSave({ __delete:true, id:editCharge.id })} style={{ background:'none', color:'var(--red)', fontSize:13, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'12px 16px', cursor:'pointer' }}>
+          <button onClick={()=>onSave({ __delete:true, id:editCharge.id })} style={{ background:'none', color:'var(--red)', fontSize:13, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'12px 16px', cursor:'pointer' }}>
             Supprimer cette charge
           </button>
         )}

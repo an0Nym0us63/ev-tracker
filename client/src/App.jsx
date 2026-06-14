@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import './styles/globals.css'
-import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateCharge, apiDeleteCharge, apiGetLists } from './api.js'
+import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateCharge, apiDeleteCharge, apiGetLists, apiGetSettings } from './api.js'
 import Login from './pages/Login.jsx'
 import BottomNav from './components/BottomNav.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AddCharge from './pages/AddCharge.jsx'
 import History from './pages/History.jsx'
 import Stats from './pages/Stats.jsx'
+import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
 
 function Toast({ msg, color }) {
@@ -29,53 +30,43 @@ function Loader() {
 export default function App() {
   const [account,    setAccount]    = useState(null)
   const [charges,    setCharges]    = useState([])
-  const [lists,      setLists]      = useState({ providers: [], cards: [] })
+  const [lists,      setLists]      = useState({ providers:[], cards:[] })
+  const [settings,   setSettings]   = useState({})
   const [loading,    setLoading]    = useState(true)
   const [page,       setPage]       = useState('home')
   const [editCharge, setEditCharge] = useState(null)
   const [toast,      setToast]      = useState(null)
 
-  // On mount: check token and load data
   useEffect(() => {
     async function init() {
-      const token = getToken()
-      if (!token) { setLoading(false); return }
+      if (!getToken()) { setLoading(false); return }
       try {
-        const [acc, ch, li] = await Promise.all([apiMe(), apiGetCharges(), apiGetLists()])
-        setAccount(acc)
-        setCharges(ch)
-        setLists(li)
-      } catch {
-        clearToken()
-      } finally {
-        setLoading(false)
-      }
+        const [acc, ch, li, st] = await Promise.all([apiMe(), apiGetCharges(), apiGetLists(), apiGetSettings()])
+        setAccount(acc); setCharges(ch); setLists(li); setSettings(st)
+      } catch { clearToken() }
+      finally { setLoading(false) }
     }
     init()
   }, [])
 
-  function showToast(msg, color = 'var(--green)') {
+  function showToast(msg, color='var(--green)') {
     setToast({ msg, color })
     setTimeout(() => setToast(null), 2400)
   }
 
   async function handleLogin(acc) {
     setAccount(acc)
-    const [ch, li] = await Promise.all([apiGetCharges(), apiGetLists()])
-    setCharges(ch)
-    setLists(li)
+    const [ch, li, st] = await Promise.all([apiGetCharges(), apiGetLists(), apiGetSettings()])
+    setCharges(ch); setLists(li); setSettings(st)
     setPage('home')
   }
 
   function handleLogout() {
-    clearToken()
-    setAccount(null)
-    setCharges([])
-    setLists({ providers: [], cards: [] })
+    clearToken(); setAccount(null); setCharges([]); setLists({ providers:[], cards:[] }); setSettings({})
     setPage('home')
   }
 
-  const navigate = useCallback((target, data = null) => {
+  const navigate = useCallback((target, data=null) => {
     if (target === 'edit') { setEditCharge(data); setPage('add') }
     else { setEditCharge(null); setPage(target) }
   }, [])
@@ -90,7 +81,6 @@ export default function App() {
       } else if (data.id) {
         const updated = await apiUpdateCharge(data.id, data)
         setCharges(prev => prev.map(c => c.id === updated.id ? updated : c))
-        // Refresh lists in case new provider/card was added
         apiGetLists().then(setLists)
         showToast('Session mise à jour ✓')
         setPage('history')
@@ -101,9 +91,7 @@ export default function App() {
         showToast('Session enregistrée ✓')
         setPage('home')
       }
-    } catch(e) {
-      showToast(e.message || 'Erreur', 'var(--red)')
-    }
+    } catch(e) { showToast(e.message||'Erreur', 'var(--red)') }
     setEditCharge(null)
   }
 
@@ -115,9 +103,10 @@ export default function App() {
   return (
     <>
       {page === 'home'     && <Dashboard charges={charges} onNavigate={navigate} />}
-      {page === 'history'  && <History   charges={charges} onEdit={c => navigate('edit', c)} />}
-      {page === 'add'      && <AddCharge account={account} lists={lists} onSave={handleSave} editCharge={editCharge} onBack={() => { setPage(editCharge ? 'history' : 'home'); setEditCharge(null) }} />}
+      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
+      {page === 'add'      && <AddCharge account={account} lists={lists} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}
+      {page === 'map'      && <MapView   charges={charges} settings={settings} />}
       {page === 'settings' && <Settings  account={account} onLogout={handleLogout} />}
 
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}
