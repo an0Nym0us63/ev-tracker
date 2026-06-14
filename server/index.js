@@ -93,11 +93,11 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
   }).on('error', () => res.json([]))
 })
 
-// Geocode a city name → coordinates (nominatim, no key needed)
+// Geocode worldwide — returns structured results for display
 app.get('/api/geocode', requireAuth, (req, res) => {
   const { q } = req.query
-  if (!q) return res.json(null)
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=3&countrycodes=fr`
+  if (!q) return res.json([])
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=10&addressdetails=1&accept-language=fr`
   const options = { headers: { 'User-Agent': 'EV-Charge-Tracker/1.0' } }
   https.get(url, options, (apiRes) => {
     let data = ''
@@ -105,7 +105,38 @@ app.get('/api/geocode', requireAuth, (req, res) => {
     apiRes.on('end', () => {
       try {
         const results = JSON.parse(data)
-        res.json(results.map(r => ({ label: r.display_name, lat: parseFloat(r.lat), lng: parseFloat(r.lon) })))
+        res.json(results.map(r => {
+          const a = r.address || {}
+          const isFr = a.country_code?.toLowerCase() === 'fr'
+
+          // Primary name: most specific place
+          const name = a.city || a.town || a.village || a.hamlet || a.suburb || a.municipality || r.display_name.split(',')[0].trim()
+
+          // Department / county
+          const dept = a.county || a.state_district || ''
+
+          // Region / state
+          const region = a.state || ''
+
+          // Country (always show, helps disambiguation)
+          const country = a.country || ''
+
+          // Postcode
+          const postcode = a.postcode || ''
+
+          return {
+            label: r.display_name,   // full string, for internal use
+            name,                     // primary display name
+            postcode,
+            dept,
+            region,
+            country,
+            isFr,
+            type: r.type || r.class, // city, town, village, etc.
+            lat: parseFloat(r.lat),
+            lng: parseFloat(r.lon),
+          }
+        }))
       } catch { res.json([]) }
     })
   }).on('error', () => res.json([]))

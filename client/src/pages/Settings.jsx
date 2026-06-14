@@ -50,14 +50,14 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
     setGeocoding(true)
     try {
       const results = await apiGeocode(homeLabel)
-      setGeoResults(results.slice(0, 3))
+      setGeoResults(results)
     } catch(e) { console.error('[Geocode]', e) }
     finally { setGeocoding(false) }
   }
 
   function pickHome(r) {
     setHomeLat(r.lat); setHomeLng(r.lng)
-    setHomeLabel(r.label.split(',')[0])
+    setHomeLabel([r.name, r.postcode].filter(Boolean).join(' '))
     setGeoResults([])
   }
 
@@ -127,12 +127,24 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
             </Field>
             {geoResults.length > 0 && (
               <div style={{ border:'1px solid var(--border)', borderRadius:'var(--r-sm)', overflow:'hidden' }}>
-                {geoResults.map((r,i) => (
-                  <div key={i} onClick={()=>pickHome(r)} style={{ padding:'10px 14px', cursor:'pointer', borderBottom:i<geoResults.length-1?'1px solid var(--border)':'none', fontSize:13 }}
-                    onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'}
-                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                  >📍 {r.label.split(',').slice(0,3).join(',')}</div>
-                ))}
+                {geoResults.map((r,i) => {
+                  const tags = [r.postcode, r.dept, !r.isFr && r.region, r.country].filter(Boolean)
+                  return (
+                    <div key={i} onClick={()=>pickHome(r)} style={{ padding:'10px 14px', cursor:'pointer', borderBottom:i<geoResults.length-1?'1px solid var(--border)':'none' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                    >
+                      <div style={{ fontSize:13, fontWeight:600 }}>{r.name}</div>
+                      {tags.length > 0 && (
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>
+                          {tags.map((t,j) => (
+                            <span key={j} style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--text-secondary)', border:'1px solid var(--border-light)' }}>{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
             {homeLat && homeLng && (
