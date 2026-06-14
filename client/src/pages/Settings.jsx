@@ -23,7 +23,7 @@ function TextInput({ value, onChange, placeholder, type='text' }) {
   )
 }
 
-export default function Settings({ account, onLogout, onSettingsSaved }) {
+export default function Settings({ account, theme, onToggleTheme, onLogout, onSettingsSaved, onBack }) {
   const vehicle = VEHICLES[account.vehicleId]
   const [ocmKey,     setOcmKey]     = useState('')
   const [homeLabel,  setHomeLabel]  = useState('')
@@ -37,12 +37,11 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
 
   useEffect(() => {
     apiGetSettings().then(s => {
-      console.log('[Settings] loaded:', s)
       setOcmKey(s.ocmApiKey || '')
       setHomeLabel(s.homeLabel || '')
       setHomeLat(s.homeLat || null)
       setHomeLng(s.homeLng || null)
-    }).catch(e => console.error('[Settings] load error:', e))
+    }).catch(() => {})
   }, [])
 
   async function searchHome() {
@@ -51,8 +50,7 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
     try {
       const results = await apiGeocode(homeLabel)
       setGeoResults(results)
-    } catch(e) { console.error('[Geocode]', e) }
-    finally { setGeocoding(false) }
+    } catch {} finally { setGeocoding(false) }
   }
 
   function pickHome(r) {
@@ -64,15 +62,10 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
   async function handleSave() {
     setSaving(true)
     try {
-      const payload = { ocmApiKey: ocmKey, homeLabel, homeLat, homeLng }
-      console.log('[Settings] saving:', payload)
-      const result = await apiSaveSettings(payload)
-      console.log('[Settings] saved:', result)
+      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng })
       onSettingsSaved?.(result)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
-    } catch(e) {
-      console.error('[Settings] save error:', e)
-    } finally { setSaving(false) }
+    } catch {} finally { setSaving(false) }
   }
 
   async function testOcm() {
@@ -82,17 +75,20 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
         headers: { Authorization: `Bearer ${localStorage.getItem('ev-token')}` }
       })
       const data = await res.json()
-      console.log('[OCM test]', data)
-      setDebugInfo(`OCM: ${data.length} résultat(s) autour de Lyon. ${data.length === 0 ? '⚠ Vérifier la clé API.' : '✓ OK — ' + data[0]?.name}`)
-    } catch(e) {
-      setDebugInfo(`❌ Erreur: ${e.message}`)
-    }
+      setDebugInfo(`${data.length} borne(s) autour de Lyon. ${data.length === 0 ? '⚠ Vérifie la clé.' : '✓ ' + data[0]?.name}`)
+    } catch(e) { setDebugInfo(`❌ ${e.message}`) }
   }
 
   return (
-    <div className="page fade-up">
-      <div style={{ padding:'16px 20px 0', display:'flex', alignItems:'center', gap:12 }}>
+    <div className="page fade-up" style={{ paddingBottom: 100 }}>
+      {/* Header avec bouton retour */}
+      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'16px 20px 0' }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:'50%', background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, cursor:'pointer', flexShrink:0 }}>←</button>
         <div style={{ fontSize:20, fontWeight:700, flex:1 }}>Réglages</div>
+        {/* Theme toggle */}
+        <button onClick={onToggleTheme} style={{ width:36, height:36, borderRadius:'50%', background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, cursor:'pointer' }}>
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </div>
 
       <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:20 }}>
@@ -101,7 +97,7 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
         <div>
           <div className="section-label">Mon compte</div>
           <div className="card" style={{ display:'flex', alignItems:'center', gap:14 }}>
-            <div style={{ width:46, height:46, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:18 }}>
+            <div style={{ width:46, height:46, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:18, color:'white' }}>
               {account.name.charAt(0).toUpperCase()}
             </div>
             <div style={{ flex:1 }}>
@@ -110,6 +106,27 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
                 <span style={{ fontSize:16 }}>{vehicle.emoji}</span>{vehicle.name} par défaut
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Apparence */}
+        <div>
+          <div className="section-label">Apparence</div>
+          <div className="card" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontWeight:600 }}>{theme === 'dark' ? 'Thème sombre' : 'Thème clair'}</div>
+              <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>Changer l'apparence de l'app</div>
+            </div>
+            <button onClick={onToggleTheme} style={{
+              padding:'8px 16px', borderRadius:20,
+              background: theme === 'dark' ? 'rgba(79,142,247,0.1)' : 'rgba(109,40,217,0.1)',
+              border: `1.5px solid ${theme === 'dark' ? 'var(--accent)' : 'var(--xpeng)'}`,
+              color: theme === 'dark' ? 'var(--accent)' : 'var(--xpeng)',
+              fontSize:13, fontWeight:600, cursor:'pointer',
+              display:'flex', alignItems:'center', gap:6,
+            }}>
+              {theme === 'dark' ? '☀️ Passer au clair' : '🌙 Passer au sombre'}
+            </button>
           </div>
         </div>
 
@@ -137,9 +154,7 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
                       <div style={{ fontSize:13, fontWeight:600 }}>{r.name}</div>
                       {tags.length > 0 && (
                         <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>
-                          {tags.map((t,j) => (
-                            <span key={j} style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--text-secondary)', border:'1px solid var(--border-light)' }}>{t}</span>
-                          ))}
+                          {tags.map((t,j) => <span key={j} style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--text-secondary)', border:'1px solid var(--border-light)' }}>{t}</span>)}
                         </div>
                       )}
                     </div>
@@ -167,7 +182,7 @@ export default function Settings({ account, onLogout, onSettingsSaved }) {
               }
               {ocmKey && (
                 <button onClick={testOcm} style={{ padding:'5px 12px', borderRadius:20, background:'var(--surface2)', border:'1px solid var(--border)', fontSize:12, fontWeight:600, cursor:'pointer', color:'var(--text)', flexShrink:0 }}>
-                  Tester la clé
+                  Tester
                 </button>
               )}
             </div>
