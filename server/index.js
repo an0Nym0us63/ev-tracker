@@ -255,7 +255,6 @@ app.get('/api/logos/:name', (req, res) => {
   const LOGOS_DIR = path.join(process.env.DATA_DIR || path.join(__dirname, '../data'), 'logos')
   if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true })
 
-  // Normalize: lowercase, spaces/special chars → hyphens
   const name = req.params.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -265,13 +264,13 @@ app.get('/api/logos/:name', (req, res) => {
   for (const ext of exts) {
     const file = path.join(LOGOS_DIR, `${name}.${ext}`)
     if (fs.existsSync(file)) {
-      const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : 'image/jpeg'
+      const mime = { svg: 'image/svg+xml', webp: 'image/webp', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' }[ext] || 'image/png'
       res.setHeader('Content-Type', mime)
       res.setHeader('Cache-Control', 'public, max-age=86400')
       return res.sendFile(file)
     }
   }
-  res.status(404).json({ error: 'Logo not found' })
+  res.status(404).end()
 })
 
 // ─── Static ───────────────────────────────────────────────────────────────────
