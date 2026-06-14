@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
+import { VERSION } from '../version.js'
 
 function Field({ label, children, hint }) {
   return (
@@ -22,7 +23,7 @@ function TextInput({ value, onChange, placeholder, type='text' }) {
   )
 }
 
-export default function Settings({ account, onLogout }) {
+export default function Settings({ account, onLogout, onSettingsSaved }) {
   const vehicle = VEHICLES[account.vehicleId]
   const [ocmKey,     setOcmKey]     = useState('')
   const [homeLabel,  setHomeLabel]  = useState('')
@@ -32,14 +33,16 @@ export default function Settings({ account, onLogout }) {
   const [saving,     setSaving]     = useState(false)
   const [saved,      setSaved]      = useState(false)
   const [geoResults, setGeoResults] = useState([])
+  const [debugInfo,  setDebugInfo]  = useState(null)
 
   useEffect(() => {
     apiGetSettings().then(s => {
+      console.log('[Settings] loaded:', s)
       setOcmKey(s.ocmApiKey || '')
       setHomeLabel(s.homeLabel || '')
       setHomeLat(s.homeLat || null)
       setHomeLng(s.homeLng || null)
-    }).catch(() => {})
+    }).catch(e => console.error('[Settings] load error:', e))
   }, [])
 
   async function searchHome() {
@@ -48,7 +51,8 @@ export default function Settings({ account, onLogout }) {
     try {
       const results = await apiGeocode(homeLabel)
       setGeoResults(results.slice(0, 3))
-    } catch {} finally { setGeocoding(false) }
+    } catch(e) { console.error('[Geocode]', e) }
+    finally { setGeocoding(false) }
   }
 
   function pickHome(r) {
@@ -60,18 +64,40 @@ export default function Settings({ account, onLogout }) {
   async function handleSave() {
     setSaving(true)
     try {
-      await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng })
+      const payload = { ocmApiKey: ocmKey, homeLabel, homeLat, homeLng }
+      console.log('[Settings] saving:', payload)
+      const result = await apiSaveSettings(payload)
+      console.log('[Settings] saved:', result)
+      onSettingsSaved?.(result)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
-    } catch {} finally { setSaving(false) }
+    } catch(e) {
+      console.error('[Settings] save error:', e)
+    } finally { setSaving(false) }
+  }
+
+  async function testOcm() {
+    setDebugInfo('Test OCM en cours…')
+    try {
+      const res = await fetch('/api/ocm/search?lat=45.75&lng=4.85', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('ev-token')}` }
+      })
+      const data = await res.json()
+      console.log('[OCM test]', data)
+      setDebugInfo(`OCM: ${data.length} résultat(s) autour de Lyon. ${data.length === 0 ? '⚠ Vérifier la clé API.' : '✓ OK — ' + data[0]?.name}`)
+    } catch(e) {
+      setDebugInfo(`❌ Erreur: ${e.message}`)
+    }
   }
 
   return (
     <div className="page fade-up">
-      <div style={{ padding:'16px 20px 0' }}>
-        <div style={{ fontSize:20, fontWeight:700, marginBottom:20 }}>Réglages</div>
+      <div style={{ padding:'16px 20px 0', display:'flex', alignItems:'center', gap:12 }}>
+        <div style={{ fontSize:20, fontWeight:700, flex:1 }}>Réglages</div>
       </div>
-      <div style={{ padding:'0 16px', display:'flex', flexDirection:'column', gap:20 }}>
 
+      <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:20 }}>
+
+        {/* Compte */}
         <div>
           <div className="section-label">Mon compte</div>
           <div className="card" style={{ display:'flex', alignItems:'center', gap:14 }}>
@@ -87,6 +113,7 @@ export default function Settings({ account, onLogout }) {
           </div>
         </div>
 
+        {/* Domicile */}
         <div>
           <div className="section-label">Domicile</div>
           <div className="card" style={{ display:'flex', flexDirection:'column', gap:12 }}>
@@ -114,19 +141,33 @@ export default function Settings({ account, onLogout }) {
           </div>
         </div>
 
+        {/* OCM */}
         <div>
           <div className="section-label">Open Charge Map</div>
           <div className="card" style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            <Field label="Clé API" hint="Gratuite sur openchargemap.org/develop — sans clé, fallback ville uniquement">
+            <Field label="Clé API" hint="Gratuite sur openchargemap.org/develop">
               <TextInput value={ocmKey} onChange={setOcmKey} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" type="password" />
             </Field>
-            {!ocmKey
-              ? <div style={{ fontSize:11, color:'var(--amber)' }}>⚠ Sans clé : recherche de bornes désactivée, fallback ville disponible</div>
-              : <div style={{ fontSize:11, color:'var(--green)' }}>✓ Recherche Open Charge Map activée</div>
-            }
+            <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+              {!ocmKey
+                ? <div style={{ fontSize:11, color:'var(--amber)', flex:1 }}>⚠ Sans clé : fallback ville uniquement</div>
+                : <div style={{ fontSize:11, color:'var(--green)', flex:1 }}>✓ Clé renseignée</div>
+              }
+              {ocmKey && (
+                <button onClick={testOcm} style={{ padding:'5px 12px', borderRadius:20, background:'var(--surface2)', border:'1px solid var(--border)', fontSize:12, fontWeight:600, cursor:'pointer', color:'var(--text)', flexShrink:0 }}>
+                  Tester la clé
+                </button>
+              )}
+            </div>
+            {debugInfo && (
+              <div style={{ fontSize:11, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:'8px 12px', color:'var(--text-secondary)', fontFamily:"'JetBrains Mono',monospace" }}>
+                {debugInfo}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Intégrations */}
         <div>
           <div className="section-label">Intégrations à venir</div>
           <div className="card" style={{ padding:0 }}>
@@ -154,7 +195,9 @@ export default function Settings({ account, onLogout }) {
           Se déconnecter
         </button>
 
-        <div style={{ textAlign:'center', fontSize:11, color:'var(--muted)', paddingBottom:8 }}>EV Charge Tracker v3.1 — build 20260614</div>
+        <div style={{ textAlign:'center', fontSize:11, color:'var(--muted)', paddingBottom:8 }}>
+          EV Charge Tracker {VERSION}
+        </div>
       </div>
     </div>
   )

@@ -4,8 +4,8 @@ const TABS = [
   { id:'home',     emoji:'📊', label:'Accueil' },
   { id:'history',  emoji:'📋', label:'Historique' },
   { id:'add',      isFab: true },
-  { id:'map',      emoji:'🗺️', label:'Carte' },
-  { id:'settings', emoji:'⚙️', label:'Réglages' },
+  { id:'stats',    emoji:'📈', label:'Stats' },
+  { id:'map',      emoji:'🗺️',  label:'Carte' },
 ]
 
 export default function BottomNav({ active, onNavigate }) {

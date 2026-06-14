@@ -10,6 +10,8 @@ import Stats from './pages/Stats.jsx'
 import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
 
+
+
 function Toast({ msg, color }) {
   return (
     <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'var(--surface2)', border:`1px solid ${color}`, color, fontWeight:600, fontSize:13, padding:'10px 20px', borderRadius:24, boxShadow:'0 8px 32px rgba(0,0,0,0.4)', zIndex:200, whiteSpace:'nowrap', animation:'fadeUp 0.2s ease' }}>
@@ -43,8 +45,10 @@ export default function App() {
       try {
         const [acc, ch, li, st] = await Promise.all([apiMe(), apiGetCharges(), apiGetLists(), apiGetSettings()])
         setAccount(acc); setCharges(ch); setLists(li); setSettings(st)
-      } catch { clearToken() }
-      finally { setLoading(false) }
+      } catch(e) {
+        console.warn('Init failed, clearing token', e)
+        clearToken()
+      } finally { setLoading(false) }
     }
     init()
   }, [])
@@ -99,6 +103,7 @@ export default function App() {
   if (!account) return <Login onLogin={handleLogin} />
 
   const isAddPage = page === 'add'
+  const isSettingsPage = page === 'settings'
 
   return (
     <>
@@ -107,9 +112,10 @@ export default function App() {
       {page === 'add'      && <AddCharge account={account} lists={lists} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}
       {page === 'map'      && <MapView   charges={charges} settings={settings} />}
-      {page === 'settings' && <Settings  account={account} onLogout={handleLogout} />}
+      {page === 'settings' && <Settings  account={account} onLogout={handleLogout} onSettingsSaved={setSettings} />}
 
-      {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}
+      {!isAddPage && !isSettingsPage && <BottomNav active={page} onNavigate={navigate} />}
+      {(isAddPage || isSettingsPage) ? null : null}
       {toast && <Toast {...toast} />}
     </>
   )

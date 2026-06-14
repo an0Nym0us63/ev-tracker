@@ -68,9 +68,9 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
   if (!s?.ocm_api_key) return res.json([])
 
   const { q, lat, lng } = req.query
-  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=8&compact=true&verbose=false&key=${s.ocm_api_key}`
-  if (lat && lng) url += `&latitude=${lat}&longitude=${lng}&distance=5&distanceunit=KM`
-  if (q) url += `&operatorname=${encodeURIComponent(q)}`
+  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=10&compact=true&verbose=false&key=${s.ocm_api_key}&countrycode=FR`
+  if (lat && lng) { url += `&latitude=${lat}&longitude=${lng}&distance=10&distanceunit=KM` } else if (q) { url += `&cityname=${encodeURIComponent(q)}` }
+  
 
   https.get(url, (apiRes) => {
     let data = ''
