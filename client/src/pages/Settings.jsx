@@ -154,7 +154,7 @@ export default function Settings({ account, onLogout }) {
           Se déconnecter
         </button>
 
-        <div style={{ textAlign:'center', fontSize:11, color:'var(--muted)', paddingBottom:8 }}>EV Charge Tracker v3.0</div>
+        <div style={{ textAlign:'center', fontSize:11, color:'var(--muted)', paddingBottom:8 }}>EV Charge Tracker v3.1 — build 20260614</div>
       </div>
     </div>
   )
