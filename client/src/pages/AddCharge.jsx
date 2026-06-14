@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { VEHICLES, LOCATIONS } from '../utils.js'
 import ComboBox from '../components/ComboBox.jsx'
 import LocationPicker from '../components/LocationPicker.jsx'
+import OperatorLogo from '../components/OperatorLogo.jsx'
+import { apiGetFavorites, apiBumpFavorite } from '../api.js'
 
 function Field({ label, children, hint }) {
   return (
@@ -23,13 +25,30 @@ function NumInput({ value, onChange, placeholder, unit, error }) {
   )
 }
 
+function FavoriteCard({ fav, onPick }) {
+  return (
+    <div onMouseDown={onPick} onTouchStart={onPick}
+      style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer', userSelect:'none', minWidth:160, flexShrink:0 }}
+      onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
+      onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+    >
+      <OperatorLogo name={fav.operator || fav.provider || ''} size={24} />
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fav.label}</div>
+        <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>
+          {fav.powerKw ? `${fav.powerKw} kW · ` : ''}{fav.useCount}× utilisé
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AddCharge({ account, lists, onSave, onBack, editCharge }) {
   const isEdit = !!editCharge
   const today  = new Date().toISOString().split('T')[0]
 
   const [vehicleId,    setVehicleId]    = useState(editCharge?.vehicleId    || account.vehicleId)
   const [locationId,   setLocationId]   = useState(editCharge?.locationId   || 'home')
-  const [provider,     setProvider]     = useState(editCharge?.provider     || '')
   const [card,         setCard]         = useState(editCharge?.card         || '')
   const [date,         setDate]         = useState(editCharge?.date         || today)
   const [kwh,          setKwh]          = useState(editCharge?.kwh?.toString()       || '')
@@ -40,29 +59,55 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
   const [notes,        setNotes]        = useState(editCharge?.notes || '')
   const [errors,       setErrors]       = useState({})
 
-  // Location (GPS)
+  // Manual provider — only shown when approx location or home
+  const [manualProvider, setManualProvider] = useState(editCharge?.provider || '')
+
+  // GPS location
   const [gpsLocation, setGpsLocation] = useState(
     editCharge?.lat ? {
       lat: editCharge.lat, lng: editCharge.lng,
       label: editCharge.locationName || '',
       approximate: editCharge.locationApproximate,
       ocmId: editCharge.ocmId,
-      operator: editCharge.operator || null,
+      operator: editCharge.provider || null,
       powerKw: editCharge.powerKw || null,
       connectorTypes: editCharge.connectorTypes || [],
     } : null
   )
 
-  // Auto provider for home
+  const [favorites, setFavorites] = useState([])
+
   useEffect(() => {
-    if (locationId === 'home' && !isEdit && !provider) setProvider('V2C Trydan')
-    else if (locationId !== 'home' && provider === 'V2C Trydan') setProvider('')
+    if (locationId === 'ext') {
+      apiGetFavorites().then(setFavorites).catch(() => {})
+    }
   }, [locationId])
+
+  // Derived provider: OCM operator > manual
+  const isApprox = gpsLocation?.approximate
+  const isOcm    = gpsLocation && !isApprox
+  const provider = isOcm ? (gpsLocation.operator || '') : manualProvider
+
+  // Show manual provider field when: home OR approx location OR no location set yet
+  const showProviderField = locationId === 'home' || !gpsLocation || isApprox
 
   const kwhNum  = parseFloat(kwh)
   const costNum = parseFloat(totalCost)
   const pricePerKwh = (kwhNum > 0 && costNum > 0) ? costNum / kwhNum : null
   const durationMin = (parseInt(hours)||0)*60 + (parseInt(minutes)||0)
+
+  function applyFavorite(fav) {
+    setGpsLocation({
+      lat: fav.lat, lng: fav.lng,
+      label: fav.label,
+      approximate: !fav.ocmId,
+      ocmId: fav.ocmId,
+      operator: fav.operator,
+      powerKw: fav.powerKw,
+      connectorTypes: fav.connectorTypes || [],
+    })
+    if (!fav.ocmId) setManualProvider(fav.provider || fav.operator || '')
+  }
 
   function handleSubmit() {
     const e = {}
@@ -71,11 +116,15 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
     if (!date) e.date = true
     if (Object.keys(e).length) { setErrors(e); return }
 
-    onSave({
+    const finalProvider = isOcm ? (gpsLocation.operator || '') : manualProvider
+    const finalLabel = gpsLocation?.label || LOCATIONS[locationId].label
+
+    const data = {
       ...(isEdit ? { id: editCharge.id } : {}),
       vehicleId, locationId,
-      locationName: gpsLocation?.label || LOCATIONS[locationId].label,
-      provider: provider.trim(), card: card.trim(),
+      locationName: finalLabel,
+      provider: finalProvider,
+      card: card.trim(),
       date, kwh: kwhNum, totalCost: costNum,
       durationMin: durationMin || null,
       odometer: odometer ? parseInt(odometer) : null,
@@ -86,7 +135,23 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
       ocmId:               gpsLocation?.ocmId || null,
       powerKw:             gpsLocation?.powerKw || null,
       connectorTypes:      gpsLocation?.connectorTypes || [],
-    })
+    }
+
+    // Save to favorites if external
+    if (locationId === 'ext' && finalLabel) {
+      apiBumpFavorite({
+        label: finalLabel,
+        provider: finalProvider,
+        locationId,
+        lat: data.lat, lng: data.lng,
+        ocmId: data.ocmId,
+        operator: gpsLocation?.operator || null,
+        powerKw: data.powerKw,
+        connectorTypes: data.connectorTypes,
+      }).catch(() => {})
+    }
+
+    onSave(data)
   }
 
   return (
@@ -117,7 +182,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
             {Object.values(LOCATIONS).map(loc => {
               const active = locationId === loc.id
               return (
-                <button key={loc.id} onClick={()=>setLocationId(loc.id)} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
+                <button key={loc.id} onClick={()=>{ setLocationId(loc.id); setGpsLocation(null) }} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
                   <span style={{ fontSize:20 }}>{loc.emoji}</span>{loc.label}
                 </button>
               )
@@ -125,21 +190,51 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           </div>
         </Field>
 
-        <Field label="Fournisseur" hint={locationId==='home'?'Ex. V2C Trydan, EDF…':'Ex. Ionity, TotalEnergies, Lidl…'}>
-          <ComboBox value={provider} onChange={setProvider} options={lists.providers} placeholder={locationId==='home'?'V2C Trydan':'Ionity, TotalEnergies…'} />
-        </Field>
+        {/* Favorites (external only) */}
+        {locationId === 'ext' && favorites.length > 0 && !gpsLocation && (
+          <Field label="Bornes récentes">
+            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2 }}>
+              {favorites.slice(0,6).map(fav => (
+                <FavoriteCard key={fav.id} fav={fav} onPick={()=>applyFavorite(fav)} />
+              ))}
+            </div>
+          </Field>
+        )}
 
+        {/* GPS location (external only) */}
+        {locationId === 'ext' && (
+          <Field label="Localisation" hint="Recherche une borne ou indique une ville">
+            <LocationPicker value={gpsLocation} onChange={setGpsLocation} />
+            {/* OCM provider badge */}
+            {isOcm && gpsLocation.operator && (
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:8, padding:'8px 12px', background:'var(--surface2)', borderRadius:'var(--r-sm)', border:'1px solid var(--border)' }}>
+                <OperatorLogo name={gpsLocation.operator} size={20} />
+                <span style={{ fontSize:12, fontWeight:600 }}>{gpsLocation.operator}</span>
+                {gpsLocation.powerKw && <span style={{ fontSize:11, color:'var(--mg4)', fontFamily:"'JetBrains Mono',monospace" }}>{gpsLocation.powerKw} kW</span>}
+                <span style={{ fontSize:10, color:'var(--green)', marginLeft:'auto' }}>Fournisseur auto ✓</span>
+              </div>
+            )}
+          </Field>
+        )}
+
+        {/* Manual provider — home or approx */}
+        {showProviderField && (
+          <Field label={locationId === 'home' ? 'Borne / équipement' : 'Fournisseur'} hint={isApprox ? 'Borne non trouvée dans OCM — renseigne le fournisseur' : undefined}>
+            <ComboBox
+              value={manualProvider}
+              onChange={setManualProvider}
+              options={lists.providers}
+              placeholder={locationId === 'home' ? 'V2C Trydan, Wallbox…' : 'Ionity, TotalEnergies…'}
+            />
+          </Field>
+        )}
+
+        {/* Card */}
         <Field label="Carte utilisée" hint="Ex. Chargemap, RFID maison…">
           <ComboBox value={card} onChange={setCard} options={lists.cards} placeholder="Chargemap, RFID, CB…" />
         </Field>
 
-        {/* GPS location — only for external charges */}
-        {locationId === 'ext' && (
-          <Field label="Localisation" hint="Recherche une borne ou indique une ville pour la carte">
-            <LocationPicker value={gpsLocation} onChange={setGpsLocation} />
-          </Field>
-        )}
-
+        {/* Date */}
         <Field label="Date">
           <div style={{ background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'13px 14px' }}>
             <input type="date" value={date} max={today} onChange={e=>setDate(e.target.value)}
@@ -147,6 +242,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           </div>
         </Field>
 
+        {/* kWh + durée */}
         <Field label="Énergie & durée" hint={errors.kwh?'⚠ Énergie requise':undefined}>
           <div style={{ display:'flex', gap:8 }}>
             <NumInput value={kwh} onChange={v=>{setKwh(v);setErrors(e=>({...e,kwh:false}))}} placeholder="42" unit="kWh" error={errors.kwh} />
@@ -155,6 +251,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           </div>
         </Field>
 
+        {/* Coût */}
         <Field label="Coût total" hint={errors.cost?'⚠ Coût requis':undefined}>
           <NumInput value={totalCost} onChange={v=>{setTotalCost(v);setErrors(e=>({...e,cost:false}))}} placeholder="6.72" unit="€" error={errors.cost} />
         </Field>
@@ -166,10 +263,12 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           </div>
         )}
 
+        {/* Kilométrage */}
         <Field label="Kilométrage (optionnel)" hint="Compteur au moment de brancher — calcul conso réelle">
           <NumInput value={odometer} onChange={setOdometer} placeholder="18 420" unit="km" />
         </Field>
 
+        {/* Notes */}
         <Field label="Notes (optionnel)">
           <div style={{ background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'12px 14px' }}>
             <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Autoroute A6, retour vacances…" rows={2}

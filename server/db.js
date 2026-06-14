@@ -69,4 +69,24 @@ if (!chargeColumns.includes('ocm_id'))               db.exec('ALTER TABLE charge
 if (!chargeColumns.includes('power_kw'))             db.exec('ALTER TABLE charges ADD COLUMN power_kw REAL')
 if (!chargeColumns.includes('connector_types'))      db.exec('ALTER TABLE charges ADD COLUMN connector_types TEXT')
 
+// Favorite locations table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS favorite_locations (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    label       TEXT NOT NULL,
+    provider    TEXT,
+    location_id TEXT NOT NULL DEFAULT 'ext',
+    lat         REAL,
+    lng         REAL,
+    ocm_id      TEXT,
+    operator    TEXT,
+    power_kw    REAL,
+    connector_types TEXT,
+    use_count   INTEGER NOT NULL DEFAULT 1,
+    last_used   TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(account_id, label)
+  )
+`)
+
 module.exports = db

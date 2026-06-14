@@ -249,6 +249,43 @@ function toClientSettings(s) {
   }
 }
 
+// ─── Favorite locations ──────────────────────────────────────────────────────
+
+app.get('/api/favorites', requireAuth, (req, res) => {
+  const favs = db.prepare(`
+    SELECT * FROM favorite_locations WHERE account_id = ?
+    ORDER BY use_count DESC, last_used DESC LIMIT 20
+  `).all(req.user.id)
+  res.json(favs.map(f => ({
+    id: f.id, label: f.label, provider: f.provider,
+    locationId: f.location_id, lat: f.lat, lng: f.lng,
+    ocmId: f.ocm_id, operator: f.operator,
+    powerKw: f.power_kw,
+    connectorTypes: f.connector_types ? JSON.parse(f.connector_types) : [],
+    useCount: f.use_count, lastUsed: f.last_used,
+  })))
+})
+
+app.post('/api/favorites/bump', requireAuth, (req, res) => {
+  const { label, provider, locationId, lat, lng, ocmId, operator, powerKw, connectorTypes } = req.body
+  if (!label) return res.status(400).json({ error: 'label required' })
+  const existing = db.prepare('SELECT id FROM favorite_locations WHERE account_id = ? AND label = ?').get(req.user.id, label)
+  if (existing) {
+    db.prepare('UPDATE favorite_locations SET use_count = use_count + 1, last_used = datetime("now"), provider=?, operator=?, power_kw=?, connector_types=? WHERE id=?')
+      .run(provider||null, operator||null, powerKw||null, connectorTypes?.length ? JSON.stringify(connectorTypes) : null, existing.id)
+  } else {
+    db.prepare(`INSERT INTO favorite_locations (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .run(req.user.id, label, provider||null, locationId||'ext', lat||null, lng||null, ocmId||null, operator||null, powerKw||null, connectorTypes?.length ? JSON.stringify(connectorTypes) : null)
+  }
+  res.json({ ok: true })
+})
+
+app.delete('/api/favorites/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM favorite_locations WHERE id = ? AND account_id = ?').run(req.params.id, req.user.id)
+  res.json({ ok: true })
+})
+
 // ─── Operator logos ──────────────────────────────────────────────────────────
 
 app.get('/api/logos/:name', (req, res) => {
