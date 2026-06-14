@@ -89,4 +89,25 @@ db.exec(`
   )
 `)
 
+// Migration: seed favorite_locations from existing external charges
+const seedFavs = db.prepare(`
+  INSERT OR IGNORE INTO favorite_locations (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types, use_count, last_used)
+  SELECT
+    account_id,
+    COALESCE(location_name, provider, 'Borne externe') as label,
+    provider,
+    location_id,
+    lat, lng, ocm_id,
+    provider as operator,
+    power_kw, connector_types,
+    COUNT(*) as use_count,
+    MAX(date) as last_used
+  FROM charges
+  WHERE location_id != 'home'
+    AND COALESCE(location_name, provider) IS NOT NULL
+    AND COALESCE(location_name, provider) != ''
+  GROUP BY account_id, COALESCE(location_name, provider)
+`)
+seedFavs.run()
+
 module.exports = db
