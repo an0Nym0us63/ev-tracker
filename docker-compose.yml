@@ -1,0 +1,12 @@
+services:
+  ev-tracker:
+    build: .
+    container_name: ev-tracker
+    ports:
+      - "3080:3080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=change-me-in-production
+    restart: unless-stopped
