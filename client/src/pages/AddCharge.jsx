@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { VEHICLES, LOCATIONS } from '../utils.js'
 import ComboBox from '../components/ComboBox.jsx'
 import LocationPicker from '../components/LocationPicker.jsx'
@@ -27,38 +28,39 @@ function NumInput({ value, onChange, placeholder, unit, error }) {
 
 function FavoritesSheet({ favorites, onPick, onClose }) {
   return (
-    <>
-      {/* Backdrop */}
-      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:300, animation:'fadeUp 0.15s ease' }} />
-      {/* Sheet */}
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--surface)', borderRadius:'20px 20px 0 0', zIndex:301, maxHeight:'70vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 32px rgba(0,0,0,0.4)', animation:'slideUp 0.2s ease' }}>
-        <div style={{ padding:'12px 20px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontSize:16, fontWeight:700 }}>Bornes récentes</div>
-          <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:16 }}>×</button>
-        </div>
-        <div style={{ overflowY:'auto', padding:'10px 16px 32px', display:'flex', flexDirection:'column', gap:8 }}>
-          {favorites.map(fav => (
-            <div key={fav.id} onClick={()=>{ onPick(fav); onClose() }}
-              style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer' }}
-              onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
-              onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
-            >
-              <OperatorLogo name={fav.operator || fav.provider || ''} size={28} />
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:600 }}>{fav.label}</div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>
-                  {(fav.operator || fav.provider) && <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--text-secondary)', border:'1px solid var(--border-light)' }}>{fav.operator || fav.provider}</span>}
-                  {fav.powerKw && <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'rgba(79,142,247,0.1)', color:'var(--mg4)', border:'1px solid rgba(79,142,247,0.2)' }}>{fav.powerKw} kW</span>}
-                  <span style={{ fontSize:10, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--muted)', border:'1px solid var(--border)' }}>{fav.useCount}× utilisé</span>
+    createPortal(
+      <>
+        <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:300 }} />
+        <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--surface)', borderRadius:'20px 20px 0 0', zIndex:301, maxHeight:'70vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 32px rgba(0,0,0,0.4)', animation:'slideUp 0.2s ease' }}>
+          <div style={{ padding:'12px 20px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ fontSize:16, fontWeight:700 }}>Bornes récentes</div>
+            <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:16 }}>×</button>
+          </div>
+          <div style={{ overflowY:'auto', padding:'10px 16px 32px', display:'flex', flexDirection:'column', gap:8 }}>
+            {favorites.map(fav => (
+              <div key={fav.id} onClick={()=>{ onPick(fav); onClose() }}
+                style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer' }}
+                onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
+                onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+              >
+                <OperatorLogo name={fav.operator || fav.provider || ''} size={28} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600 }}>{fav.label}</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>
+                    {(fav.operator || fav.provider) && <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--text-secondary)', border:'1px solid var(--border-light)' }}>{fav.operator || fav.provider}</span>}
+                    {fav.powerKw && <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'rgba(79,142,247,0.1)', color:'var(--mg4)', border:'1px solid rgba(79,142,247,0.2)' }}>{fav.powerKw} kW</span>}
+                    <span style={{ fontSize:10, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--muted)', border:'1px solid var(--border)' }}>{fav.useCount}× utilisé</span>
+                  </div>
                 </div>
+                <span style={{ color:'var(--accent)', fontSize:18, flexShrink:0 }}>→</span>
               </div>
-              <span style={{ color:'var(--accent)', fontSize:18, flexShrink:0 }}>→</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-      <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
-    </>
+        <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+      </>,
+      document.body
+    )
   )
 }
 
