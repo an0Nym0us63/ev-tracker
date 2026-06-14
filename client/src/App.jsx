@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import './styles/globals.css'
+import { useTheme } from './useTheme.js'
 import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateCharge, apiDeleteCharge, apiGetLists, apiGetSettings } from './api.js'
 import Login from './pages/Login.jsx'
 import BottomNav from './components/BottomNav.jsx'
@@ -9,8 +10,6 @@ import History from './pages/History.jsx'
 import Stats from './pages/Stats.jsx'
 import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
-
-
 
 function Toast({ msg, color }) {
   return (
@@ -30,6 +29,7 @@ function Loader() {
 }
 
 export default function App() {
+  const { theme, toggle: toggleTheme } = useTheme()
   const [account,    setAccount]    = useState(null)
   const [charges,    setCharges]    = useState([])
   const [lists,      setLists]      = useState({ providers:[], cards:[] })
@@ -45,10 +45,8 @@ export default function App() {
       try {
         const [acc, ch, li, st] = await Promise.all([apiMe(), apiGetCharges(), apiGetLists(), apiGetSettings()])
         setAccount(acc); setCharges(ch); setLists(li); setSettings(st)
-      } catch(e) {
-        console.warn('Init failed, clearing token', e)
-        clearToken()
-      } finally { setLoading(false) }
+      } catch { clearToken() }
+      finally { setLoading(false) }
     }
     init()
   }, [])
@@ -103,7 +101,6 @@ export default function App() {
   if (!account) return <Login onLogin={handleLogin} />
 
   const isAddPage = page === 'add'
-  const isSettingsPage = page === 'settings'
 
   return (
     <>
@@ -111,11 +108,10 @@ export default function App() {
       {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
       {page === 'add'      && <AddCharge account={account} lists={lists} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}
-      {page === 'map'      && <MapView   charges={charges} settings={settings} />}
-      {page === 'settings' && <Settings  account={account} onLogout={handleLogout} onSettingsSaved={setSettings} />}
+      {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} />}
+      {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
 
-      {!isAddPage && !isSettingsPage && <BottomNav active={page} onNavigate={navigate} />}
-      {(isAddPage || isSettingsPage) ? null : null}
+      {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}
       {toast && <Toast {...toast} />}
     </>
   )
