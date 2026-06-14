@@ -5,7 +5,7 @@ services:
     ports:
       - "3080:3080"
     volumes:
-      - /docker/ev-tracker-stack/data::/app/data
+      - /docker/ev-tracker-stack/data:/app/data
     environment:
       - NODE_ENV=production
       - JWT_SECRET=change-me-in-production
