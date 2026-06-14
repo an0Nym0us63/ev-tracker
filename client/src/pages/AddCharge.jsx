@@ -47,6 +47,9 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
       label: editCharge.locationName || '',
       approximate: editCharge.locationApproximate,
       ocmId: editCharge.ocmId,
+      operator: editCharge.operator || null,
+      powerKw: editCharge.powerKw || null,
+      connectorTypes: editCharge.connectorTypes || [],
     } : null
   )
 
@@ -81,6 +84,8 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
       lng:                 gpsLocation?.lng  || null,
       locationApproximate: gpsLocation?.approximate || false,
       ocmId:               gpsLocation?.ocmId || null,
+      powerKw:             gpsLocation?.powerKw || null,
+      connectorTypes:      gpsLocation?.connectorTypes || [],
     })
   }
 

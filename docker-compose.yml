@@ -1,6 +1,6 @@
 services:
   ev-tracker:
-    build: .
+    image: ghcr.io/an0Nym0us63/ev-tracker:latest
     container_name: ev-tracker
     ports:
       - "3080:3080"
@@ -8,5 +8,5 @@ services:
       - /docker/ev-tracker-stack/data:/app/data
     environment:
       - NODE_ENV=production
-      - JWT_SECRET=change-me-in-production
+      - JWT_SECRET=${JWT_SECRET}
     restart: unless-stopped

@@ -121,6 +121,8 @@ export default function History({ charges, onEdit }) {
                         </div>
                         <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>
                           {c.durationMin ? formatDuration(c.durationMin) : '—'}
+                          {c.powerKw ? ` · ${c.powerKw} kW` : ''}
+                          {(c.connectorTypes||[]).length > 0 ? ` · ${c.connectorTypes.join(', ')}` : ''}
                           {c.card ? ` · ${c.card}` : ''}
                           {c.odometer ? ` · ${c.odometer.toLocaleString('fr-FR')} km` : ''}
                         </div>

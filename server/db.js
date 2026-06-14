@@ -46,6 +46,8 @@ db.exec(`
     lng                  REAL,
     location_approximate INTEGER NOT NULL DEFAULT 0,
     ocm_id               TEXT,
+    power_kw             REAL,
+    connector_types      TEXT,
     created_at           TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -64,5 +66,7 @@ if (!chargeColumns.includes('lat'))                  db.exec('ALTER TABLE charge
 if (!chargeColumns.includes('lng'))                  db.exec('ALTER TABLE charges ADD COLUMN lng REAL')
 if (!chargeColumns.includes('location_approximate')) db.exec('ALTER TABLE charges ADD COLUMN location_approximate INTEGER NOT NULL DEFAULT 0')
 if (!chargeColumns.includes('ocm_id'))               db.exec('ALTER TABLE charges ADD COLUMN ocm_id TEXT')
+if (!chargeColumns.includes('power_kw'))             db.exec('ALTER TABLE charges ADD COLUMN power_kw REAL')
+if (!chargeColumns.includes('connector_types'))      db.exec('ALTER TABLE charges ADD COLUMN connector_types TEXT')
 
 module.exports = db

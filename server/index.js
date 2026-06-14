@@ -69,7 +69,7 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
 
   const { q, lat, lng } = req.query
   // 100 results, no country restriction, 25km radius — client filters
-  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=true&verbose=false&key=${s.ocm_api_key}`
+  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=false&verbose=true&key=${s.ocm_api_key}`
   if (lat && lng) { url += `&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM` } else if (q) { url += `&cityname=${encodeURIComponent(q)}` }
   
 
@@ -79,16 +79,44 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
     apiRes.on('end', () => {
       try {
         const stations = JSON.parse(data)
-        res.json(stations.map(s => ({
-          id:       s.ID,
-          name:     s.AddressInfo?.Title || '',
-          address:  s.AddressInfo?.AddressLine1 || '',
-          city:     s.AddressInfo?.Town || '',
-          lat:      s.AddressInfo?.Latitude,
-          lng:      s.AddressInfo?.Longitude,
-          operator: s.OperatorInfo?.Title || '',
-          power:    s.Connections?.[0]?.PowerKW || null,
-        })))
+        res.json(stations.map(s => {
+          // Collect unique connector types and max power
+          const connections = s.Connections || []
+          const connectorTypes = [...new Set(
+            connections
+              .map(c => c.ConnectionType?.Title || c.ConnectionType?.FormalName || '')
+              .filter(Boolean)
+              .map(t => {
+                // Normalize common names
+                if (t.includes('CCS') || t.includes('Combo')) return 'CCS'
+                if (t.includes('CHAdeMO')) return 'CHAdeMO'
+                if (t.includes('Type 2') || t.includes('Mennekes')) return 'Type 2'
+                if (t.includes('Type 1')) return 'Type 1'
+                if (t.includes('Tesla')) return 'Tesla'
+                return t.split('(')[0].trim()
+              })
+          )]
+          const maxPower = Math.max(0, ...connections.map(c => c.PowerKW || 0)) || null
+
+          // Operator: try multiple fields
+          const operator = s.OperatorInfo?.Title
+            || s.AddressInfo?.RelatedURL
+            || ''
+
+          return {
+            id:             s.ID,
+            name:           s.AddressInfo?.Title || '',
+            address:        s.AddressInfo?.AddressLine1 || '',
+            city:           s.AddressInfo?.Town || '',
+            lat:            s.AddressInfo?.Latitude,
+            lng:            s.AddressInfo?.Longitude,
+            operator:       operator.replace(/\(.*?\)/g, '').trim(),
+            network:        s.OperatorInfo?.Title || '',
+            power:          maxPower,
+            connectorTypes, // ['CCS', 'Type 2'] etc.
+            totalPoints:    s.NumberOfPoints || connections.length || null,
+          }
+        }))
       } catch { res.json([]) }
     })
   }).on('error', () => res.json([]))
@@ -153,9 +181,9 @@ app.get('/api/charges', requireAuth, (req, res) => {
 app.post('/api/charges', requireAuth, (req, res) => {
   const c = req.body
   const result = db.prepare(`
-    INSERT INTO charges (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh, total_cost, duration_min, odometer, notes, source, lat, lng, location_approximate, ocm_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-  `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null)
+    INSERT INTO charges (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh, total_cost, duration_min, odometer, notes, source, lat, lng, location_approximate, ocm_id, power_kw, connector_types)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   res.status(201).json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(result.lastInsertRowid)))
@@ -166,9 +194,9 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Session introuvable' })
   const c = req.body
   db.prepare(`
-    UPDATE charges SET vehicle_id=?, location_id=?, location_name=?, provider=?, card=?, date=?, kwh=?, total_cost=?, duration_min=?, odometer=?, notes=?, lat=?, lng=?, location_approximate=?, ocm_id=?
+    UPDATE charges SET vehicle_id=?, location_id=?, location_name=?, provider=?, card=?, date=?, kwh=?, total_cost=?, duration_min=?, odometer=?, notes=?, lat=?, lng=?, location_approximate=?, ocm_id=?, power_kw=?, connector_types=?
     WHERE id=? AND account_id=?
-  `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, req.params.id, req.user.id)
+  `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, req.params.id, req.user.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   res.json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(req.params.id)))
@@ -205,6 +233,8 @@ function toClient(c) {
     durationMin: c.duration_min, odometer: c.odometer, notes: c.notes,
     source: c.source, lat: c.lat, lng: c.lng,
     locationApproximate: !!c.location_approximate, ocmId: c.ocm_id,
+    powerKw: c.power_kw,
+    connectorTypes: c.connector_types ? JSON.parse(c.connector_types) : [],
     createdAt: c.created_at,
   }
 }
