@@ -28,7 +28,3 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/ev-tracker:latest
-
-      - name: Trigger Portainer redeploy
-        if: ${{ secrets.PORTAINER_WEBHOOK_URL != '' }}
-        run: curl -s -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
