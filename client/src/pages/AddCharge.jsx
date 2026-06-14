@@ -25,21 +25,40 @@ function NumInput({ value, onChange, placeholder, unit, error }) {
   )
 }
 
-function FavoriteCard({ fav, onPick }) {
+function FavoritesSheet({ favorites, onPick, onClose }) {
   return (
-    <div onMouseDown={onPick} onTouchStart={onPick}
-      style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer', userSelect:'none', minWidth:160, flexShrink:0 }}
-      onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
-      onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
-    >
-      <OperatorLogo name={fav.operator || fav.provider || ''} size={24} />
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fav.label}</div>
-        <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>
-          {fav.powerKw ? `${fav.powerKw} kW · ` : ''}{fav.useCount}× utilisé
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:300, animation:'fadeUp 0.15s ease' }} />
+      {/* Sheet */}
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--surface)', borderRadius:'20px 20px 0 0', zIndex:301, maxHeight:'70vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 32px rgba(0,0,0,0.4)', animation:'slideUp 0.2s ease' }}>
+        <div style={{ padding:'12px 20px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontSize:16, fontWeight:700 }}>Bornes récentes</div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:16 }}>×</button>
+        </div>
+        <div style={{ overflowY:'auto', padding:'10px 16px 32px', display:'flex', flexDirection:'column', gap:8 }}>
+          {favorites.map(fav => (
+            <div key={fav.id} onClick={()=>{ onPick(fav); onClose() }}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer' }}
+              onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
+              onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+            >
+              <OperatorLogo name={fav.operator || fav.provider || ''} size={28} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:600 }}>{fav.label}</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>
+                  {(fav.operator || fav.provider) && <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--text-secondary)', border:'1px solid var(--border-light)' }}>{fav.operator || fav.provider}</span>}
+                  {fav.powerKw && <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'rgba(79,142,247,0.1)', color:'var(--mg4)', border:'1px solid rgba(79,142,247,0.2)' }}>{fav.powerKw} kW</span>}
+                  <span style={{ fontSize:10, padding:'2px 7px', borderRadius:20, background:'var(--surface3)', color:'var(--muted)', border:'1px solid var(--border)' }}>{fav.useCount}× utilisé</span>
+                </div>
+              </div>
+              <span style={{ color:'var(--accent)', fontSize:18, flexShrink:0 }}>→</span>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+      <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+    </>
   )
 }
 
@@ -76,6 +95,7 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
   )
 
   const [favorites, setFavorites] = useState([])
+  const [showFavSheet, setShowFavSheet] = useState(false)
 
   useEffect(() => {
     if (locationId === 'ext') {
@@ -190,16 +210,21 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           </div>
         </Field>
 
-        {/* Favorites (external only) */}
+        {/* Favorites button (external only) */}
         {locationId === 'ext' && favorites.length > 0 && !gpsLocation && (
-          <Field label="Bornes récentes">
-            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2 }}>
-              {favorites.slice(0,6).map(fav => (
-                <FavoriteCard key={fav.id} fav={fav} onPick={()=>applyFavorite(fav)} />
-              ))}
+          <button onClick={()=>setShowFavSheet(true)} style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 16px', background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer', width:'100%', transition:'border-color 0.15s' }}
+            onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
+            onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+          >
+            <span style={{ fontSize:18 }}>⭐</span>
+            <div style={{ flex:1, textAlign:'left' }}>
+              <div style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>Bornes récentes</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>{favorites.length} borne{favorites.length>1?'s':''} enregistrée{favorites.length>1?'s':''}</div>
             </div>
-          </Field>
+            <span style={{ color:'var(--muted)', fontSize:16 }}>›</span>
+          </button>
         )}
+        {showFavSheet && <FavoritesSheet favorites={favorites} onPick={applyFavorite} onClose={()=>setShowFavSheet(false)} />}
 
         {/* GPS location (external only) */}
         {locationId === 'ext' && (
