@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { VEHICLES, LOCATIONS, formatDate, formatDuration, formatCost } from '../utils.js'
+import OperatorLogo from '../components/OperatorLogo.jsx'
 
 export default function History({ charges, onEdit }) {
   const [vf, setVf] = useState('all')
@@ -117,7 +118,10 @@ export default function History({ charges, onEdit }) {
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
                           <span style={{ fontSize:13, fontWeight:600 }}>{v.name}</span>
-                          <span className={`badge ${loc.badgeClass}`}>{loc.emoji} {c.provider || c.locationName || loc.label}</span>
+                          <span className={`badge ${loc.badgeClass}`} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+                            <OperatorLogo name={c.provider || ''} size={12} />
+                            {c.provider || c.locationName || loc.label}
+                          </span>
                         </div>
                         <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>
                           {c.durationMin ? formatDuration(c.durationMin) : '—'}

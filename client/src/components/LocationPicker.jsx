@@ -1,15 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { apiOcmSearch, apiGeocode } from '../api.js'
-
-const OPERATOR_ICONS = {
-  'ionity':'🟡','totalenergies':'🔴','total':'🔴','fastned':'🟠',
-  'tesla':'⚡','lidl':'🔵','leclerc':'🔵','engie':'🟢','izivia':'🔵',
-  'freshmile':'🟣','electra':'🟣','bump':'🟢','beev':'🔵','recharge':'🔵',
-}
-function operatorIcon(name='') {
-  const k = Object.keys(OPERATOR_ICONS).find(k => name.toLowerCase().includes(k))
-  return k ? OPERATOR_ICONS[k] : '🔌'
-}
+import OperatorLogo from './OperatorLogo.jsx'
 
 function GeoResultItem({ r, onPick }) {
   const tags = [r.postcode, r.dept, !r.isFr && r.region, r.country].filter(Boolean)
@@ -208,7 +199,7 @@ export default function LocationPicker({ value, onChange }) {
                     onMouseEnter={e=>e.currentTarget.style.background='var(--surface3)'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                   >
-                    <span style={{ fontSize:20, flexShrink:0, marginTop:1 }}>{operatorIcon(s.operator)}</span>
+                    <OperatorLogo name={s.operator || s.network || ''} size={22} style={{ marginTop:1 }} />
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:600 }}>{s.name}</div>
                       <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { computeStats, filterByPeriod, getWeeklyData, formatCost, formatDate, formatDuration, VEHICLES, LOCATIONS } from '../utils.js'
+import OperatorLogo from '../components/OperatorLogo.jsx'
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -143,7 +144,10 @@ export default function Dashboard({ charges, onNavigate }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{v.name}</span>
-                    <span className={`badge ${loc.badgeClass}`}>{loc.emoji} {c.provider || c.locationName || loc.label}</span>
+                    <span className={`badge ${loc.badgeClass}`} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+                    <OperatorLogo name={c.provider || ''} size={12} />
+                    {c.provider || c.locationName || loc.label}
+                  </span>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     {formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}
