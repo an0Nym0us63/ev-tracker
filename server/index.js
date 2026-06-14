@@ -172,6 +172,32 @@ app.get('/api/geocode', requireAuth, (req, res) => {
   }).on('error', () => res.json([]))
 })
 
+// ─── Favorites recalculation ─────────────────────────────────────────────────
+
+function recalcFavorites(accountId) {
+  // Delete and rebuild from charges — always accurate
+  db.prepare('DELETE FROM favorite_locations WHERE account_id = ?').run(accountId)
+  db.prepare(`
+    INSERT OR IGNORE INTO favorite_locations (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types, use_count, last_used)
+    SELECT
+      account_id,
+      COALESCE(location_name, provider, 'Borne externe') as label,
+      provider,
+      location_id,
+      lat, lng, ocm_id,
+      provider as operator,
+      power_kw, connector_types,
+      COUNT(*) as use_count,
+      MAX(date) as last_used
+    FROM charges
+    WHERE account_id = ?
+      AND location_id != 'home'
+      AND COALESCE(location_name, provider) IS NOT NULL
+      AND COALESCE(location_name, provider) != ''
+    GROUP BY account_id, COALESCE(location_name, provider)
+  `).run(accountId, accountId)
+}
+
 // ─── Charges ──────────────────────────────────────────────────────────────────
 
 app.get('/api/charges', requireAuth, (req, res) => {
@@ -187,6 +213,7 @@ app.post('/api/charges', requireAuth, (req, res) => {
   `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
+  recalcFavorites(req.user.id)
   res.status(201).json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(result.lastInsertRowid)))
 })
 
@@ -200,12 +227,14 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
   `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, req.params.id, req.user.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
+  recalcFavorites(req.user.id)
   res.json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(req.params.id)))
 })
 
 app.delete('/api/charges/:id', requireAuth, (req, res) => {
   const result = db.prepare('DELETE FROM charges WHERE id = ? AND account_id = ?').run(req.params.id, req.user.id)
   if (!result.changes) return res.status(404).json({ error: 'Session introuvable' })
+  recalcFavorites(req.user.id)
   res.json({ ok: true })
 })
 

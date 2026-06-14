@@ -105,6 +105,13 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
     }
   }, [locationId])
 
+  // Refresh favorites each time the sheet opens — server recalcs after every save
+  useEffect(() => {
+    if (showFavSheet) {
+      apiGetFavorites().then(setFavorites).catch(() => {})
+    }
+  }, [showFavSheet])
+
   // Derived provider: OCM operator > manual
   const isApprox = gpsLocation?.approximate
   const isOcm    = gpsLocation && !isApprox
