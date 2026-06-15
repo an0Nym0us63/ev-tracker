@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
 import { VERSION } from '../version.js'
+import AppLogo from '../components/AppLogo.jsx'
 
 function Field({ label, children, hint }) {
   return (
@@ -222,8 +223,9 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
           Se déconnecter
         </button>
 
-        <div style={{ textAlign:'center', fontSize:11, color:'var(--muted)', paddingBottom:8 }}>
-          EV Charge Tracker {VERSION}
+        <div style={{ textAlign:'center', paddingBottom:8, display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+          <AppLogo size={48} style={{ opacity:0.7 }} />
+          <div style={{ fontSize:11, color:'var(--muted)' }}>EV Charge Tracker {VERSION}</div>
         </div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { apiLogin, apiRegister } from '../api.js'
 import { VEHICLES } from '../utils.js'
+import AppLogo from '../components/AppLogo.jsx'
 
 function Logo() {
   return (
     <div style={{ textAlign: 'center', marginBottom: 32 }}>
-      <div style={{ width:60, height:60, borderRadius:18, background:'linear-gradient(135deg,var(--accent),var(--accent2))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, margin:'0 auto 14px', boxShadow:'0 8px 32px var(--accent-glow)' }}>⚡</div>
+      <AppLogo size={80} style={{ margin:'0 auto 16px', display:'block', boxShadow:'0 8px 32px rgba(79,142,247,0.3)' }} />
       <div style={{ fontSize:22, fontWeight:700 }}>EV Charge Tracker</div>
       <div style={{ fontSize:13, color:'var(--muted)', marginTop:4 }}>Suivi de recharge</div>
     </div>

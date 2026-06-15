@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { computeStats, filterByPeriod, getWeeklyData, formatCost, formatDate, formatDuration, VEHICLES, LOCATIONS } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
+import AppLogo from '../components/AppLogo.jsx'
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -35,6 +36,10 @@ export default function Dashboard({ charges, onNavigate }) {
         <div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>Tableau de bord</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1, textTransform: 'capitalize' }}>{dateStr}</div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <AppLogo size={32} />
+          <button onClick={() => onNavigate('settings')} style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:20, padding:4 }}>⚙️</button>
         </div>
         <button onClick={() => onNavigate('add')} style={{
           background: 'linear-gradient(135deg, var(--accent), var(--accent2))',
@@ -124,7 +129,11 @@ export default function Dashboard({ charges, onNavigate }) {
             <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
               Aucune session encore.
               <div style={{ marginTop: 10 }}>
-                <button onClick={() => onNavigate('add')} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <AppLogo size={32} />
+          <button onClick={() => onNavigate('settings')} style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:20, padding:4 }}>⚙️</button>
+        </div>
+        <button onClick={() => onNavigate('add')} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
                   Ajouter la première →
                 </button>
               </div>

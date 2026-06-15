@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import './styles/globals.css'
 import { useTheme } from './useTheme.js'
+import AppLogo from './components/AppLogo.jsx'
 import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateCharge, apiDeleteCharge, apiGetLists, apiGetSettings } from './api.js'
 import Login from './pages/Login.jsx'
 import BottomNav from './components/BottomNav.jsx'
@@ -22,7 +23,7 @@ function Toast({ msg, color }) {
 function Loader() {
   return (
     <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div style={{ width:48, height:48, borderRadius:14, background:'linear-gradient(135deg,var(--accent),var(--accent2))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24 }}>⚡</div>
+      <AppLogo size={72} style={{ boxShadow:'0 8px 32px rgba(79,142,247,0.3)' }} />
       <div style={{ fontSize:13, color:'var(--muted)' }}>Chargement…</div>
     </div>
   )
