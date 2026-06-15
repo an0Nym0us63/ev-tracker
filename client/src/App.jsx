@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import './styles/globals.css'
 import { useTheme } from './useTheme.js'
 import AppLogo from './components/AppLogo.jsx'
+import { usePullToRefresh } from './usePullToRefresh.js'
 import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateCharge, apiDeleteCharge, apiGetLists, apiGetSettings } from './api.js'
 import Login from './pages/Login.jsx'
 import BottomNav from './components/BottomNav.jsx'
@@ -13,6 +14,12 @@ import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
 
 function Toast({ msg, color }) {
+  const { pulling, progress } = usePullToRefresh(() => {
+    loadCharges()
+    loadLists()
+    loadSettings()
+  })
+
   return (
     <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'var(--surface2)', border:`1px solid ${color}`, color, fontWeight:600, fontSize:13, padding:'10px 20px', borderRadius:24, boxShadow:'0 8px 32px rgba(0,0,0,0.4)', zIndex:200, whiteSpace:'nowrap', animation:'fadeUp 0.2s ease' }}>
       {msg}

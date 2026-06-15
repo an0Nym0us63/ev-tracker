@@ -192,6 +192,13 @@ export default function Dashboard({ charges, onNavigate }) {
     ? sorted.find(c => c.vehicleId === activeVehicle)
     : sorted[0]
   const streak = lastCharge ? Math.floor((now-new Date(lastCharge.date+'T00:00:00'))/86400000) : null
+
+  // Last AC (home) and DC (external) charge days
+  const filteredForStreak = activeVehicle ? sorted.filter(c=>c.vehicleId===activeVehicle) : sorted
+  const lastAC = filteredForStreak.find(c => c.locationId === 'home')
+  const lastDC = filteredForStreak.find(c => c.locationId !== 'home')
+  const daysAC = lastAC ? Math.floor((now-new Date(lastAC.date+'T00:00:00'))/86400000) : null
+  const daysDC = lastDC ? Math.floor((now-new Date(lastDC.date+'T00:00:00'))/86400000) : null
   // Savings from DB (computed at save time with user's fuel price)
   const savings = filtered.reduce((s,c) => s + (c.fuelSavings||0), 0)
 
@@ -240,7 +247,7 @@ export default function Dashboard({ charges, onNavigate }) {
     { val:`${avgSession}`,  label:'kWh/session moy.',     color:'var(--mg4)',    mono:true },
     { val:`${avgCost} €`,   label:'Coût/session moy.',    color:'var(--xpeng)',  mono:true },
     { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
-    { val: streak!==null ? `${streak}j` : '—', label:'Depuis dernière charge', color: streak===0?'var(--green)':streak>7?'var(--red)':'var(--muted)' },
+    { type:'streak', daysAC, daysDC, label:'Dernière charge' },
     { val: savings > 0 ? `${savings.toFixed(0)} €` : '—', label:'Économies vs thermique', color:'var(--green)' },
     { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
     { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy. (kWh/h)', color:'var(--accent)', mono:true },
@@ -311,7 +318,22 @@ export default function Dashboard({ charges, onNavigate }) {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'10px 16px 0' }}>
         {kpis.map((k,i) => (
           <div key={k.label} className="card" style={{ padding:'10px 10px', gridColumn: k.type==='bar' ? 'span 2' : undefined }}>
-            {k.type === 'bar' ? (
+            {k.type === 'streak' ? (
+              <>
+                <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <div style={{ flex:1 }}>
+                    <div className="mono" style={{ fontSize:13, fontWeight:700, color: k.daysAC===0?'var(--green)':k.daysAC>7?'var(--red)':'var(--text)' }}>{k.daysAC!==null?`${k.daysAC}j`:'—'}</div>
+                    <div style={{ fontSize:8, color:'var(--green)', marginTop:2 }}>🏠 AC</div>
+                  </div>
+                  <div style={{ width:1, background:'var(--border)' }} />
+                  <div style={{ flex:1 }}>
+                    <div className="mono" style={{ fontSize:13, fontWeight:700, color: k.daysDC===0?'var(--green)':k.daysDC>7?'var(--red)':'var(--text)' }}>{k.daysDC!==null?`${k.daysDC}j`:'—'}</div>
+                    <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>📍 DC</div>
+                  </div>
+                </div>
+              </>
+            ) : k.type === 'bar' ? (
               <>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
                   <span style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{k.homePct}%</span>
