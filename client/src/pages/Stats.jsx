@@ -80,14 +80,24 @@ export default function Stats({ charges }) {
   // Cost over time for line chart
   const costData = useMemo(() => {
     const d = getChartData(filtered, period)
-    // Cumulative cost — rebuild from charges
     let cum = 0
-    return d.map(row => {
-      const dayCharges = filtered.filter(c => c.date === row.date || !row.date)
-      const dc = filtered.filter(c => {
-        if (row.date) return c.date === row.date
-        return true
-      })
+    return d.map((row, idx) => {
+      let dc
+      if (row.date) {
+        // Daily — match by exact date
+        dc = filtered.filter(c => c.date === row.date)
+      } else if (period === 'all') {
+        // By year — label is "2023", "2024"...
+        dc = filtered.filter(c => c.date.startsWith(row.label))
+      } else {
+        // By month — label is "janv.", "févr."... match by position in chart
+        const now = new Date()
+        const monthsBack = d.length - 1 - idx
+        const target = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1)
+        const y = target.getFullYear()
+        const m = String(target.getMonth() + 1).padStart(2, '0')
+        dc = filtered.filter(c => c.date.startsWith(`${y}-${m}`))
+      }
       const cost = dc.reduce((s,c)=>s+(c.totalCost||0),0)
       cum += cost
       return { ...row, cost: parseFloat(cost.toFixed(2)), cumCost: parseFloat(cum.toFixed(2)) }
