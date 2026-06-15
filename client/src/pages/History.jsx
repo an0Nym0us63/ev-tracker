@@ -110,7 +110,7 @@ export default function History({ charges, onEdit }) {
                       {/* Logo column */}
                       <div style={{ width:56, display:'flex', alignItems:'center', justifyContent:'center', padding:'10px 6px', flexShrink:0 }}>
                         <div style={{ width:40, height:40, borderRadius:10, overflow:'hidden', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                          <OperatorLogo name={c.provider||''} size={40} style={{ width:40, height:40, borderRadius:10, objectFit:'cover' }} />
+                          <OperatorLogo name={c.locationId==='home' ? (c.provider||'v2c') : (c.provider||'')} size={40} style={{ width:40, height:40, borderRadius:10, objectFit:'cover' }} />
                         </div>
                       </div>
 

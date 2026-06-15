@@ -141,33 +141,36 @@ export default function Dashboard({ charges, onNavigate }) {
             </div>
           ) : recent.map((c, idx) => {
             const v = VEHICLES[c.vehicleId]
-            const loc = LOCATIONS[c.locationId]
+            const isHome = c.locationId === 'home'
+            const logoName = isHome ? (c.provider || 'v2c') : (c.provider || '')
             return (
-              <div key={c.id} onClick={() => onNavigate('edit', c)} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
-                borderBottom: idx < recent.length - 1 ? '1px solid var(--border)' : 'none',
-                cursor: 'pointer',
-              }}>
-                <div style={{ width: 38, height: 38, borderRadius: 11, background: v.dimColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                  {v.emoji}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{v.name}</span>
-                    <span className={`badge ${loc.badgeClass}`} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
-                    <OperatorLogo name={c.provider || ''} size={12} />
-                    {c.provider || c.locationName || loc.label}
-                  </span>
+              <div key={c.id} onClick={() => onNavigate('edit', c)}
+                style={{ display:'flex', cursor:'pointer', borderBottom: idx < recent.length-1 ? '1px solid var(--border)' : 'none', marginLeft:-16, marginRight:-16 }}>
+                {/* Vehicle color bar */}
+                <div style={{ width:3, background:v.color, flexShrink:0 }} />
+                {/* Logo */}
+                <div style={{ width:48, display:'flex', alignItems:'center', justifyContent:'center', padding:'10px 6px', flexShrink:0 }}>
+                  <div style={{ width:36, height:36, borderRadius:9, overflow:'hidden', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <OperatorLogo name={logoName} size={36} style={{ width:36, height:36, borderRadius:9, objectFit:'cover' }} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                </div>
+                {/* Info */}
+                <div style={{ flex:1, minWidth:0, padding:'10px 0' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
+                    {c.provider && <span style={{ fontSize:11, fontWeight:600, padding:'2px 7px', borderRadius:20,
+                      background: isHome?'rgba(34,197,94,0.1)':'rgba(79,142,247,0.1)',
+                      color: isHome?'var(--green)':'var(--accent)',
+                      border:`1px solid ${isHome?'rgba(34,197,94,0.2)':'rgba(79,142,247,0.2)'}` }}>{c.provider}</span>}
+                  </div>
+                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
                     {formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div className="mono" style={{ fontSize: 14, fontWeight: 700 }}>{c.kwh} kWh</div>
-                  <div style={{ fontSize: 11, color: c.locationId !== 'home' ? 'var(--amber)' : 'var(--green)', marginTop: 1, fontWeight: 600 }}>
-                    {formatCost(c.totalCost)}
-                  </div>
+                {/* kWh + cost */}
+                <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:2 }}>
+                  <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh} kWh</div>
+                  <div className="mono" style={{ fontSize:11, fontWeight:600, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</div>
                 </div>
               </div>
             )

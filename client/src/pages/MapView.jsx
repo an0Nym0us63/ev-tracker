@@ -90,15 +90,24 @@ function buildPopupHTML(group) {
     </div>`
 }
 
-function makeMarkerIcon(operator, approximate, size=40) {
+// intensity: 0..1 (relative usage among all visible markers)
+function makeMarkerIcon(operator, approximate, size=40, intensity=0) {
   const name = toLogoName(operator||'')
   const emoji = operatorEmoji(operator||'')
-  const opacity = approximate ? '0.7' : '1'
-  const outline = approximate
-    ? `outline:2px dashed rgba(255,255,255,0.6);outline-offset:2px`
-    : `box-shadow:0 2px 12px rgba(0,0,0,0.5);outline:2.5px solid white;outline-offset:0px`
+  const opacity = approximate ? '0.75' : '1'
 
-  // Logo fills entire circle, emoji fallback centered on dark bg
+  // Halo color: low=blue(79,142,247) → mid=amber(251,191,36) → high=green(34,197,94)
+  let haloColor, haloSize, haloOpacity
+  if (intensity < 0.5) {
+    const t = intensity * 2
+    haloColor = `rgb(${Math.round(79+t*(251-79))},${Math.round(142+t*(191-142))},${Math.round(247+t*(36-247))})`
+  } else {
+    const t = (intensity - 0.5) * 2
+    haloColor = `rgb(${Math.round(251+t*(34-251))},${Math.round(191+t*(197-191))},${Math.round(36+t*(94-36))})`
+  }
+  haloSize  = Math.round(size * (1 + 0.5 * intensity)) // 1x → 1.5x
+  haloOpacity = 0.25 + intensity * 0.45
+
   const inner = name
     ? `<img src="/api/logos/providers/${name}"
         style="width:100%;height:100%;object-fit:cover;border-radius:50%"
@@ -107,7 +116,14 @@ function makeMarkerIcon(operator, approximate, size=40) {
     : `<span style="font-size:${Math.round(size*0.45)}px;line-height:1">${emoji}</span>`
 
   const bg = name ? 'transparent' : '#1e2235'
-  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;${outline};opacity:${opacity};overflow:hidden">${inner}</div>`
+  const border = approximate ? '2px dashed rgba(255,255,255,0.6)' : '2.5px solid white'
+
+  // Halo ring behind the marker
+  const haloOffset = Math.round((haloSize - size) / 2)
+  return `<div style="position:relative;width:${haloSize}px;height:${haloSize}px">
+    <div style="position:absolute;inset:0;border-radius:50%;background:${haloColor};opacity:${haloOpacity};filter:blur(4px)"></div>
+    <div style="position:absolute;top:${haloOffset}px;left:${haloOffset}px;width:${size}px;height:${size}px;border-radius:50%;background:${bg};border:${border};display:flex;align-items:center;justify-content:center;overflow:hidden;opacity:${opacity};box-shadow:0 2px 8px rgba(0,0,0,0.4)">${inner}</div>
+  </div>`
 }
 
 export default function MapView({ charges, settings, theme }) {
@@ -157,9 +173,17 @@ export default function MapView({ charges, settings, theme }) {
     const groups = groupByLocation(filtered)
     const bounds = []
 
-    groups.forEach(group => {
-      const markerHtml = makeMarkerIcon(group.operator, group.approximate)
-      const icon = window.L.divIcon({ html:markerHtml, className:'', iconSize:[36,36], iconAnchor:[18,18] })
+    // Compute min/max for intensity normalization
+    const values = groups.map(g => g.charges.reduce((s,c)=>s+c.kwh,0))
+    const minVal = Math.min(...values)
+    const maxVal = Math.max(...values)
+
+    groups.forEach((group, gi) => {
+      const totalKwh = group.charges.reduce((s,c)=>s+c.kwh,0)
+      const intensity = maxVal > minVal ? (totalKwh - minVal) / (maxVal - minVal) : 0.5
+      const haloSize = Math.round(40 * (1 + 0.5 * intensity))
+      const markerHtml = makeMarkerIcon(group.operator, group.approximate, 40, intensity)
+      const icon = window.L.divIcon({ html:markerHtml, className:'', iconSize:[haloSize,haloSize], iconAnchor:[haloSize/2,haloSize/2] })
       window.L.marker([group.lat, group.lng], { icon })
         .addTo(map)
         .bindPopup(buildPopupHTML(group), { maxWidth:300, className:'ev-popup' })
