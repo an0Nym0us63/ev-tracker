@@ -168,6 +168,15 @@ export default function Dashboard({ charges, onNavigate }) {
   function togglePeriod(id)  { setActivePeriod(p  => p===id ? null : id) }
   function toggleVehicle(id) { setActiveVehicle(v => v===id ? null : id) }
 
+  // Avg power (kW) from sessions with duration
+  const avgPower = useMemo(() => {
+    const withDur = filtered.filter(c => c.durationMin > 0)
+    if (!withDur.length) return null
+    const totalKwhD = withDur.reduce((s,c) => s+c.kwh, 0)
+    const totalHours = withDur.reduce((s,c) => s+c.durationMin/60, 0)
+    return totalHours > 0 ? (totalKwhD/totalHours).toFixed(1) : null
+  }, [filtered])
+
   // Top provider
   const topProvider = useMemo(() => {
     const map = {}
@@ -195,6 +204,7 @@ export default function Dashboard({ charges, onNavigate }) {
     { val: streak!==null ? `${streak}j` : '—', label:'Depuis dernière charge', color: streak===0?'var(--green)':streak>7?'var(--red)':'var(--muted)' },
     { val: savings > 0 ? `${savings.toFixed(0)} €` : '—', label:'Économies vs thermique', color:'var(--green)' },
     { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
+    { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy. (kWh/h)', color:'var(--accent)', mono:true },
     { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },
   ]
 
