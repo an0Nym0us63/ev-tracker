@@ -23,10 +23,40 @@ export function computeStats(charges, vehicleId = null) {
 export function filterByPeriod(charges, period) {
   if (period === 'all') return charges
   const now = new Date(), cutoff = new Date()
+  if (period === '30d')   cutoff.setDate(now.getDate() - 30)
   if (period === '7d')    cutoff.setDate(now.getDate() - 7)
   if (period === 'month') cutoff.setDate(1)
+  if (period === 'year')  { cutoff.setMonth(0); cutoff.setDate(1) }
   if (period === '3m')    cutoff.setMonth(now.getMonth() - 3)
   return charges.filter(c => new Date(c.date) >= cutoff)
+}
+
+export function getDailyData(charges, days = 30) {
+  const now = new Date()
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(now)
+    d.setDate(now.getDate() - (days - 1 - i))
+    const dateStr = d.toISOString().slice(0,10)
+    const dc = charges.filter(c => c.date === dateStr)
+    return {
+      label: i % 5 === 0 ? `${d.getDate()}/${d.getMonth()+1}` : '',
+      date:  dateStr,
+      mg4:   dc.filter(c=>c.vehicleId==='mg4').reduce((s,c)=>s+c.kwh,0),
+      xpeng: dc.filter(c=>c.vehicleId==='xpeng').reduce((s,c)=>s+c.kwh,0),
+    }
+  })
+}
+
+export function getProviderStats(charges) {
+  const map = {}
+  charges.filter(c=>c.locationId!=='home').forEach(c => {
+    const name = c.provider || 'Inconnu'
+    if (!map[name]) map[name] = { name, kwh:0, sessions:0, cost:0 }
+    map[name].kwh      += c.kwh
+    map[name].sessions += 1
+    map[name].cost     += c.totalCost||0
+  })
+  return Object.values(map).sort((a,b)=>b.kwh-a.kwh)
 }
 
 export function getWeeklyData(charges, weeks = 6) {
