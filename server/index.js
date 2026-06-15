@@ -401,22 +401,35 @@ app.get('/api/logos/:type/:name', (req, res) => {
   const { type, name: rawName } = req.params
   if (!['providers', 'cards'].includes(type)) return res.status(400).end()
 
-  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data')
-  const LOGOS_DIR = path.join(DATA_DIR, 'logos', type)
-  if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true })
+  const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, '../data')
+  const BUNDLED_DIR = path.join(__dirname, '../bundled-logos', type)
 
   const name = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-
   const exts = ['png', 'svg', 'jpg', 'jpeg', 'webp']
+  const mime = { svg:'image/svg+xml', webp:'image/webp', png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg' }
+
+  // 1. Look in volume (user custom logos)
+  const customDir = path.join(DATA_DIR, 'logos', type)
+  if (!fs.existsSync(customDir)) fs.mkdirSync(customDir, { recursive: true })
   for (const ext of exts) {
-    const file = path.join(LOGOS_DIR, `${name}.${ext}`)
+    const file = path.join(customDir, `${name}.${ext}`)
     if (fs.existsSync(file)) {
-      const mime = { svg:'image/svg+xml', webp:'image/webp', png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg' }[ext] || 'image/png'
-      res.setHeader('Content-Type', mime)
+      res.setHeader('Content-Type', mime[ext] || 'image/png')
       res.setHeader('Cache-Control', 'public, max-age=86400')
       return res.sendFile(file)
     }
   }
+
+  // 2. Fallback to bundled logos (in image)
+  for (const ext of exts) {
+    const file = path.join(BUNDLED_DIR, `${name}.${ext}`)
+    if (fs.existsSync(file)) {
+      res.setHeader('Content-Type', mime[ext] || 'image/png')
+      res.setHeader('Cache-Control', 'public, max-age=86400')
+      return res.sendFile(file)
+    }
+  }
+
   res.status(404).end()
 })
 

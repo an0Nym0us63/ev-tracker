@@ -14,8 +14,8 @@ COPY package*.json ./
 RUN npm install --omit=dev
 COPY server/ ./server/
 COPY --from=builder /app/client/dist ./client/dist
-RUN mkdir -p /app/data/logos/providers /app/data/logos/cards
-COPY data/logos/ /app/data/logos/
+RUN mkdir -p /app/bundled-logos/providers /app/bundled-logos/cards
+COPY data/logos/ /app/bundled-logos/
 VOLUME ["/app/data"]
 EXPOSE 3080
 ENV NODE_ENV=production
