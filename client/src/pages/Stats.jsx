@@ -84,13 +84,10 @@ export default function Stats({ charges }) {
     return d.map((row, idx) => {
       let dc
       if (row.date) {
-        // Daily — match by exact date
         dc = filtered.filter(c => c.date === row.date)
       } else if (period === 'all') {
-        // By year — label is "2023", "2024"...
         dc = filtered.filter(c => c.date.startsWith(row.label))
       } else {
-        // By month — label is "janv.", "févr."... match by position in chart
         const now = new Date()
         const monthsBack = d.length - 1 - idx
         const target = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1)
@@ -98,9 +95,11 @@ export default function Stats({ charges }) {
         const m = String(target.getMonth() + 1).padStart(2, '0')
         dc = filtered.filter(c => c.date.startsWith(`${y}-${m}`))
       }
-      const cost = dc.reduce((s,c)=>s+(c.totalCost||0),0)
+      const mg4Cost   = dc.filter(c=>c.vehicleId==='mg4').reduce((s,c)=>s+(c.totalCost||0),0)
+      const xpengCost = dc.filter(c=>c.vehicleId==='xpeng').reduce((s,c)=>s+(c.totalCost||0),0)
+      const cost = mg4Cost + xpengCost
       cum += cost
-      return { ...row, cost: parseFloat(cost.toFixed(2)), cumCost: parseFloat(cum.toFixed(2)) }
+      return { ...row, mg4: parseFloat(mg4Cost.toFixed(2)), xpeng: parseFloat(xpengCost.toFixed(2)), cost: parseFloat(cost.toFixed(2)), cumCost: parseFloat(cum.toFixed(2)) }
     })
   }, [filtered, period])
 
@@ -255,7 +254,8 @@ export default function Stats({ charges }) {
                 <BarChart data={costData} barSize={isDailyChart ? (costData.length>20?5:9) : 20}>
                   <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} interval={isDailyChart?0:'preserveStartEnd'} />
                   <Tooltip content={<Tip />} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
-                  <Bar dataKey="cost" name="Coût" unit=" €" fill="var(--green)" radius={[3,3,0,0]} opacity={0.8} />
+                  <Bar dataKey="mg4"   name="MG4"      unit=" €" fill="var(--mg4)"   radius={[0,0,0,0]} stackId="a" opacity={0.85} />
+                  <Bar dataKey="xpeng" name="Xpeng G6" unit=" €" fill="var(--xpeng)" radius={[3,3,0,0]} stackId="a" opacity={0.85} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
