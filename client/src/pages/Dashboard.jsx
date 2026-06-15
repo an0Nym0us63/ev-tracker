@@ -76,25 +76,7 @@ function ProviderChart({ charges }) {
   return (
     <div className="card" style={{ padding:'14px 16px' }}>
       <div className="section-label">Répartition fournisseurs (externe)</div>
-      {useDonut ? (
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <PieChart width={100} height={100}>
-            <Pie data={data} dataKey="kwh" cx={50} cy={50} innerRadius={28} outerRadius={46} paddingAngle={2} strokeWidth={0}>
-              {data.map((_,i) => <Cell key={i} fill={PROVIDER_COLORS[i%PROVIDER_COLORS.length]} />)}
-            </Pie>
-          </PieChart>
-          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
-            {data.map((d,i) => (
-              <div key={d.name} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <OperatorLogo name={d.name} size={14} />
-                <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
-                <span className="mono" style={{ fontSize:10, color:PROVIDER_COLORS[i%PROVIDER_COLORS.length], fontWeight:600 }}>{Math.round(d.kwh/total*100)}%</span>
-                <span className="mono" style={{ fontSize:10, color:'var(--muted)' }}>{d.kwh.toFixed(0)} kWh</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
+      {false ? null : (
         // Horizontal bar chart for many providers
         <div style={{ display:'flex', flexDirection:'column', gap:7, marginTop:4 }}>
           {data.map((d,i) => {
@@ -167,7 +149,10 @@ export default function Dashboard({ charges, onNavigate }) {
   const avgCost    = stats.count > 0 ? (stats.totalCost/stats.count).toFixed(2) : '—'
   const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
   const avgPrice   = stats.avgPrice > 0 ? stats.avgPrice.toFixed(3) : '—'
-  const streak     = sorted.length ? Math.floor((now-new Date(sorted[0].date+'T00:00:00'))/86400000) : null
+  const lastCharge  = activeVehicle
+    ? sorted.find(c => c.vehicleId === activeVehicle)
+    : sorted[0]
+  const streak = lastCharge ? Math.floor((now-new Date(lastCharge.date+'T00:00:00'))/86400000) : null
   // Savings vs thermal (ref: 7.5L/100km, SP95 1.85€/L, avg EV range ~5km/kWh)
   const thermalCost = stats.totalKwh * 5 * 0.075 * 1.85
   const savings     = thermalCost - stats.totalCost
@@ -184,15 +169,34 @@ export default function Dashboard({ charges, onNavigate }) {
   function togglePeriod(id)  { setActivePeriod(p  => p===id ? null : id) }
   function toggleVehicle(id) { setActiveVehicle(v => v===id ? null : id) }
 
+  // Top provider
+  const topProvider = useMemo(() => {
+    const map = {}
+    filtered.filter(c=>c.locationId!=='home'&&c.provider).forEach(c => {
+      map[c.provider] = (map[c.provider]||0) + 1
+    })
+    const top = Object.entries(map).sort((a,b)=>b[1]-a[1])[0]
+    return top ? `${top[0]} (${top[1]})` : '—'
+  }, [filtered])
+
+  // Most expensive session
+  const maxCost = filtered.length ? Math.max(...filtered.map(c=>c.totalCost||0)).toFixed(2) : '—'
+
   const kpis = [
-    { val:`${extPct}%`,     label:'Recharge externe',    color:'var(--amber)' },
-    { val:`${homePct}%`,    label:'Recharge maison',      color:'var(--green)' },
-    { val:`${avgSession}`,  label:'kWh/session moy.',     color:'var(--mg4)',   mono:true },
-    { val:`${avgCost} €`,   label:'Coût/session moy.',    color:'var(--xpeng)', mono:true },
-    { val:`${maxSession}`,  label:'Max kWh (1 session)',  color:'var(--accent)', mono:true },
-    { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)', mono:true },
+    {
+      // Combined home/ext bar
+      type:'bar',
+      homeKwh: stats.homeKwh, extKwh: stats.extKwh,
+      homePct, extPct,
+      label:'Maison / Externe',
+    },
+    { val:`${avgSession}`,  label:'kWh/session moy.',     color:'var(--mg4)',    mono:true },
+    { val:`${avgCost} €`,   label:'Coût/session moy.',    color:'var(--xpeng)',  mono:true },
+    { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
     { val: streak!==null ? `${streak}j` : '—', label:'Depuis dernière charge', color: streak===0?'var(--green)':streak>7?'var(--red)':'var(--muted)' },
     { val: savings > 0 ? `${savings.toFixed(0)} €` : '—', label:'Économies vs thermique', color:'var(--green)' },
+    { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
+    { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },
   ]
 
   return (
@@ -210,26 +214,26 @@ export default function Dashboard({ charges, onNavigate }) {
         </div>
       </div>
 
-      {/* Period banners */}
-      <div style={{ display:'flex', gap:10, overflowX:'auto', scrollbarWidth:'none', padding:'14px 16px 0' }}>
+      {/* Period banners — 2x2 grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:'14px 16px 0' }}>
         {periodStats.map(p => {
           const active = activePeriod === p.id
           return (
             <div key={p.id} onClick={()=>togglePeriod(p.id)} style={{
-              flexShrink:0, minWidth:148, cursor:'pointer',
-              background: active ? `linear-gradient(135deg,${p.accent}30,${p.accent}18)` : `linear-gradient(135deg,${p.accent}14,${p.accent}08)`,
-              border: active ? `2px solid ${p.accent}` : `1px solid ${p.accent}30`,
-              borderRadius:'var(--r)', padding:'13px 15px',
-              boxShadow: active ? `0 0 20px ${p.accent}35` : 'none',
+              cursor:'pointer',
+              background: active ? `linear-gradient(135deg,${p.accent}30,${p.accent}18)` : `linear-gradient(135deg,${p.accent}12,${p.accent}06)`,
+              border: active ? `2px solid ${p.accent}` : `1px solid ${p.accent}28`,
+              borderRadius:'var(--r)', padding:'13px 14px',
+              boxShadow: active ? `0 0 18px ${p.accent}35` : 'none',
               transition:'all 0.15s',
             }}>
               <div style={{ fontSize:10, color: active?p.accent:'var(--muted)', marginBottom:5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em' }}>{p.label}</div>
-              <div className="mono" style={{ fontSize:24, fontWeight:700, lineHeight:1 }}>
-                {p.stats.totalKwh.toFixed(0)}<span style={{ fontSize:12, color:'var(--muted)', fontWeight:400 }}> kWh</span>
+              <div className="mono" style={{ fontSize:22, fontWeight:700, lineHeight:1 }}>
+                {p.stats.totalKwh.toFixed(0)}<span style={{ fontSize:11, color:'var(--muted)', fontWeight:400 }}> kWh</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginTop:5 }}>
-                <span style={{ fontSize:11, color:'var(--muted)' }}>{p.stats.count} sess.</span>
-                <span className="mono" style={{ fontSize:12, fontWeight:700, color:p.accent }}>{p.stats.totalCost.toFixed(0)} €</span>
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:5, alignItems:'center' }}>
+                <span style={{ fontSize:10, color:'var(--muted)' }}>{p.stats.count} sess.</span>
+                <span className="mono" style={{ fontSize:13, fontWeight:700, color:p.accent }}>{p.stats.totalCost.toFixed(0)} €</span>
               </div>
               {p.stats.avgPrice > 0 && <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>{p.stats.avgPrice.toFixed(3)} €/kWh</div>}
             </div>
@@ -257,10 +261,30 @@ export default function Dashboard({ charges, onNavigate }) {
 
       {/* KPIs grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'10px 16px 0' }}>
-        {kpis.map(k => (
-          <div key={k.label} className="card" style={{ padding:'10px 10px' }}>
-            <div className={k.mono?'mono':''} style={{ fontSize:15, fontWeight:700, color:k.color, lineHeight:1 }}>{k.val}</div>
-            <div style={{ fontSize:8.5, color:'var(--muted)', marginTop:4, lineHeight:1.3 }}>{k.label}</div>
+        {kpis.map((k,i) => (
+          <div key={k.label} className="card" style={{ padding:'10px 10px', gridColumn: k.type==='bar' ? 'span 2' : undefined }}>
+            {k.type === 'bar' ? (
+              <>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{k.homePct}%</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--amber)' }}>{k.extPct}%</span>
+                </div>
+                <div style={{ display:'flex', gap:2, height:6, borderRadius:3, overflow:'hidden' }}>
+                  <div style={{ flex:k.homeKwh||0.001, background:'var(--green)', opacity:.85 }} />
+                  <div style={{ flex:k.extKwh||0.001, background:'var(--amber)', opacity:.85 }} />
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+                  <span style={{ fontSize:8.5, color:'var(--green)' }}>🏠 {k.homeKwh.toFixed(0)} kWh</span>
+                  <span style={{ fontSize:8, color:'var(--muted)' }}>{k.label}</span>
+                  <span style={{ fontSize:8.5, color:'var(--amber)' }}>{k.extKwh.toFixed(0)} kWh 📍</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={k.mono?'mono':''} style={{ fontSize:k.small?11:15, fontWeight:700, color:k.color, lineHeight:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{k.val}</div>
+                <div style={{ fontSize:8.5, color:'var(--muted)', marginTop:4, lineHeight:1.3 }}>{k.label}</div>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -272,17 +296,17 @@ export default function Dashboard({ charges, onNavigate }) {
             <div className="section-label">{chartLabel} — {periodLabel} · {vehicleLabel}</div>
             <ResponsiveContainer width="100%" height={100}>
               {isDailyChart ? (
-                <BarChart data={chartData} barSize={chartData.length > 20 ? 6 : 10} barGap={1}>
-                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} />
+                <BarChart data={chartData} barSize={chartData.length > 20 ? 5 : 9} barGap={1}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} interval={0} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
-                  <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[2,2,0,0]} stackId="a" />
+                  <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[0,0,0,0]} stackId="a" />
                   <Bar dataKey="xpeng" fill="var(--xpeng)" radius={[2,2,0,0]} stackId="a" />
                 </BarChart>
               ) : (
-                <BarChart data={chartData} barSize={18} barGap={3}>
+                <BarChart data={chartData} barSize={20} barGap={3}>
                   <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
-                  <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[3,3,0,0]} stackId="a" />
+                  <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[0,0,0,0]} stackId="a" />
                   <Bar dataKey="xpeng" fill="var(--xpeng)" radius={[3,3,0,0]} stackId="a" />
                 </BarChart>
               )}
