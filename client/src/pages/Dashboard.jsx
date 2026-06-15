@@ -441,7 +441,10 @@ export default function Dashboard({ charges, account, onNavigate, onLogout, them
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:2 }}>
                   <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh} kWh</div>
-                  <div className="mono" style={{ fontSize:11, fontWeight:600, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</div>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+                    <span className="mono" style={{ fontSize:11, fontWeight:600, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</span>
+                    {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:600, color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)', opacity:0.8 }}>{c.fuelSavings >= 0 ? '+' : '-'}{Math.abs(c.fuelSavings).toFixed(0)}€</span>}
+                  </div>
                 </div>
               </div>
             )

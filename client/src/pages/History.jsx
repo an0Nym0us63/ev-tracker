@@ -143,14 +143,10 @@ export default function History({ charges, onEdit }) {
                           {day.getDate()} {day.toLocaleDateString('fr-FR',{month:'short'})}
                         </div>
                         <div className="mono" style={{ fontSize:15, fontWeight:700 }}>{c.kwh} kWh</div>
-                        <div className="mono" style={{ fontSize:12, fontWeight:600, color: isHome ? 'var(--green)' : 'var(--amber)' }}>
-                          {c.totalCost.toFixed(2)} €
+                        <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+                          <span className="mono" style={{ fontSize:12, fontWeight:600, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{c.totalCost.toFixed(2)} €</span>
+                          {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:600, color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)', opacity:0.8 }}>{c.fuelSavings >= 0 ? '+' : '-'}{Math.abs(c.fuelSavings).toFixed(0)}€</span>}
                         </div>
-                        {c.fuelSavings != null && (
-                          <div style={{ fontSize:10, color:'var(--green)', fontWeight:600 }}>
-                            +{c.fuelSavings.toFixed(2)} €
-                          </div>
-                        )}
                       </div>
                     </div>
                   )
