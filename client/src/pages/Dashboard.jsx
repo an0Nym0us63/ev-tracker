@@ -1,10 +1,17 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie } from 'recharts'
 import { computeStats, filterByPeriod, getDailyData, getProviderStats, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
+
+const PERIODS = [
+  { id:'month',  label:'Ce mois',      accent:'#4f8ef7' },
+  { id:'year',   label:'Cette année',  accent:'#7c5cfc' },
+  { id:'30d',    label:'30 jours',     accent:'#22c55e' },
+  { id:'12m',    label:'12 mois',      accent:'#f59e0b' },
+]
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -20,35 +27,16 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-// Horizontal scrollable period banner
-function PeriodBanner({ periods }) {
-  const scrollRef = useRef(null)
-  return (
-    <div ref={scrollRef} style={{ display:'flex', gap:10, overflowX:'auto', scrollbarWidth:'none', padding:'0 16px' }}>
-      {periods.map(({ label, stats, accent }) => (
-        <div key={label} style={{ flexShrink:0, minWidth:160, background:`linear-gradient(135deg,${accent}22,${accent}10)`, border:`1px solid ${accent}40`, borderRadius:'var(--r)', padding:'14px 16px' }}>
-          <div style={{ fontSize:10, color:'var(--muted)', marginBottom:6, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em' }}>{label}</div>
-          <div className="mono" style={{ fontSize:26, fontWeight:700, lineHeight:1, color:'var(--text)' }}>
-            {stats.totalKwh.toFixed(0)}<span style={{ fontSize:13, color:'var(--muted)', fontWeight:400 }}> kWh</span>
-          </div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:6 }}>
-            <span style={{ fontSize:11, color:'var(--muted)' }}>{stats.count} session{stats.count!==1?'s':''}</span>
-            <span className="mono" style={{ fontSize:13, fontWeight:700, color:accent }}>{stats.totalCost.toFixed(0)} €</span>
-          </div>
-          {stats.avgPrice > 0 && (
-            <div style={{ fontSize:10, color:'var(--muted)', marginTop:3 }}>{stats.avgPrice.toFixed(3)} €/kWh moy.</div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// Vehicle card
-function VehicleCard({ v, stats, total }) {
+function VehicleCard({ v, stats, total, selected, onClick }) {
   const pct = total > 0 ? Math.round(stats.totalKwh / total * 100) : 0
+  const isSelected = selected === v.id
   return (
-    <div style={{ flex:1, background:'var(--surface)', border:`1.5px solid ${v.color}33`, borderRadius:'var(--r-sm)', padding:'12px 14px' }}>
+    <div onClick={onClick} style={{
+      flex:1, background:'var(--surface)', borderRadius:'var(--r-sm)', padding:'12px 14px', cursor:'pointer',
+      border: isSelected ? `2px solid ${v.color}` : '1.5px solid var(--border)',
+      boxShadow: isSelected ? `0 0 16px ${v.color}44` : 'none',
+      transition:'all 0.15s',
+    }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
         <span style={{ fontSize:20 }}>{v.emoji}</span>
         <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
@@ -59,40 +47,40 @@ function VehicleCard({ v, stats, total }) {
         <span style={{ fontSize:11, color:'var(--muted)' }}>{stats.count} sessions</span>
         <span className="mono" style={{ fontSize:11, fontWeight:600, color:'var(--green)' }}>{stats.totalCost.toFixed(2)} €</span>
       </div>
-      {/* Mini bar home/ext */}
       {stats.totalKwh > 0 && (
-        <div style={{ marginTop:8, display:'flex', gap:4, alignItems:'center' }}>
-          <div style={{ flex:stats.homeKwh||0.001, height:4, borderRadius:2, background:'var(--green)', opacity:.8 }} />
-          <div style={{ flex:stats.extKwh||0.001, height:4, borderRadius:2, background:'var(--amber)', opacity:.8 }} />
-        </div>
+        <>
+          <div style={{ marginTop:8, display:'flex', gap:4 }}>
+            <div style={{ flex:stats.homeKwh||0.001, height:4, borderRadius:2, background:'var(--green)', opacity:.8 }} />
+            <div style={{ flex:stats.extKwh||0.001, height:4, borderRadius:2, background:'var(--amber)', opacity:.8 }} />
+          </div>
+          <div style={{ display:'flex', gap:10, marginTop:4, fontSize:10, color:'var(--muted)' }}>
+            <span>🏠 {stats.homeKwh.toFixed(0)} kWh</span>
+            <span>📍 {stats.extKwh.toFixed(0)} kWh</span>
+          </div>
+        </>
       )}
-      <div style={{ display:'flex', gap:10, marginTop:4, fontSize:10, color:'var(--muted)' }}>
-        <span>🏠 {stats.homeKwh.toFixed(0)} kWh</span>
-        <span>📍 {stats.extKwh.toFixed(0)} kWh</span>
-      </div>
     </div>
   )
 }
 
-// Provider donut
 function ProviderDonut({ charges }) {
   const data = useMemo(() => getProviderStats(charges).slice(0,6), [charges])
   if (data.length === 0) return null
   const total = data.reduce((s,d)=>s+d.kwh,0)
   return (
     <div className="card" style={{ padding:'14px 16px' }}>
-      <div className="section-label">Répartition fournisseurs (externe)</div>
+      <div className="section-label">Répartition fournisseurs</div>
       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-        <PieChart width={110} height={110}>
-          <Pie data={data} dataKey="kwh" cx={55} cy={55} innerRadius={30} outerRadius={50} paddingAngle={2} strokeWidth={0}>
-            {data.map((_, i) => <Cell key={i} fill={PROVIDER_COLORS[i % PROVIDER_COLORS.length]} />)}
+        <PieChart width={100} height={100}>
+          <Pie data={data} dataKey="kwh" cx={50} cy={50} innerRadius={28} outerRadius={46} paddingAngle={2} strokeWidth={0}>
+            {data.map((_,i) => <Cell key={i} fill={PROVIDER_COLORS[i%PROVIDER_COLORS.length]} />)}
           </Pie>
         </PieChart>
         <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
-          {data.map((d, i) => (
+          {data.map((d,i) => (
             <div key={d.name} style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <OperatorLogo name={d.name} size={16} />
-              <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text)' }}>{d.name}</span>
+              <OperatorLogo name={d.name} size={14} />
+              <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
               <span className="mono" style={{ fontSize:10, color:PROVIDER_COLORS[i%PROVIDER_COLORS.length], fontWeight:600 }}>{Math.round(d.kwh/total*100)}%</span>
               <span className="mono" style={{ fontSize:10, color:'var(--muted)' }}>{d.kwh.toFixed(0)} kWh</span>
             </div>
@@ -104,37 +92,49 @@ function ProviderDonut({ charges }) {
 }
 
 export default function Dashboard({ charges, onNavigate }) {
+  const [activePeriod,  setActivePeriod]  = useState(null) // null = tout
+  const [activeVehicle, setActiveVehicle] = useState(null) // null = tous
+
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
 
-  const month30 = useMemo(() => filterByPeriod(charges, '30d'),   [charges])
-  const monthCal= useMemo(() => filterByPeriod(charges, 'month'), [charges])
-  const year    = useMemo(() => filterByPeriod(charges, 'year'),  [charges])
+  // Stats for each period banner (always unfiltered by vehicle for the banner itself)
+  const periodStats = useMemo(() => {
+    return PERIODS.map(p => ({
+      ...p,
+      stats: computeStats(filterByPeriod(charges, p.id)),
+    }))
+  }, [charges])
 
-  const periods = [
-    { label:'30 derniers jours', stats: computeStats(month30),  accent:'#4f8ef7' },
-    { label:'Ce mois-ci',        stats: computeStats(monthCal), accent:'#7c5cfc' },
-    { label:'Cette année',       stats: computeStats(year),     accent:'#22c55e' },
-  ]
+  // Main filtered dataset — period + vehicle combined
+  const filtered = useMemo(() => {
+    let c = activePeriod ? filterByPeriod(charges, activePeriod) : charges
+    if (activeVehicle) c = c.filter(x => x.vehicleId === activeVehicle)
+    return c
+  }, [charges, activePeriod, activeVehicle])
 
-  const statsMg4   = useMemo(() => computeStats(monthCal, 'mg4'),   [monthCal])
-  const statsXpeng = useMemo(() => computeStats(monthCal, 'xpeng'), [monthCal])
-  const statsAll   = useMemo(() => computeStats(monthCal),          [monthCal])
-  const daily      = useMemo(() => getDailyData(charges, 30),        [charges])
+  const stats      = useMemo(() => computeStats(filtered),         [filtered])
+  const statsMg4   = useMemo(() => computeStats(filtered, 'mg4'),  [filtered])
+  const statsXpeng = useMemo(() => computeStats(filtered, 'xpeng'),[filtered])
+  const daily      = useMemo(() => getDailyData(filtered, 30),     [filtered])
 
   const sorted = useMemo(() => [...charges].sort((a,b)=>b.date.localeCompare(a.date)), [charges])
-  const recent = sorted.slice(0, 8)
+  const recentFiltered = useMemo(() => {
+    let c = sorted
+    if (activePeriod) c = c.filter(x => filterByPeriod([x], activePeriod).length > 0)
+    if (activeVehicle) c = c.filter(x => x.vehicleId === activeVehicle)
+    return c.slice(0, 8)
+  }, [sorted, activePeriod, activeVehicle])
 
-  // Extra KPIs
-  const extPct     = statsAll.totalKwh > 0 ? Math.round(statsAll.extKwh/statsAll.totalKwh*100) : 0
-  const avgSession = statsAll.count > 0 ? (statsAll.totalKwh/statsAll.count).toFixed(1) : '—'
-  const streak = useMemo(() => {
-    // Days since last charge
-    if (!sorted.length) return null
-    const last = new Date(sorted[0].date+'T00:00:00')
-    const diff = Math.floor((new Date()-last)/86400000)
-    return diff
-  }, [sorted])
+  const extPct     = stats.totalKwh > 0 ? Math.round(stats.extKwh/stats.totalKwh*100) : 0
+  const avgSession = stats.count > 0 ? (stats.totalKwh/stats.count).toFixed(1) : '—'
+  const streak = sorted.length ? Math.floor((new Date()-new Date(sorted[0].date+'T00:00:00'))/86400000) : null
+
+  const periodLabel = activePeriod ? PERIODS.find(p=>p.id===activePeriod)?.label : 'Tout'
+  const vehicleLabel = activeVehicle ? VEHICLES[activeVehicle]?.name : 'Tous véhicules'
+
+  function togglePeriod(id)  { setActivePeriod(p  => p===id  ? null : id)  }
+  function toggleVehicle(id) { setActiveVehicle(v => v===id ? null : id) }
 
   return (
     <div className="page fade-up" style={{ paddingBottom:100 }}>
@@ -151,25 +151,56 @@ export default function Dashboard({ charges, onNavigate }) {
         </div>
       </div>
 
-      {/* Period banners — scrollable */}
-      <div style={{ marginTop:14 }}>
-        <PeriodBanner periods={periods} />
+      {/* Period banners — scrollable, selectable */}
+      <div style={{ display:'flex', gap:10, overflowX:'auto', scrollbarWidth:'none', padding:'14px 16px 0' }}>
+        {periodStats.map(p => {
+          const active = activePeriod === p.id
+          return (
+            <div key={p.id} onClick={()=>togglePeriod(p.id)} style={{
+              flexShrink:0, minWidth:155, cursor:'pointer',
+              background: active ? `linear-gradient(135deg,${p.accent}30,${p.accent}18)` : `linear-gradient(135deg,${p.accent}14,${p.accent}08)`,
+              border: active ? `2px solid ${p.accent}` : `1px solid ${p.accent}30`,
+              borderRadius:'var(--r)', padding:'14px 16px',
+              boxShadow: active ? `0 0 20px ${p.accent}35` : 'none',
+              transition:'all 0.15s',
+            }}>
+              <div style={{ fontSize:10, color: active ? p.accent : 'var(--muted)', marginBottom:6, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em' }}>{p.label}</div>
+              <div className="mono" style={{ fontSize:26, fontWeight:700, lineHeight:1 }}>
+                {p.stats.totalKwh.toFixed(0)}<span style={{ fontSize:13, color:'var(--muted)', fontWeight:400 }}> kWh</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
+                <span style={{ fontSize:11, color:'var(--muted)' }}>{p.stats.count} sessions</span>
+                <span className="mono" style={{ fontSize:13, fontWeight:700, color:p.accent }}>{p.stats.totalCost.toFixed(0)} €</span>
+              </div>
+              {p.stats.avgPrice > 0 && <div style={{ fontSize:10, color:'var(--muted)', marginTop:3 }}>{p.stats.avgPrice.toFixed(3)} €/kWh</div>}
+            </div>
+          )
+        })}
       </div>
 
-      {/* Vehicle cards (ce mois) */}
+      {/* Context label */}
+      {(activePeriod || activeVehicle) && (
+        <div style={{ margin:'10px 16px 0', padding:'8px 12px', background:'rgba(79,142,247,0.08)', border:'1px solid rgba(79,142,247,0.2)', borderRadius:'var(--r-sm)', fontSize:12, color:'var(--accent)', fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
+          <span>🔍</span>
+          <span>Filtre : {[periodLabel, vehicleLabel].filter(Boolean).join(' · ')}</span>
+          <button onClick={()=>{setActivePeriod(null);setActiveVehicle(null)}} style={{ marginLeft:'auto', background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:11 }}>✕ Tout</button>
+        </div>
+      )}
+
+      {/* Vehicle cards */}
       <div style={{ margin:'10px 16px 0' }}>
-        <div className="section-label">Véhicules — ce mois</div>
+        <div className="section-label">{`Véhicules — ${periodLabel}`}</div>
         <div style={{ display:'flex', gap:8 }}>
-          <VehicleCard v={VEHICLES.mg4}   stats={statsMg4}   total={statsAll.totalKwh} />
-          <VehicleCard v={VEHICLES.xpeng} stats={statsXpeng} total={statsAll.totalKwh} />
+          <VehicleCard v={VEHICLES.mg4}   stats={statsMg4}   total={stats.totalKwh} selected={activeVehicle} onClick={()=>toggleVehicle('mg4')} />
+          <VehicleCard v={VEHICLES.xpeng} stats={statsXpeng} total={stats.totalKwh} selected={activeVehicle} onClick={()=>toggleVehicle('xpeng')} />
         </div>
       </div>
 
-      {/* Extra KPIs */}
+      {/* KPIs */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, margin:'10px 16px 0' }}>
         {[
-          { val: `${extPct}%`,     label:'Recharge externe', color:'var(--amber)' },
-          { val: `${avgSession}`,  label:'kWh/session moy.',  color:'var(--mg4)', mono:true },
+          { val:`${extPct}%`,    label:'Recharge externe', color:'var(--amber)' },
+          { val:`${avgSession}`, label:'kWh/session moy.',  color:'var(--mg4)', mono:true },
           { val: streak !== null ? `${streak}j` : '—', label:'Depuis dernière charge', color: streak===0?'var(--green)':streak>7?'var(--red)':'var(--muted)' },
         ].map(k => (
           <div key={k.label} className="card" style={{ padding:'11px 12px' }}>
@@ -179,11 +210,11 @@ export default function Dashboard({ charges, onNavigate }) {
         ))}
       </div>
 
-      {/* 30j daily chart */}
-      {charges.length > 0 && (
+      {/* Daily chart */}
+      {filtered.length > 0 && (
         <div style={{ margin:'14px 16px 0' }}>
           <div className="card" style={{ padding:'14px 16px' }}>
-            <div className="section-label">30 derniers jours</div>
+            <div className="section-label">{`30 derniers jours — ${periodLabel} · ${vehicleLabel}`}</div>
             <ResponsiveContainer width="100%" height={80}>
               <BarChart data={daily} barSize={5} barGap={1}>
                 <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} />
@@ -193,7 +224,7 @@ export default function Dashboard({ charges, onNavigate }) {
               </BarChart>
             </ResponsiveContainer>
             <div style={{ display:'flex', gap:14, marginTop:4, fontSize:10, fontWeight:500 }}>
-              {[{c:'var(--mg4)',l:'MG4'},{c:'var(--xpeng)',l:'Xpeng G6'}].map(i => (
+              {[{c:'var(--mg4)',l:'MG4'},{c:'var(--xpeng)',l:'Xpeng G6'}].map(i=>(
                 <div key={i.l} style={{ display:'flex', alignItems:'center', gap:5 }}>
                   <div style={{ width:8, height:8, borderRadius:'50%', background:i.c }} />{i.l}
                 </div>
@@ -204,9 +235,9 @@ export default function Dashboard({ charges, onNavigate }) {
       )}
 
       {/* Provider donut */}
-      {charges.filter(c=>c.locationId!=='home').length > 0 && (
+      {filtered.filter(c=>c.locationId!=='home').length > 0 && (
         <div style={{ margin:'10px 16px 0' }}>
-          <ProviderDonut charges={charges} />
+          <ProviderDonut charges={filtered} />
         </div>
       )}
 
@@ -214,25 +245,27 @@ export default function Dashboard({ charges, onNavigate }) {
       <div style={{ margin:'14px 16px 0' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
           <div className="section-label" style={{ marginBottom:0 }}>Dernières sessions</div>
-          {charges.length > 8 && (
+          {recentFiltered.length >= 8 && (
             <button onClick={()=>onNavigate('history')} style={{ fontSize:12, color:'var(--accent)', fontWeight:600, background:'none', border:'none', cursor:'pointer' }}>Voir tout →</button>
           )}
         </div>
         <div className="card" style={{ padding:'0 16px' }}>
-          {recent.length === 0 ? (
+          {recentFiltered.length === 0 ? (
             <div style={{ padding:'28px 0', textAlign:'center', color:'var(--muted)', fontSize:13 }}>
-              Aucune session encore.
-              <div style={{ marginTop:10 }}>
-                <button onClick={()=>onNavigate('add')} style={{ color:'var(--accent)', background:'none', border:'none', cursor:'pointer', fontWeight:600, fontSize:13 }}>Ajouter la première →</button>
-              </div>
+              Aucune session pour ce filtre.
+              {!activePeriod && !activeVehicle && (
+                <div style={{ marginTop:10 }}>
+                  <button onClick={()=>onNavigate('add')} style={{ color:'var(--accent)', background:'none', border:'none', cursor:'pointer', fontWeight:600, fontSize:13 }}>Ajouter la première →</button>
+                </div>
+              )}
             </div>
-          ) : recent.map((c, idx) => {
+          ) : recentFiltered.map((c, idx) => {
             const v = VEHICLES[c.vehicleId]
             const isHome = c.locationId === 'home'
             const logoName = isHome ? (c.provider||'v2c') : (c.provider||'')
             return (
               <div key={c.id} onClick={()=>onNavigate('edit', c)}
-                style={{ display:'flex', cursor:'pointer', borderBottom: idx < recent.length-1 ? '1px solid var(--border)' : 'none', marginLeft:-16, marginRight:-16 }}>
+                style={{ display:'flex', cursor:'pointer', borderBottom: idx < recentFiltered.length-1 ? '1px solid var(--border)' : 'none', marginLeft:-16, marginRight:-16 }}>
                 <div style={{ width:3, background:v.color, flexShrink:0 }} />
                 <div style={{ width:48, display:'flex', alignItems:'center', justifyContent:'center', padding:'10px 6px', flexShrink:0 }}>
                   <div style={{ width:36, height:36, borderRadius:9, overflow:'hidden', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center' }}>

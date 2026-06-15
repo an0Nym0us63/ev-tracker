@@ -24,6 +24,7 @@ export function filterByPeriod(charges, period) {
   if (period === 'all') return charges
   const now = new Date(), cutoff = new Date()
   if (period === '30d')   cutoff.setDate(now.getDate() - 30)
+  if (period === '12m')   cutoff.setMonth(now.getMonth() - 12)
   if (period === '7d')    cutoff.setDate(now.getDate() - 7)
   if (period === 'month') cutoff.setDate(1)
   if (period === 'year')  { cutoff.setMonth(0); cutoff.setDate(1) }
