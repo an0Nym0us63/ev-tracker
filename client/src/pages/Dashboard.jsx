@@ -153,9 +153,8 @@ export default function Dashboard({ charges, onNavigate }) {
     ? sorted.find(c => c.vehicleId === activeVehicle)
     : sorted[0]
   const streak = lastCharge ? Math.floor((now-new Date(lastCharge.date+'T00:00:00'))/86400000) : null
-  // Savings vs thermal (ref: 7.5L/100km, SP95 1.85€/L, avg EV range ~5km/kWh)
-  const thermalCost = stats.totalKwh * 5 * 0.075 * 1.85
-  const savings     = thermalCost - stats.totalCost
+  // Savings from DB (computed at save time with user's fuel price)
+  const savings = filtered.reduce((s,c) => s + (c.fuelSavings||0), 0)
 
   const periodLabel  = activePeriod ? PERIODS.find(p=>p.id===activePeriod)?.label : 'Tout'
   const vehicleLabel = activeVehicle ? VEHICLES[activeVehicle]?.name : 'Tous véhicules'

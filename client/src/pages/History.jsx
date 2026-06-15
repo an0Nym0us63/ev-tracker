@@ -146,6 +146,11 @@ export default function History({ charges, onEdit }) {
                         <div className="mono" style={{ fontSize:12, fontWeight:600, color: isHome ? 'var(--green)' : 'var(--amber)' }}>
                           {c.totalCost.toFixed(2)} €
                         </div>
+                        {c.fuelSavings != null && (
+                          <div style={{ fontSize:10, color:'var(--green)', fontWeight:600 }}>
+                            +{c.fuelSavings.toFixed(2)} €
+                          </div>
+                        )}
                       </div>
                     </div>
                   )

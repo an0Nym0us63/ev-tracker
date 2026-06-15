@@ -89,6 +89,43 @@ db.exec(`
   )
 `)
 
+// Migration: add fuel_savings column
+try {
+  db.exec('ALTER TABLE charges ADD COLUMN fuel_savings REAL')
+} catch(e) {} // already exists
+
+// Migration: add fuel_price setting
+try {
+  db.exec('ALTER TABLE settings ADD COLUMN fuel_price REAL NOT NULL DEFAULT 1.85')
+} catch(e) {}
+
+// Vehicle consumption references (kWh/100km consumed, L/100km thermal, fuel type)
+const VEHICLE_REF = {
+  mg4:   { kwhPer100: 14.5, thermalL100: 6.0 },
+  xpeng: { kwhPer100: 16.0, thermalL100: 7.5 },
+}
+
+function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
+  const ref = VEHICLE_REF[vehicleId]
+  if (!ref || !kwh) return null
+  const km = kwh / ref.kwhPer100 * 100
+  const thermalCost = km * ref.thermalL100 / 100 * fuelPrice
+  return parseFloat((thermalCost - totalCost).toFixed(2))
+}
+global.calcSavings = calcSavings
+global.VEHICLE_REF = VEHICLE_REF
+
+// Migration: backfill fuel_savings for existing charges using default price 1.85
+const chargesToFill = db.prepare("SELECT id, vehicle_id, kwh, total_cost FROM charges WHERE fuel_savings IS NULL").all()
+const updateSavings = db.prepare("UPDATE charges SET fuel_savings = ? WHERE id = ?")
+const fillTx = db.transaction(() => {
+  for (const c of chargesToFill) {
+    const s = calcSavings(c.vehicle_id, c.kwh, c.total_cost, 1.85)
+    if (s !== null) updateSavings.run(s, c.id)
+  }
+})
+try { fillTx(); console.log(`[db] backfilled savings for ${chargesToFill.length} charges`) } catch(e) { console.error('[db] savings backfill error:', e.message) }
+
 // Migration: seed favorite_locations from existing external charges
 const seedFavs = db.prepare(`
   INSERT OR IGNORE INTO favorite_locations (account_id, label, provider, location_id, lat, lng, ocm_id, operator, power_kw, connector_types, use_count, last_used)

@@ -237,6 +237,11 @@ app.post('/api/charges', requireAuth, (req, res) => {
   `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
+  // Compute fuel savings
+  const settings201 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)
+  const fuelPrice201 = settings201?.fuel_price || 1.85
+  const savings201 = global.calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice201)
+  if (savings201 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings201, result.lastInsertRowid)
   recalcFavorites(req.user.id)
   res.status(201).json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(result.lastInsertRowid)))
 })
@@ -251,6 +256,10 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
   `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, req.params.id, req.user.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
+  const settings204 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)
+  const fuelPrice204 = settings204?.fuel_price || 1.85
+  const savings204 = global.calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice204)
+  if (savings204 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings204, req.params.id)
   recalcFavorites(req.user.id)
   res.json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(req.params.id)))
 })
@@ -281,7 +290,7 @@ function saveList(accountId, type, value) {
 
 function toClient(c) {
   return {
-    id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id,
+    id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id, fuelSavings: c.fuel_savings,
     locationName: c.location_name, provider: c.provider, card: c.card,
     date: c.date, kwh: c.kwh, totalCost: c.total_cost,
     durationMin: c.duration_min, odometer: c.odometer, notes: c.notes,
