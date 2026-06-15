@@ -76,7 +76,6 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
   const [totalCost,    setTotalCost]    = useState(editCharge?.totalCost?.toString() || '')
   const [hours,        setHours]        = useState(editCharge ? Math.floor((editCharge.durationMin||0)/60).toString() : '')
   const [minutes,      setMinutes]      = useState(editCharge ? ((editCharge.durationMin||0)%60).toString() : '')
-  const [odometer,     setOdometer]     = useState(editCharge?.odometer?.toString()  || '')
   const [notes,        setNotes]        = useState(editCharge?.notes || '')
   const [errors,       setErrors]       = useState({})
 
@@ -156,7 +155,6 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
       card: card.trim(),
       date, kwh: kwhNum, totalCost: costNum,
       durationMin: durationMin || null,
-      odometer: odometer ? parseInt(odometer) : null,
       notes: notes.trim(),
       lat:                 gpsLocation?.lat  || null,
       lng:                 gpsLocation?.lng  || null,
@@ -296,11 +294,6 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
             <span className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--green)' }}>{pricePerKwh.toFixed(4)} €/kWh</span>
           </div>
         )}
-
-        {/* Kilométrage */}
-        <Field label="Kilométrage (optionnel)" hint="Compteur au moment de brancher — calcul conso réelle">
-          <NumInput value={odometer} onChange={setOdometer} placeholder="18 420" unit="km" />
-        </Field>
 
         {/* Notes */}
         <Field label="Notes (optionnel)">

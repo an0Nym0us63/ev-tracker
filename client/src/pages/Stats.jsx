@@ -32,7 +32,6 @@ export default function Stats({ charges }) {
     { name:'Externe', value:stats.extKwh, color:'var(--amber)' },
   ].filter(d => d.value > 0)
 
-  const consoL100 = stats.consoKwh100 ? stats.consoKwh100 * 0.1 : null
 
   return (
     <div className="page fade-up">

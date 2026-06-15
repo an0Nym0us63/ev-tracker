@@ -1,6 +1,6 @@
 export const VEHICLES = {
-  mg4:   { id: 'mg4',   name: 'MG4',      color: 'var(--mg4)',   dimColor: 'var(--mg4-dim)',   emoji: '🚗', thermalRef: 6.5 },
-  xpeng: { id: 'xpeng', name: 'Xpeng G6', color: 'var(--xpeng)', dimColor: 'var(--xpeng-dim)', emoji: '🚙', thermalRef: 7.0 },
+  mg4:   { id: 'mg4',   name: 'MG4',      color: 'var(--mg4)',   dimColor: 'var(--mg4-dim)',   emoji: '🚗' },
+  xpeng: { id: 'xpeng', name: 'Xpeng G6', color: 'var(--xpeng)', dimColor: 'var(--xpeng-dim)', emoji: '🚙' },
 }
 
 export const LOCATIONS = {
@@ -17,16 +17,7 @@ export function computeStats(charges, vehicleId = null) {
   const avgPrice  = totalKwh > 0 ? totalCost / totalKwh : 0
   const homeKwh   = f.filter(c => c.locationId === 'home').reduce((s, c) => s + c.kwh, 0)
   const extKwh    = f.filter(c => c.locationId !== 'home').reduce((s, c) => s + c.kwh, 0)
-
-  const withOdo = f.filter(c => c.odometer != null).sort((a, b) => a.date.localeCompare(b.date))
-  let consoKwh100 = null
-  if (withOdo.length >= 2) {
-    const first = withOdo[0], last = withOdo[withOdo.length - 1]
-    const km  = last.odometer - first.odometer
-    const kwh = f.filter(c => c.date >= first.date && c.date <= last.date).reduce((s, c) => s + c.kwh, 0)
-    if (km > 0) consoKwh100 = (kwh / km) * 100
-  }
-  return { totalKwh, totalCost, count, avgPrice, homeKwh, extKwh, consoKwh100 }
+  return { totalKwh, totalCost, count, avgPrice, homeKwh, extKwh }
 }
 
 export function filterByPeriod(charges, period) {
