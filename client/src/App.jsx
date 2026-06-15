@@ -14,8 +14,6 @@ import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
 
 function Toast({ msg, color }) {
-  const { pulling, progress } = usePullToRefresh(reload)
-
   return (
     <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'var(--surface2)', border:`1px solid ${color}`, color, fontWeight:600, fontSize:13, padding:'10px 20px', borderRadius:24, boxShadow:'0 8px 32px rgba(0,0,0,0.4)', zIndex:200, whiteSpace:'nowrap', animation:'fadeUp 0.2s ease' }}>
       {msg}
@@ -99,17 +97,17 @@ export default function App() {
         setCharges(prev => prev.map(c => c.id === updated.id ? updated : c))
         apiGetLists().then(setLists)
         setEditCharge(null)
-        showToast('Session mise à jour ✓')
         window.scrollTo({ top:0, behavior:'instant' })
         setPage('history')
+        setTimeout(() => showToast('Session mise à jour ✓'), 100)
       } else {
         const created = await apiAddCharge(data)
         setCharges(prev => [created, ...prev])
         apiGetLists().then(setLists)
         setEditCharge(null)
-        showToast('Session enregistrée ✓')
         window.scrollTo({ top:0, behavior:'instant' })
         setPage('home')
+        setTimeout(() => showToast('Session enregistrée ✓'), 100)
       }
     } catch(e) {
       console.error('[handleSave]', e)
