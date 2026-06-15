@@ -253,11 +253,15 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
             <LocationPicker value={gpsLocation} onChange={setGpsLocation} />
             {/* OCM provider badge */}
             {isOcm && gpsLocation.operator && (
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:8, padding:'8px 12px', background:'var(--surface2)', borderRadius:'var(--r-sm)', border:'1px solid var(--border)' }}>
-                <OperatorLogo name={gpsLocation.operator} size={20} />
-                <span style={{ fontSize:12, fontWeight:600 }}>{gpsLocation.operator}</span>
-                {gpsLocation.powerKw && <span style={{ fontSize:11, color:'var(--mg4)', fontFamily:"'JetBrains Mono',monospace" }}>{gpsLocation.powerKw} kW</span>}
-                <span style={{ fontSize:10, color:'var(--green)', marginLeft:'auto' }}>Fournisseur auto ✓</span>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:8, padding:'10px 12px', background:'var(--surface2)', borderRadius:'var(--r-sm)', border:'1px solid var(--border)' }}>
+                <div style={{ width:36, height:36, borderRadius:9, overflow:'hidden', background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <OperatorLogo name={gpsLocation.operator} size={36} style={{ width:36, height:36, objectFit:'cover', borderRadius:9 }} />
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600 }}>{gpsLocation.operator}</div>
+                  {gpsLocation.powerKw && <div style={{ fontSize:11, color:'var(--mg4)', fontFamily:"'JetBrains Mono',monospace", marginTop:1 }}>{gpsLocation.powerKw} kW</div>}
+                </div>
+                <span style={{ fontSize:10, color:'var(--green)', fontWeight:600, flexShrink:0 }}>Auto ✓</span>
               </div>
             )}
           </Field>
