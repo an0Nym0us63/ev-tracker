@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
 import { VERSION } from '../version.js'
+import ImportCSV from '../components/ImportCSV.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 
 function Field({ label, children, hint }) {
@@ -222,6 +223,12 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
         <button onClick={onLogout} style={{ background:'none', color:'var(--red)', fontSize:14, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'14px 16px', cursor:'pointer' }}>
           Se déconnecter
         </button>
+
+        {/* Import */}
+        <div>
+          <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:8 }}>Import</div>
+          <ImportCSV onDone={() => window.location.reload()} />
+        </div>
 
         <div style={{ textAlign:'center', paddingBottom:8, display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
           <AppLogo size={48} style={{ opacity:0.7 }} />

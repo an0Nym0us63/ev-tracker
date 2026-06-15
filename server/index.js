@@ -339,6 +339,61 @@ app.delete('/api/favorites/:id', requireAuth, (req, res) => {
   res.json({ ok: true })
 })
 
+// ─── CSV Import ──────────────────────────────────────────────────────────────
+
+app.post('/api/import/charges', requireAuth, (req, res) => {
+  const { rows } = req.body
+  if (!Array.isArray(rows) || rows.length === 0)
+    return res.status(400).json({ error: 'Aucune ligne' })
+
+  const insert = db.prepare(`
+    INSERT INTO charges
+      (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh, total_cost, duration_min, source)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+  `)
+
+  const errors = []
+  let imported = 0
+
+  const run = db.transaction(() => {
+    for (const r of rows) {
+      try {
+        // Basic validation
+        if (!r.date || !r.vehicleId || !r.kwh) throw new Error('Champs requis manquants')
+        const kwh = parseFloat(r.kwh)
+        const cost = parseFloat(r.totalCost ?? 0)
+        const dur  = r.durationMin ? parseInt(r.durationMin) : null
+        if (isNaN(kwh) || kwh <= 0) throw new Error(`kWh invalide: ${r.kwh}`)
+
+        insert.run(
+          req.user.id,
+          r.vehicleId || 'mg4',
+          r.locationId || 'home',
+          r.locationName || (r.locationId === 'home' ? 'Maison' : 'Externe'),
+          r.provider || null,
+          r.card || null,
+          r.date,
+          kwh,
+          isNaN(cost) ? 0 : cost,
+          dur,
+          'import'
+        )
+        imported++
+      } catch(e) {
+        errors.push({ row: r, error: e.message })
+      }
+    }
+  })
+
+  try {
+    run()
+    recalcFavorites(req.user.id)
+    res.json({ imported, errors })
+  } catch(e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ─── Operator logos ──────────────────────────────────────────────────────────
 
 app.get('/api/logos/:name', (req, res) => {

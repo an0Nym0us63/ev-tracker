@@ -69,3 +69,6 @@ export async function apiGeocode(q) {
 export async function apiGetFavorites()    { return req('GET', '/api/favorites') }
 export async function apiBumpFavorite(f)   { return req('POST', '/api/favorites/bump', f) }
 export async function apiDeleteFavorite(id){ return req('DELETE', `/api/favorites/${id}`) }
+
+// ─── Import ───────────────────────────────────────────────────────────────────
+export async function apiImportCharges(rows) { return req('POST', '/api/import/charges', { rows }) }
