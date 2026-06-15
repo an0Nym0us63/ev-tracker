@@ -29,7 +29,7 @@ export default function OperatorLogo({ name = '', size = 20, style = {} }) {
 
   return (
     <img
-      src={`/api/logos/${encodeURIComponent(toLogoName(name))}`}
+      src={`/api/logos/providers/${encodeURIComponent(toLogoName(name))}`}
       alt={name}
       onError={() => setFailed(true)}
       style={{

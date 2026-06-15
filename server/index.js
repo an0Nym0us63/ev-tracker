@@ -396,20 +396,22 @@ app.post('/api/import/charges', requireAuth, (req, res) => {
 
 // ─── Operator logos ──────────────────────────────────────────────────────────
 
-app.get('/api/logos/:name', (req, res) => {
-  const LOGOS_DIR = path.join(process.env.DATA_DIR || path.join(__dirname, '../data'), 'logos')
+// /api/logos/providers/:name  or  /api/logos/cards/:name
+app.get('/api/logos/:type/:name', (req, res) => {
+  const { type, name: rawName } = req.params
+  if (!['providers', 'cards'].includes(type)) return res.status(400).end()
+
+  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data')
+  const LOGOS_DIR = path.join(DATA_DIR, 'logos', type)
   if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true })
 
-  const name = req.params.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+  const name = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 
   const exts = ['png', 'svg', 'jpg', 'jpeg', 'webp']
   for (const ext of exts) {
     const file = path.join(LOGOS_DIR, `${name}.${ext}`)
     if (fs.existsSync(file)) {
-      const mime = { svg: 'image/svg+xml', webp: 'image/webp', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' }[ext] || 'image/png'
+      const mime = { svg:'image/svg+xml', webp:'image/webp', png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg' }[ext] || 'image/png'
       res.setHeader('Content-Type', mime)
       res.setHeader('Cache-Control', 'public, max-age=86400')
       return res.sendFile(file)
@@ -417,6 +419,9 @@ app.get('/api/logos/:name', (req, res) => {
   }
   res.status(404).end()
 })
+
+// Legacy route kept for compatibility
+app.get('/api/logos/:name', (req, res) => res.redirect(`/api/logos/providers/${req.params.name}`))
 
 // ─── Static ───────────────────────────────────────────────────────────────────
 

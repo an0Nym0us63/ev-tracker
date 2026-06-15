@@ -98,7 +98,7 @@ function makeMarkerIcon(operator, approximate, size=36) {
 
   // Try logo image, fallback to emoji
   const inner = name
-    ? `<img src="/api/logos/${name}" style="width:${size-10}px;height:${size-10}px;object-fit:contain;border-radius:4px"
+    ? `<img src="/api/logos/providers/${name}" style="width:${size-10}px;height:${size-10}px;object-fit:contain;border-radius:4px"
         onerror="this.style.display='none';this.nextSibling.style.display='flex'"
         /><span style="display:none;font-size:${size*0.4}px;line-height:1">${emoji}</span>`
     : `<span style="font-size:${size*0.4}px;line-height:1">${emoji}</span>`
