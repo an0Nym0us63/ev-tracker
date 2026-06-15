@@ -13,7 +13,7 @@ function parseCSV(text) {
   const lines = normalized.trim().split('\n').filter(Boolean)
   if (lines.length < 2) throw new Error('CSV vide ou sans données')
   const sep = lines[0].includes(';') ? ';' : ','
-  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, ''))
   return lines.slice(1).map((line, idx) => {
     const vals = line.split(sep).map(v => v.trim().replace(/^"|"$/g, ''))
     const row = {}
