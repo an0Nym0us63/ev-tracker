@@ -208,6 +208,18 @@ export default function Stats({ charges }) {
                     <div style={{ height:'100%', background:v.color, width:`${(s.totalKwh/statsAll.totalKwh*100).toFixed(0)}%`, borderRadius:3 }} />
                   </div>
                 )}
+                {dcSpeedPerVehicle[v.id] && (
+                  <div style={{ marginTop:8, display:'flex', gap:6 }}>
+                    <div style={{ flex:1, background:'rgba(251,191,36,0.08)', borderRadius:6, padding:'5px 8px' }}>
+                      <div className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{dcSpeedPerVehicle[v.id]} kWh/min</div>
+                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:1 }}>Vitesse DC 📍</div>
+                    </div>
+                    <div style={{ flex:1, background:'rgba(251,191,36,0.05)', borderRadius:6, padding:'5px 8px' }}>
+                      <div className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{(parseFloat(dcSpeedPerVehicle[v.id])*60).toFixed(1)} kW</div>
+                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:1 }}>Puissance moy.</div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
