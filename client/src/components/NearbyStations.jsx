@@ -23,16 +23,31 @@ export default function NearbyStations({ onPick, settings }) {
     setUserPos({ lat, lng })
     try {
       const results = await apiOcmSearch({ lat, lng })
+      // Server returns normalized objects: { id, name, lat, lng, operator, power, connectorTypes, totalPoints }
+      const normalized = results.map(s => ({
+        _isHome: false,
+        _id: s.id,
+        _name: s.name,
+        _lat: s.lat,
+        _lng: s.lng,
+        _operator: s.operator || s.network || '',
+        _power: s.power,
+        _connectorTypes: s.connectorTypes || [],
+        _totalPoints: s.totalPoints,
+      }))
+
       const withHome = settings?.homeLat ? [{
         _isHome: true,
-        AddressInfo: { Title: settings.homeLabel || 'Domicile', Latitude: settings.homeLat, Longitude: settings.homeLng },
-        Connections: [], OperatorInfo: null,
-      }, ...results] : results
+        _name: settings.homeLabel || 'Domicile',
+        _lat: settings.homeLat,
+        _lng: settings.homeLng,
+        _operator: null, _power: null, _connectorTypes: [], _totalPoints: null,
+      }, ...normalized] : normalized
 
-      const sorted = withHome.map(s => ({
-        ...s,
-        _dist: distanceKm(lat, lng, s.AddressInfo.Latitude, s.AddressInfo.Longitude)
-      })).sort((a,b) => a._dist - b._dist)
+      const sorted = withHome
+        .filter(s => s._lat && s._lng)
+        .map(s => ({ ...s, _dist: distanceKm(lat, lng, s._lat, s._lng) }))
+        .sort((a,b) => a._dist - b._dist)
 
       setStations(sorted)
       setState('results')
@@ -66,11 +81,9 @@ export default function NearbyStations({ onPick, settings }) {
 
   function pickStation(s) {
     if (s._isHome) {
-      onPick({ lat: s.AddressInfo.Latitude, lng: s.AddressInfo.Longitude, label: s.AddressInfo.Title, approximate: false, ocmId: null, operator: null, powerKw: null, connectorTypes: [], _isHome: true })
+      onPick({ lat: s._lat, lng: s._lng, label: s._name, approximate: false, ocmId: null, operator: null, powerKw: null, connectorTypes: [], _isHome: true })
     } else {
-      const maxPwr = s.Connections?.reduce((m,c)=>Math.max(m,c.PowerKW||0),0) || null
-      const connTypes = [...new Set((s.Connections||[]).map(c=>c.ConnectionType?.Title).filter(Boolean))]
-      onPick({ lat: s.AddressInfo.Latitude, lng: s.AddressInfo.Longitude, label: s.AddressInfo.Title, approximate: false, ocmId: s.ID?.toString(), operator: s.OperatorInfo?.Title||null, powerKw: maxPwr, connectorTypes: connTypes })
+      onPick({ lat: s._lat, lng: s._lng, label: s._name, approximate: false, ocmId: s._id?.toString(), operator: s._operator||null, powerKw: s._power, connectorTypes: s._connectorTypes })
     }
     setState('idle')
   }
@@ -116,11 +129,11 @@ export default function NearbyStations({ onPick, settings }) {
             </div>
             <div style={{ overflowY:'auto', flex:1, paddingBottom:32 }}>
               {filtered.map((s, i) => {
-                const title    = s.AddressInfo.Title
-                const operator = s._isHome ? null : (s.OperatorInfo?.Title||null)
-                const maxPwr   = s._isHome ? null : (s.Connections?.reduce((m,c)=>Math.max(m,c.PowerKW||0),0)||null)
-                const connTypes= s._isHome ? [] : [...new Set((s.Connections||[]).map(c=>c.ConnectionType?.Title).filter(Boolean))]
-                const nbPts    = s._isHome ? null : (s.Connections?.length||null)
+                const title    = s._name
+                const operator = s._isHome ? null : s._operator
+                const maxPwr   = s._isHome ? null : s._power
+                const connTypes= s._isHome ? [] : (s._connectorTypes||[])
+                const nbPts    = s._isHome ? null : s._totalPoints
                 return (
                   <div key={i} onClick={()=>pickStation(s)} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid var(--border)', cursor:'pointer' }}
                     onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'}
