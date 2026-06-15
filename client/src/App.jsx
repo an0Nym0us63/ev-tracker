@@ -14,11 +14,7 @@ import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
 
 function Toast({ msg, color }) {
-  const { pulling, progress } = usePullToRefresh(() => {
-    loadCharges()
-    loadLists()
-    loadSettings()
-  })
+  const { pulling, progress } = usePullToRefresh(reload)
 
   return (
     <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'var(--surface2)', border:`1px solid ${color}`, color, fontWeight:600, fontSize:13, padding:'10px 20px', borderRadius:24, boxShadow:'0 8px 32px rgba(0,0,0,0.4)', zIndex:200, whiteSpace:'nowrap', animation:'fadeUp 0.2s ease' }}>
@@ -46,6 +42,13 @@ export default function App() {
   const [page,       setPage]       = useState('home')
   const [editCharge, setEditCharge] = useState(null)
   const [toast,      setToast]      = useState(null)
+
+  const reload = useCallback(async () => {
+    try {
+      const [ch, li, st] = await Promise.all([apiGetCharges(), apiGetLists(), apiGetSettings()])
+      setCharges(ch); setLists(li); setSettings(st)
+    } catch(e) { console.error('reload error', e) }
+  }, [])
 
   useEffect(() => {
     async function init() {
