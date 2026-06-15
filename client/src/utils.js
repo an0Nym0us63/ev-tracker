@@ -32,20 +32,69 @@ export function filterByPeriod(charges, period) {
   return charges.filter(c => new Date(c.date) >= cutoff)
 }
 
-export function getDailyData(charges, days = 30) {
+export function getChartData(charges, period) {
   const now = new Date()
+
+  // By year (all time)
+  if (!period || period === 'all') {
+    if (!charges.length) return []
+    const years = {}
+    charges.forEach(c => {
+      const y = c.date.slice(0,4)
+      if (!years[y]) years[y] = { label:y, mg4:0, xpeng:0 }
+      years[y][c.vehicleId] = (years[y][c.vehicleId]||0) + c.kwh
+    })
+    return Object.values(years).sort((a,b)=>a.label.localeCompare(b.label))
+  }
+
+  // By month (year or 12m)
+  if (period === 'year' || period === '12m') {
+    const months = period === '12m' ? 12 : now.getMonth() + 1
+    const startYear = period === '12m' ? null : now.getFullYear()
+    return Array.from({ length: months }, (_, i) => {
+      let d
+      if (period === '12m') {
+        d = new Date(now.getFullYear(), now.getMonth() - (months-1-i), 1)
+      } else {
+        d = new Date(now.getFullYear(), i, 1)
+      }
+      const y = d.getFullYear(), m = d.getMonth()
+      const mc = charges.filter(c => {
+        const cd = new Date(c.date)
+        return cd.getFullYear()===y && cd.getMonth()===m
+      })
+      return {
+        label: d.toLocaleDateString('fr-FR',{month:'short', year: period==='12m'&&d.getFullYear()!==now.getFullYear()?'2-digit':undefined}),
+        mg4:   mc.filter(c=>c.vehicleId==='mg4').reduce((s,c)=>s+c.kwh,0),
+        xpeng: mc.filter(c=>c.vehicleId==='xpeng').reduce((s,c)=>s+c.kwh,0),
+      }
+    })
+  }
+
+  // By day (month or 30d)
+  const days = period === '30d' ? 30 : new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()
+  const startDate = period === '30d'
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate()-29)
+    : new Date(now.getFullYear(), now.getMonth(), 1)
+
   return Array.from({ length: days }, (_, i) => {
-    const d = new Date(now)
-    d.setDate(now.getDate() - (days - 1 - i))
+    const d = new Date(startDate)
+    d.setDate(startDate.getDate() + i)
+    if (d > now) return null
     const dateStr = d.toISOString().slice(0,10)
     const dc = charges.filter(c => c.date === dateStr)
+    const showLabel = days <= 31 && (i === 0 || i === days-1 || d.getDate() % 5 === 1)
     return {
-      label: i % 5 === 0 ? `${d.getDate()}/${d.getMonth()+1}` : '',
-      date:  dateStr,
+      label: showLabel ? `${d.getDate()}/${d.getMonth()+1}` : '',
+      date: dateStr,
       mg4:   dc.filter(c=>c.vehicleId==='mg4').reduce((s,c)=>s+c.kwh,0),
       xpeng: dc.filter(c=>c.vehicleId==='xpeng').reduce((s,c)=>s+c.kwh,0),
     }
-  })
+  }).filter(Boolean)
+}
+
+export function getDailyData(charges, days = 30) {
+  return getChartData(charges, '30d')
 }
 
 export function getProviderStats(charges) {

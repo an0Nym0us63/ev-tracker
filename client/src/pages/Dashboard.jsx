@@ -1,61 +1,65 @@
 import React, { useMemo, useState } from 'react'
-import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie } from 'recharts'
-import { computeStats, filterByPeriod, getDailyData, getProviderStats, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie, AreaChart, Area, YAxis } from 'recharts'
+import { computeStats, filterByPeriod, getChartData, getProviderStats, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
 const PERIODS = [
-  { id:'month',  label:'Ce mois',      accent:'#4f8ef7' },
-  { id:'year',   label:'Cette année',  accent:'#7c5cfc' },
-  { id:'30d',    label:'30 jours',     accent:'#22c55e' },
-  { id:'12m',    label:'12 mois',      accent:'#f59e0b' },
+  { id:'month', label:'Ce mois',     accent:'#4f8ef7' },
+  { id:'year',  label:'Cette année', accent:'#7c5cfc' },
+  { id:'30d',   label:'30 jours',    accent:'#22c55e' },
+  { id:'12m',   label:'12 mois',     accent:'#f59e0b' },
 ]
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
+  const total = payload.reduce((s,p)=>s+(p.value||0),0)
   return (
     <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:11 }}>
       <div style={{ color:'var(--muted)', marginBottom:4 }}>{label}</div>
       {payload.map(p => p.value > 0 && (
-        <div key={p.dataKey} style={{ color:p.fill, fontWeight:600 }}>
+        <div key={p.dataKey} style={{ color:p.fill||p.stroke, fontWeight:600 }}>
           {p.dataKey==='mg4'?'MG4':'Xpeng G6'}: {p.value.toFixed(1)} kWh
         </div>
       ))}
+      {payload.length > 1 && total > 0 && <div style={{ color:'var(--text)', fontWeight:700, marginTop:3, borderTop:'1px solid var(--border)', paddingTop:3 }}>Total: {total.toFixed(1)} kWh</div>}
     </div>
   )
 }
 
-function VehicleCard({ v, stats, total, selected, onClick }) {
-  const pct = total > 0 ? Math.round(stats.totalKwh / total * 100) : 0
+function VehicleCard({ v, stats, allStats, selected, onClick }) {
   const isSelected = selected === v.id
+  const isOtherSelected = selected && selected !== v.id
+  const pct = allStats.totalKwh > 0 ? Math.round(stats.totalKwh / allStats.totalKwh * 100) : 0
   return (
     <div onClick={onClick} style={{
       flex:1, background:'var(--surface)', borderRadius:'var(--r-sm)', padding:'12px 14px', cursor:'pointer',
       border: isSelected ? `2px solid ${v.color}` : '1.5px solid var(--border)',
-      boxShadow: isSelected ? `0 0 16px ${v.color}44` : 'none',
+      boxShadow: isSelected ? `0 0 18px ${v.color}44` : 'none',
+      opacity: isOtherSelected ? 0.55 : 1,
       transition:'all 0.15s',
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-        <span style={{ fontSize:20 }}>{v.emoji}</span>
-        <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
+        <span style={{ fontSize:18 }}>{v.emoji}</span>
+        <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
         <span style={{ marginLeft:'auto', fontSize:11, fontWeight:600, color:v.color, background:`${v.color}18`, padding:'2px 7px', borderRadius:20 }}>{pct}%</span>
       </div>
-      <div className="mono" style={{ fontSize:22, fontWeight:700 }}>{stats.totalKwh.toFixed(0)}<span style={{ fontSize:12, color:'var(--muted)', fontWeight:400 }}> kWh</span></div>
+      <div className="mono" style={{ fontSize:20, fontWeight:700 }}>{stats.totalKwh.toFixed(0)}<span style={{ fontSize:11, color:'var(--muted)', fontWeight:400 }}> kWh</span></div>
       <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-        <span style={{ fontSize:11, color:'var(--muted)' }}>{stats.count} sessions</span>
+        <span style={{ fontSize:11, color:'var(--muted)' }}>{stats.count} sess.</span>
         <span className="mono" style={{ fontSize:11, fontWeight:600, color:'var(--green)' }}>{stats.totalCost.toFixed(2)} €</span>
       </div>
       {stats.totalKwh > 0 && (
         <>
-          <div style={{ marginTop:8, display:'flex', gap:4 }}>
-            <div style={{ flex:stats.homeKwh||0.001, height:4, borderRadius:2, background:'var(--green)', opacity:.8 }} />
-            <div style={{ flex:stats.extKwh||0.001, height:4, borderRadius:2, background:'var(--amber)', opacity:.8 }} />
+          <div style={{ marginTop:8, display:'flex', gap:2 }}>
+            <div style={{ flex:stats.homeKwh||0.001, height:3, borderRadius:2, background:'var(--green)', opacity:.8 }} />
+            <div style={{ flex:stats.extKwh||0.001, height:3, borderRadius:2, background:'var(--amber)', opacity:.8 }} />
           </div>
-          <div style={{ display:'flex', gap:10, marginTop:4, fontSize:10, color:'var(--muted)' }}>
-            <span>🏠 {stats.homeKwh.toFixed(0)} kWh</span>
-            <span>📍 {stats.extKwh.toFixed(0)} kWh</span>
+          <div style={{ display:'flex', gap:8, marginTop:3, fontSize:9, color:'var(--muted)' }}>
+            <span>🏠 {stats.homeKwh.toFixed(0)}</span>
+            <span>📍 {stats.extKwh.toFixed(0)}</span>
           </div>
         </>
       )}
@@ -63,60 +67,90 @@ function VehicleCard({ v, stats, total, selected, onClick }) {
   )
 }
 
-function ProviderDonut({ charges }) {
-  const data = useMemo(() => getProviderStats(charges).slice(0,6), [charges])
+function ProviderChart({ charges }) {
+  const data = useMemo(() => getProviderStats(charges).slice(0,7), [charges])
   if (data.length === 0) return null
   const total = data.reduce((s,d)=>s+d.kwh,0)
+  const useDonut = data.length <= 4
+
   return (
     <div className="card" style={{ padding:'14px 16px' }}>
-      <div className="section-label">Répartition fournisseurs</div>
-      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-        <PieChart width={100} height={100}>
-          <Pie data={data} dataKey="kwh" cx={50} cy={50} innerRadius={28} outerRadius={46} paddingAngle={2} strokeWidth={0}>
-            {data.map((_,i) => <Cell key={i} fill={PROVIDER_COLORS[i%PROVIDER_COLORS.length]} />)}
-          </Pie>
-        </PieChart>
-        <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
-          {data.map((d,i) => (
-            <div key={d.name} style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <OperatorLogo name={d.name} size={14} />
-              <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
-              <span className="mono" style={{ fontSize:10, color:PROVIDER_COLORS[i%PROVIDER_COLORS.length], fontWeight:600 }}>{Math.round(d.kwh/total*100)}%</span>
-              <span className="mono" style={{ fontSize:10, color:'var(--muted)' }}>{d.kwh.toFixed(0)} kWh</span>
-            </div>
-          ))}
+      <div className="section-label">Répartition fournisseurs (externe)</div>
+      {useDonut ? (
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <PieChart width={100} height={100}>
+            <Pie data={data} dataKey="kwh" cx={50} cy={50} innerRadius={28} outerRadius={46} paddingAngle={2} strokeWidth={0}>
+              {data.map((_,i) => <Cell key={i} fill={PROVIDER_COLORS[i%PROVIDER_COLORS.length]} />)}
+            </Pie>
+          </PieChart>
+          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
+            {data.map((d,i) => (
+              <div key={d.name} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <OperatorLogo name={d.name} size={14} />
+                <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
+                <span className="mono" style={{ fontSize:10, color:PROVIDER_COLORS[i%PROVIDER_COLORS.length], fontWeight:600 }}>{Math.round(d.kwh/total*100)}%</span>
+                <span className="mono" style={{ fontSize:10, color:'var(--muted)' }}>{d.kwh.toFixed(0)} kWh</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        // Horizontal bar chart for many providers
+        <div style={{ display:'flex', flexDirection:'column', gap:7, marginTop:4 }}>
+          {data.map((d,i) => {
+            const pct = Math.round(d.kwh/total*100)
+            return (
+              <div key={d.name}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                  <OperatorLogo name={d.name} size={14} />
+                  <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text)' }}>{d.name}</span>
+                  <span className="mono" style={{ fontSize:10, color:'var(--muted)', flexShrink:0 }}>{d.kwh.toFixed(0)} kWh</span>
+                  <span className="mono" style={{ fontSize:10, fontWeight:700, color:PROVIDER_COLORS[i%PROVIDER_COLORS.length], flexShrink:0, minWidth:28, textAlign:'right' }}>{pct}%</span>
+                </div>
+                <div style={{ height:5, borderRadius:3, background:'var(--surface2)', overflow:'hidden' }}>
+                  <div style={{ height:'100%', width:`${pct}%`, borderRadius:3, background:PROVIDER_COLORS[i%PROVIDER_COLORS.length], transition:'width 0.4s ease' }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
 export default function Dashboard({ charges, onNavigate }) {
-  const [activePeriod,  setActivePeriod]  = useState(null) // null = tout
-  const [activeVehicle, setActiveVehicle] = useState(null) // null = tous
+  const [activePeriod,  setActivePeriod]  = useState(null)
+  const [activeVehicle, setActiveVehicle] = useState(null)
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
 
-  // Stats for each period banner (always unfiltered by vehicle for the banner itself)
-  const periodStats = useMemo(() => {
-    return PERIODS.map(p => ({
-      ...p,
-      stats: computeStats(filterByPeriod(charges, p.id)),
-    }))
-  }, [charges])
+  // Banner stats — always global
+  const periodStats = useMemo(() => PERIODS.map(p => ({
+    ...p, stats: computeStats(filterByPeriod(charges, p.id))
+  })), [charges])
 
-  // Main filtered dataset — period + vehicle combined
+  // Main filtered
   const filtered = useMemo(() => {
     let c = activePeriod ? filterByPeriod(charges, activePeriod) : charges
     if (activeVehicle) c = c.filter(x => x.vehicleId === activeVehicle)
     return c
   }, [charges, activePeriod, activeVehicle])
 
-  const stats      = useMemo(() => computeStats(filtered),         [filtered])
-  const statsMg4   = useMemo(() => computeStats(filtered, 'mg4'),  [filtered])
-  const statsXpeng = useMemo(() => computeStats(filtered, 'xpeng'),[filtered])
-  const daily      = useMemo(() => getDailyData(filtered, 30),     [filtered])
+  // Period-only (for vehicle cards comparison)
+  const periodFiltered = useMemo(() => {
+    return activePeriod ? filterByPeriod(charges, activePeriod) : charges
+  }, [charges, activePeriod])
+
+  const stats      = useMemo(() => computeStats(filtered),          [filtered])
+  const statsMg4   = useMemo(() => computeStats(periodFiltered, 'mg4'),   [periodFiltered])
+  const statsXpeng = useMemo(() => computeStats(periodFiltered, 'xpeng'), [periodFiltered])
+  const statsAll   = useMemo(() => computeStats(periodFiltered),          [periodFiltered])
+
+  // Adaptive chart
+  const chartData = useMemo(() => getChartData(filtered, activePeriod || 'all'), [filtered, activePeriod])
+  const isDailyChart = activePeriod === 'month' || activePeriod === '30d'
 
   const sorted = useMemo(() => [...charges].sort((a,b)=>b.date.localeCompare(a.date)), [charges])
   const recentFiltered = useMemo(() => {
@@ -126,20 +160,45 @@ export default function Dashboard({ charges, onNavigate }) {
     return c.slice(0, 8)
   }, [sorted, activePeriod, activeVehicle])
 
+  // KPIs
   const extPct     = stats.totalKwh > 0 ? Math.round(stats.extKwh/stats.totalKwh*100) : 0
+  const homePct    = stats.totalKwh > 0 ? Math.round(stats.homeKwh/stats.totalKwh*100) : 0
   const avgSession = stats.count > 0 ? (stats.totalKwh/stats.count).toFixed(1) : '—'
-  const streak = sorted.length ? Math.floor((new Date()-new Date(sorted[0].date+'T00:00:00'))/86400000) : null
+  const avgCost    = stats.count > 0 ? (stats.totalCost/stats.count).toFixed(2) : '—'
+  const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
+  const avgPrice   = stats.avgPrice > 0 ? stats.avgPrice.toFixed(3) : '—'
+  const streak     = sorted.length ? Math.floor((now-new Date(sorted[0].date+'T00:00:00'))/86400000) : null
+  // Savings vs thermal (ref: 7.5L/100km, SP95 1.85€/L, avg EV range ~5km/kWh)
+  const thermalCost = stats.totalKwh * 5 * 0.075 * 1.85
+  const savings     = thermalCost - stats.totalCost
 
-  const periodLabel = activePeriod ? PERIODS.find(p=>p.id===activePeriod)?.label : 'Tout'
+  const periodLabel  = activePeriod ? PERIODS.find(p=>p.id===activePeriod)?.label : 'Tout'
   const vehicleLabel = activeVehicle ? VEHICLES[activeVehicle]?.name : 'Tous véhicules'
 
-  function togglePeriod(id)  { setActivePeriod(p  => p===id  ? null : id)  }
+  const chartLabel = {
+    null: 'Par année', all:'Par année',
+    year:'Par mois', '12m':'Par mois',
+    month:'Par jour', '30d':'Par jour',
+  }[activePeriod] || 'Par année'
+
+  function togglePeriod(id)  { setActivePeriod(p  => p===id ? null : id) }
   function toggleVehicle(id) { setActiveVehicle(v => v===id ? null : id) }
+
+  const kpis = [
+    { val:`${extPct}%`,     label:'Recharge externe',    color:'var(--amber)' },
+    { val:`${homePct}%`,    label:'Recharge maison',      color:'var(--green)' },
+    { val:`${avgSession}`,  label:'kWh/session moy.',     color:'var(--mg4)',   mono:true },
+    { val:`${avgCost} €`,   label:'Coût/session moy.',    color:'var(--xpeng)', mono:true },
+    { val:`${maxSession}`,  label:'Max kWh (1 session)',  color:'var(--accent)', mono:true },
+    { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)', mono:true },
+    { val: streak!==null ? `${streak}j` : '—', label:'Depuis dernière charge', color: streak===0?'var(--green)':streak>7?'var(--red)':'var(--muted)' },
+    { val: savings > 0 ? `${savings.toFixed(0)} €` : '—', label:'Économies vs thermique', color:'var(--green)' },
+  ]
 
   return (
     <div className="page fade-up" style={{ paddingBottom:100 }}>
       {/* Header */}
-      <div style={{ padding:'16px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      <div style={{ padding:'16px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div>
           <div style={{ fontSize:20, fontWeight:700 }}>Tableau de bord</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, textTransform:'capitalize' }}>{dateStr}</div>
@@ -151,77 +210,82 @@ export default function Dashboard({ charges, onNavigate }) {
         </div>
       </div>
 
-      {/* Period banners — scrollable, selectable */}
+      {/* Period banners */}
       <div style={{ display:'flex', gap:10, overflowX:'auto', scrollbarWidth:'none', padding:'14px 16px 0' }}>
         {periodStats.map(p => {
           const active = activePeriod === p.id
           return (
             <div key={p.id} onClick={()=>togglePeriod(p.id)} style={{
-              flexShrink:0, minWidth:155, cursor:'pointer',
+              flexShrink:0, minWidth:148, cursor:'pointer',
               background: active ? `linear-gradient(135deg,${p.accent}30,${p.accent}18)` : `linear-gradient(135deg,${p.accent}14,${p.accent}08)`,
               border: active ? `2px solid ${p.accent}` : `1px solid ${p.accent}30`,
-              borderRadius:'var(--r)', padding:'14px 16px',
+              borderRadius:'var(--r)', padding:'13px 15px',
               boxShadow: active ? `0 0 20px ${p.accent}35` : 'none',
               transition:'all 0.15s',
             }}>
-              <div style={{ fontSize:10, color: active ? p.accent : 'var(--muted)', marginBottom:6, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em' }}>{p.label}</div>
-              <div className="mono" style={{ fontSize:26, fontWeight:700, lineHeight:1 }}>
-                {p.stats.totalKwh.toFixed(0)}<span style={{ fontSize:13, color:'var(--muted)', fontWeight:400 }}> kWh</span>
+              <div style={{ fontSize:10, color: active?p.accent:'var(--muted)', marginBottom:5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em' }}>{p.label}</div>
+              <div className="mono" style={{ fontSize:24, fontWeight:700, lineHeight:1 }}>
+                {p.stats.totalKwh.toFixed(0)}<span style={{ fontSize:12, color:'var(--muted)', fontWeight:400 }}> kWh</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
-                <span style={{ fontSize:11, color:'var(--muted)' }}>{p.stats.count} sessions</span>
-                <span className="mono" style={{ fontSize:13, fontWeight:700, color:p.accent }}>{p.stats.totalCost.toFixed(0)} €</span>
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:5 }}>
+                <span style={{ fontSize:11, color:'var(--muted)' }}>{p.stats.count} sess.</span>
+                <span className="mono" style={{ fontSize:12, fontWeight:700, color:p.accent }}>{p.stats.totalCost.toFixed(0)} €</span>
               </div>
-              {p.stats.avgPrice > 0 && <div style={{ fontSize:10, color:'var(--muted)', marginTop:3 }}>{p.stats.avgPrice.toFixed(3)} €/kWh</div>}
+              {p.stats.avgPrice > 0 && <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>{p.stats.avgPrice.toFixed(3)} €/kWh</div>}
             </div>
           )
         })}
       </div>
 
-      {/* Context label */}
+      {/* Filter context */}
       {(activePeriod || activeVehicle) && (
-        <div style={{ margin:'10px 16px 0', padding:'8px 12px', background:'rgba(79,142,247,0.08)', border:'1px solid rgba(79,142,247,0.2)', borderRadius:'var(--r-sm)', fontSize:12, color:'var(--accent)', fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
+        <div style={{ margin:'10px 16px 0', padding:'7px 12px', background:'rgba(79,142,247,0.08)', border:'1px solid rgba(79,142,247,0.2)', borderRadius:'var(--r-sm)', fontSize:12, color:'var(--accent)', fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
           <span>🔍</span>
-          <span>Filtre : {[periodLabel, vehicleLabel].filter(Boolean).join(' · ')}</span>
-          <button onClick={()=>{setActivePeriod(null);setActiveVehicle(null)}} style={{ marginLeft:'auto', background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:11 }}>✕ Tout</button>
+          <span>{[activePeriod && periodLabel, activeVehicle && vehicleLabel].filter(Boolean).join(' · ')}</span>
+          <button onClick={()=>{setActivePeriod(null);setActiveVehicle(null)}} style={{ marginLeft:'auto', background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:13, padding:'0 2px' }}>✕</button>
         </div>
       )}
 
-      {/* Vehicle cards */}
+      {/* Vehicle cards — always show both, dim non-selected */}
       <div style={{ margin:'10px 16px 0' }}>
         <div className="section-label">{`Véhicules — ${periodLabel}`}</div>
         <div style={{ display:'flex', gap:8 }}>
-          <VehicleCard v={VEHICLES.mg4}   stats={statsMg4}   total={stats.totalKwh} selected={activeVehicle} onClick={()=>toggleVehicle('mg4')} />
-          <VehicleCard v={VEHICLES.xpeng} stats={statsXpeng} total={stats.totalKwh} selected={activeVehicle} onClick={()=>toggleVehicle('xpeng')} />
+          <VehicleCard v={VEHICLES.mg4}   stats={statsMg4}   allStats={statsAll} selected={activeVehicle} onClick={()=>toggleVehicle('mg4')} />
+          <VehicleCard v={VEHICLES.xpeng} stats={statsXpeng} allStats={statsAll} selected={activeVehicle} onClick={()=>toggleVehicle('xpeng')} />
         </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, margin:'10px 16px 0' }}>
-        {[
-          { val:`${extPct}%`,    label:'Recharge externe', color:'var(--amber)' },
-          { val:`${avgSession}`, label:'kWh/session moy.',  color:'var(--mg4)', mono:true },
-          { val: streak !== null ? `${streak}j` : '—', label:'Depuis dernière charge', color: streak===0?'var(--green)':streak>7?'var(--red)':'var(--muted)' },
-        ].map(k => (
-          <div key={k.label} className="card" style={{ padding:'11px 12px' }}>
-            <div className={k.mono?'mono':''} style={{ fontSize:18, fontWeight:700, color:k.color, lineHeight:1 }}>{k.val}</div>
-            <div style={{ fontSize:9, color:'var(--muted)', marginTop:4, lineHeight:1.3 }}>{k.label}</div>
+      {/* KPIs grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'10px 16px 0' }}>
+        {kpis.map(k => (
+          <div key={k.label} className="card" style={{ padding:'10px 10px' }}>
+            <div className={k.mono?'mono':''} style={{ fontSize:15, fontWeight:700, color:k.color, lineHeight:1 }}>{k.val}</div>
+            <div style={{ fontSize:8.5, color:'var(--muted)', marginTop:4, lineHeight:1.3 }}>{k.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Daily chart */}
-      {filtered.length > 0 && (
+      {/* Adaptive chart */}
+      {chartData.length > 0 && (
         <div style={{ margin:'14px 16px 0' }}>
           <div className="card" style={{ padding:'14px 16px' }}>
-            <div className="section-label">{`30 derniers jours — ${periodLabel} · ${vehicleLabel}`}</div>
-            <ResponsiveContainer width="100%" height={80}>
-              <BarChart data={daily} barSize={5} barGap={1}>
-                <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
-                <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[2,2,0,0]} stackId="a" />
-                <Bar dataKey="xpeng" fill="var(--xpeng)" radius={[2,2,0,0]} stackId="a" />
-              </BarChart>
+            <div className="section-label">{chartLabel} — {periodLabel} · {vehicleLabel}</div>
+            <ResponsiveContainer width="100%" height={100}>
+              {isDailyChart ? (
+                <BarChart data={chartData} barSize={chartData.length > 20 ? 6 : 10} barGap={1}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
+                  <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[2,2,0,0]} stackId="a" />
+                  <Bar dataKey="xpeng" fill="var(--xpeng)" radius={[2,2,0,0]} stackId="a" />
+                </BarChart>
+              ) : (
+                <BarChart data={chartData} barSize={18} barGap={3}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
+                  <Bar dataKey="mg4"   fill="var(--mg4)"   radius={[3,3,0,0]} stackId="a" />
+                  <Bar dataKey="xpeng" fill="var(--xpeng)" radius={[3,3,0,0]} stackId="a" />
+                </BarChart>
+              )}
             </ResponsiveContainer>
             <div style={{ display:'flex', gap:14, marginTop:4, fontSize:10, fontWeight:500 }}>
               {[{c:'var(--mg4)',l:'MG4'},{c:'var(--xpeng)',l:'Xpeng G6'}].map(i=>(
@@ -234,10 +298,10 @@ export default function Dashboard({ charges, onNavigate }) {
         </div>
       )}
 
-      {/* Provider donut */}
+      {/* Provider chart */}
       {filtered.filter(c=>c.locationId!=='home').length > 0 && (
         <div style={{ margin:'10px 16px 0' }}>
-          <ProviderDonut charges={filtered} />
+          <ProviderChart charges={filtered} />
         </div>
       )}
 
