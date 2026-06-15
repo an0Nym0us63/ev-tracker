@@ -112,7 +112,12 @@ export default function LocationPicker({ value, onChange }) {
   if (step === 'picked' && value) {
     return (
       <div style={{ background:'var(--surface)', border:`1.5px solid ${value.approximate?'var(--amber)':'var(--green)'}`, borderRadius:'var(--r-sm)', padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
-        <span style={{ fontSize:18 }}>{value.approximate ? '📍' : '🔌'}</span>
+        {value.approximate
+          ? <span style={{ fontSize:18 }}>📍</span>
+          : <div style={{ width:36, height:36, borderRadius:9, overflow:'hidden', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <OperatorLogo name={value.operator||''} size={36} style={{ width:36, height:36, objectFit:'cover', borderRadius:9 }} />
+            </div>
+        }
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:600 }}>{value.label}</div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4 }}>
