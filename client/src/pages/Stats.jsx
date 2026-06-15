@@ -65,18 +65,7 @@ export default function Stats({ charges }) {
     return (w.reduce((s,c)=>s+c.kwh,0) / w.reduce((s,c)=>s+c.durationMin/60,0)).toFixed(1)
   }, [filtered])
 
-  // DC speed in kWh/min per vehicle
-  const dcSpeedPerVehicle = useMemo(() => {
-    const result = {}
-    for (const vid of ['mg4', 'xpeng']) {
-      const sessions = filtered.filter(c => c.vehicleId===vid && c.locationId!=='home' && c.durationMin>0 && c.kwh>0)
-      if (!sessions.length) { result[vid] = null; continue }
-      const totalKwh = sessions.reduce((s,c)=>s+c.kwh,0)
-      const totalMin = sessions.reduce((s,c)=>s+c.durationMin,0)
-      result[vid] = (totalKwh / totalMin).toFixed(3)
-    }
-    return result
-  }, [filtered])
+
   const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
   const maxCost    = filtered.length ? Math.max(...filtered.map(c=>c.totalCost||0)).toFixed(2) : '—'
   const topProvider = useMemo(() => {
@@ -208,18 +197,7 @@ export default function Stats({ charges }) {
                     <div style={{ height:'100%', background:v.color, width:`${(s.totalKwh/statsAll.totalKwh*100).toFixed(0)}%`, borderRadius:3 }} />
                   </div>
                 )}
-                {dcSpeedPerVehicle[v.id] && (
-                  <div style={{ marginTop:8, display:'flex', gap:6 }}>
-                    <div style={{ flex:1, background:'rgba(251,191,36,0.08)', borderRadius:6, padding:'5px 8px' }}>
-                      <div className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{dcSpeedPerVehicle[v.id]} kWh/min</div>
-                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:1 }}>Vitesse DC 📍</div>
-                    </div>
-                    <div style={{ flex:1, background:'rgba(251,191,36,0.05)', borderRadius:6, padding:'5px 8px' }}>
-                      <div className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{(parseFloat(dcSpeedPerVehicle[v.id])*60).toFixed(1)} kW</div>
-                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:1 }}>Puissance moy.</div>
-                    </div>
-                  </div>
-                )}
+
               </div>
             ))}
           </div>

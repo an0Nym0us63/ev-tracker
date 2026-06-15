@@ -5,7 +5,7 @@ import OperatorLogo from './OperatorLogo.jsx'
 function GeoResultItem({ r, onPick }) {
   const tags = [r.postcode, r.dept, !r.isFr && r.region, r.country].filter(Boolean)
   return (
-    <div onMouseDown={onPick} onTouchStart={onPick}
+    <div onClick={onPick}
       style={{ padding:'10px 14px', cursor:'pointer', borderTop:'1px solid var(--border)', userSelect:'none' }}
       onMouseEnter={e=>e.currentTarget.style.background='var(--surface3)'}
       onMouseLeave={e=>e.currentTarget.style.background='transparent'}
@@ -194,7 +194,7 @@ export default function LocationPicker({ value, onChange }) {
                   </div>
                 : filtered().map(s => (
                   <div key={s.id}
-                    onMouseDown={()=>pickStation(s)} onTouchStart={()=>pickStation(s)}
+                    onClick={()=>pickStation(s)}
                     style={{ padding:'10px 14px', cursor:'pointer', borderTop:'1px solid var(--border)', display:'flex', alignItems:'flex-start', gap:10, userSelect:'none' }}
                     onMouseEnter={e=>e.currentTarget.style.background='var(--surface3)'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}
@@ -218,7 +218,7 @@ export default function LocationPicker({ value, onChange }) {
           </div>
 
           {/* Approx option */}
-          <div onMouseDown={pickApprox} onTouchStart={pickApprox}
+          <div onClick={pickApprox}
             style={{ padding:'10px 14px', cursor:'pointer', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10, background:'rgba(245,158,11,0.04)', userSelect:'none' }}
             onMouseEnter={e=>e.currentTarget.style.background='rgba(245,158,11,0.08)'}
             onMouseLeave={e=>e.currentTarget.style.background='rgba(245,158,11,0.04)'}
