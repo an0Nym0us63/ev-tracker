@@ -90,20 +90,24 @@ function buildPopupHTML(group) {
     </div>`
 }
 
-function makeMarkerIcon(operator, approximate, size=36) {
+function makeMarkerIcon(operator, approximate, size=40) {
   const name = toLogoName(operator||'')
   const emoji = operatorEmoji(operator||'')
-  const border = approximate ? '2px dashed rgba(255,255,255,0.5)' : '2.5px solid white'
-  const opacity = approximate ? '0.75' : '1'
+  const opacity = approximate ? '0.7' : '1'
+  const outline = approximate
+    ? `outline:2px dashed rgba(255,255,255,0.6);outline-offset:2px`
+    : `box-shadow:0 2px 12px rgba(0,0,0,0.5);outline:2.5px solid white;outline-offset:0px`
 
-  // Try logo image, fallback to emoji
+  // Logo fills entire circle, emoji fallback centered on dark bg
   const inner = name
-    ? `<img src="/api/logos/providers/${name}" style="width:${size-10}px;height:${size-10}px;object-fit:contain;border-radius:4px"
-        onerror="this.style.display='none';this.nextSibling.style.display='flex'"
-        /><span style="display:none;font-size:${size*0.4}px;line-height:1">${emoji}</span>`
-    : `<span style="font-size:${size*0.4}px;line-height:1">${emoji}</span>`
+    ? `<img src="/api/logos/providers/${name}"
+        style="width:100%;height:100%;object-fit:cover;border-radius:50%"
+        onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${emoji}',style:'font-size:${Math.round(size*0.45)}px;line-height:1'}))"
+      />`
+    : `<span style="font-size:${Math.round(size*0.45)}px;line-height:1">${emoji}</span>`
 
-  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1e2235;border:${border};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.5);opacity:${opacity};overflow:hidden">${inner}</div>`
+  const bg = name ? 'transparent' : '#1e2235'
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;${outline};opacity:${opacity};overflow:hidden">${inner}</div>`
 }
 
 export default function MapView({ charges, settings, theme }) {

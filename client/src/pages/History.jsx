@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { VEHICLES, LOCATIONS, formatDate, formatDuration, formatCost } from '../utils.js'
+import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 
 export default function History({ charges, onEdit }) {
@@ -29,11 +29,11 @@ export default function History({ charges, onEdit }) {
 
   function chipStyle(active, color = 'var(--accent)') {
     return {
-      flexShrink: 0, padding: '5px 13px', borderRadius: 20,
-      border: `1.5px solid ${active ? color : 'var(--border)'}`,
-      background: active ? `rgba(${color === 'var(--mg4)' ? '79,142,247' : color === 'var(--xpeng)' ? '124,92,252' : '79,142,247'},0.1)` : 'var(--surface)',
+      flexShrink:0, padding:'5px 13px', borderRadius:20,
+      border:`1.5px solid ${active ? color : 'var(--border)'}`,
+      background: active ? `rgba(${color==='var(--mg4)'?'79,142,247':color==='var(--xpeng)'?'124,92,252':'79,142,247'},0.1)` : 'var(--surface)',
       color: active ? color : 'var(--muted)',
-      fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.12s',
+      fontSize:12, fontWeight:600, cursor:'pointer',
     }
   }
 
@@ -45,12 +45,12 @@ export default function History({ charges, onEdit }) {
 
   return (
     <div className="page fade-up">
-      <div style={{ padding: '16px 20px 0' }}>
-        <div style={{ fontSize: 20, fontWeight: 700 }}>Historique</div>
+      <div style={{ padding:'16px 20px 0' }}>
+        <div style={{ fontSize:20, fontWeight:700 }}>Historique</div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 6, padding: '12px 16px 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div style={{ display:'flex', gap:6, padding:'12px 16px 0', overflowX:'auto', scrollbarWidth:'none' }}>
         {VF.map(f => (
           <button key={f.id} onClick={() => setVf(f.id)}
             style={chipStyle(vf===f.id, f.id==='mg4'?'var(--mg4)':f.id==='xpeng'?'var(--xpeng)':'var(--accent)')}>
@@ -59,9 +59,7 @@ export default function History({ charges, onEdit }) {
         ))}
         <div style={{ width:1, background:'var(--border)', flexShrink:0, margin:'4px 2px' }} />
         {LF.map(f => (
-          <button key={f.id} onClick={() => setLf(f.id)} style={chipStyle(lf===f.id)}>
-            {f.label}
-          </button>
+          <button key={f.id} onClick={() => setLf(f.id)} style={chipStyle(lf===f.id)}>{f.label}</button>
         ))}
       </div>
 
@@ -82,10 +80,11 @@ export default function History({ charges, onEdit }) {
         )}
 
         {grouped.map(([key, items]) => {
-          const mKwh = items.reduce((s,c)=>s+c.kwh,0)
+          const mKwh  = items.reduce((s,c)=>s+c.kwh,0)
           const mCost = items.reduce((s,c)=>s+c.totalCost,0)
           return (
             <div key={key}>
+              {/* Month header */}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                 <span style={{ fontSize:12, fontWeight:700, color:'var(--text-secondary)', textTransform:'capitalize' }}>{monthLabel(key)}</span>
                 <div style={{ display:'flex', gap:10 }}>
@@ -94,49 +93,57 @@ export default function History({ charges, onEdit }) {
                 </div>
               </div>
 
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {items.map(c => {
-                  const v = VEHICLES[c.vehicleId]
+                  const v   = VEHICLES[c.vehicleId]
                   const loc = LOCATIONS[c.locationId]
+                  const day = new Date(c.date+'T00:00:00')
+                  const isHome = c.locationId === 'home'
+
                   return (
-                    <div key={c.id} onClick={() => onEdit(c)} style={{
-                      background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r)',
-                      padding:'12px 14px', display:'flex', alignItems:'center', gap:12,
-                      cursor:'pointer', position:'relative', overflow:'hidden',
-                    }}>
-                      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:3, background:v.color }} />
+                    <div key={c.id} onClick={() => onEdit(c)}
+                      style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', cursor:'pointer', overflow:'hidden', display:'flex' }}>
 
-                      <div style={{ textAlign:'center', minWidth:32, paddingLeft:4 }}>
-                        <div className="mono" style={{ fontSize:18, fontWeight:700, lineHeight:1 }}>
-                          {new Date(c.date+'T00:00:00').getDate()}
-                        </div>
-                        <div style={{ fontSize:9, textTransform:'uppercase', color:'var(--muted)', letterSpacing:'0.05em' }}>
-                          {new Date(c.date+'T00:00:00').toLocaleDateString('fr-FR',{month:'short'})}
+                      {/* Left accent bar */}
+                      <div style={{ width:3, background:v.color, flexShrink:0 }} />
+
+                      {/* Logo column */}
+                      <div style={{ width:56, display:'flex', alignItems:'center', justifyContent:'center', padding:'10px 6px', flexShrink:0 }}>
+                        <div style={{ width:40, height:40, borderRadius:10, overflow:'hidden', background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          <OperatorLogo name={c.provider||''} size={40} style={{ width:40, height:40, borderRadius:10, objectFit:'cover' }} />
                         </div>
                       </div>
 
-                      <div style={{ width:1, background:'var(--border)', alignSelf:'stretch' }} />
-
-                      <div style={{ flex:1, minWidth:0 }}>
+                      {/* Main content */}
+                      <div style={{ flex:1, minWidth:0, padding:'10px 0 10px 0' }}>
+                        {/* Row 1: vehicle + provider tag */}
                         <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                          <span style={{ fontSize:13, fontWeight:600 }}>{v.name}</span>
-                          <span className={`badge ${loc.badgeClass}`} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
-                            <OperatorLogo name={c.provider || ''} size={12} />
-                            {c.provider || c.locationName || loc.label}
-                          </span>
+                          <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
+                          {c.provider && (
+                            <span style={{ fontSize:11, fontWeight:600, padding:'2px 7px', borderRadius:20,
+                              background: isHome ? 'rgba(34,197,94,0.1)' : 'rgba(79,142,247,0.1)',
+                              color: isHome ? 'var(--green)' : 'var(--accent)',
+                              border: `1px solid ${isHome ? 'rgba(34,197,94,0.2)' : 'rgba(79,142,247,0.2)'}` }}>
+                              {c.provider}
+                            </span>
+                          )}
                         </div>
-                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>
-                          {c.durationMin ? formatDuration(c.durationMin) : '—'}
-                          {c.powerKw ? ` · ${c.powerKw} kW` : ''}
-                          {(c.connectorTypes||[]).length > 0 ? ` · ${c.connectorTypes.join(', ')}` : ''}
-                          {c.card ? ` · ${c.card}` : ''}
-                          {c.odometer ? ` · ${c.odometer.toLocaleString('fr-FR')} km` : ''}
+                        {/* Row 2: details */}
+                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', flexWrap:'wrap', gap:'0 6px' }}>
+                          {c.durationMin ? <span>{formatDuration(c.durationMin)}</span> : null}
+                          {c.powerKw ? <span>{c.powerKw} kW</span> : null}
+                          {(c.connectorTypes||[]).length > 0 ? <span>{c.connectorTypes.join(', ')}</span> : null}
+                          {c.card ? <span>{c.card}</span> : null}
                         </div>
                       </div>
 
-                      <div style={{ textAlign:'right', flexShrink:0 }}>
+                      {/* Right: date + kWh + cost */}
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', justifyContent:'center', padding:'10px 14px 10px 8px', flexShrink:0, gap:2 }}>
+                        <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500 }}>
+                          {day.getDate()} {day.toLocaleDateString('fr-FR',{month:'short'})}
+                        </div>
                         <div className="mono" style={{ fontSize:15, fontWeight:700 }}>{c.kwh} kWh</div>
-                        <div className="mono" style={{ fontSize:11, fontWeight:600, marginTop:2, color: c.locationId!=='home' ? 'var(--amber)' : 'var(--green)' }}>
+                        <div className="mono" style={{ fontSize:12, fontWeight:600, color: isHome ? 'var(--green)' : 'var(--amber)' }}>
                           {c.totalCost.toFixed(2)} €
                         </div>
                       </div>
