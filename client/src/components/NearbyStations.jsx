@@ -53,7 +53,7 @@ export default function NearbyStations({ onPick, settings }) {
 
           setStations(sorted)
           setState('results')
-        } catch { setState('error') }
+        } catch(e) { console.error('OCM nearby error:', e); setState('error') }
       },
       () => setState('error'),
       { timeout: 8000, maximumAge: 60000 }

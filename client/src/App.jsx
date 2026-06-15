@@ -116,7 +116,7 @@ export default function App() {
 
   return (
     <>
-      {page === 'home'     && <Dashboard charges={charges} onNavigate={navigate} />}
+      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
       {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
       {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}

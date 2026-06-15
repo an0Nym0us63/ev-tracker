@@ -66,11 +66,12 @@ app.put('/api/settings', requireAuth, (req, res) => {
 // Search charging stations by name/location
 app.get('/api/ocm/search', requireAuth, (req, res) => {
   const s = db.prepare('SELECT ocm_api_key FROM settings WHERE account_id = ?').get(req.user.id)
-  if (!s?.ocm_api_key) return res.json([])
+  // Use user key if available, otherwise use keyless public endpoint (rate limited but works)
+  const apiKey = s?.ocm_api_key || ''
 
   const { q, lat, lng } = req.query
   // 100 results, no country restriction, 25km radius — client filters
-  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=false&verbose=true&key=${s.ocm_api_key}`
+  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=false&verbose=true${apiKey?'&key='+apiKey:''}`
   if (lat && lng) { url += `&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM` } else if (q) { url += `&cityname=${encodeURIComponent(q)}` }
   
 
