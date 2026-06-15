@@ -19,6 +19,7 @@ export default function NearbyStations({ onPick, settings }) {
   const [state, setState] = useState('idle') // idle | loading | results | error
   const [stations, setStations] = useState([])
   const [userPos, setUserPos] = useState(null)
+  const [geoError, setGeoError] = useState(null)
   const [filter, setFilter] = useState('')
 
   async function handleOpen() {
@@ -55,8 +56,12 @@ export default function NearbyStations({ onPick, settings }) {
           setState('results')
         } catch(e) { console.error('OCM nearby error:', e); setState('error') }
       },
-      () => setState('error'),
-      { timeout: 8000, maximumAge: 60000 }
+      (err) => {
+        console.error('Geoloc error:', err.code, err.message)
+        setState('error')
+        setGeoError(err.code === 1 ? 'Autorisation refusée' : err.code === 2 ? 'Position indisponible' : 'Timeout')
+      },
+      { timeout: 10000, maximumAge: 30000, enableHighAccuracy: false }
     )
   }
 
@@ -105,10 +110,13 @@ export default function NearbyStations({ onPick, settings }) {
         )}
 
         {state === 'error' && (
-          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:32, color:'var(--muted)', fontSize:13 }}>
+          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:32, color:'var(--muted)', fontSize:13, textAlign:'center' }}>
             <div style={{ fontSize:28 }}>⚠️</div>
-            Impossible d'accéder à ta position.
-            <button onClick={handleOpen} style={{ color:'var(--accent)', background:'none', border:'none', fontWeight:600, cursor:'pointer' }}>Réessayer</button>
+            <div style={{ fontWeight:600, color:"var(--text)" }}>{geoError || "Impossible d'accéder à ta position"}</div>
+            {geoError === 'Autorisation refusée' && (
+              <div style={{ fontSize:11, lineHeight:1.5 }}>Vérifie les autorisations de localisation dans les réglages de ton navigateur pour ce site.</div>
+            )}
+            <button onClick={handleOpen} style={{ color:'var(--accent)', background:'none', border:'none', fontWeight:600, cursor:'pointer', fontSize:13 }}>Réessayer</button>
           </div>
         )}
 
