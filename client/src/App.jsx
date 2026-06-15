@@ -111,7 +111,14 @@ export default function App() {
         window.scrollTo({ top:0, behavior:'instant' })
         setPage('home')
       }
-    } catch(e) { showToast(e.message||'Erreur', 'var(--red)') }
+    } catch(e) {
+      console.error('[handleSave]', e)
+      showToast(e.message||'Erreur lors de la sauvegarde', 'var(--red)')
+      // Navigate away from add page even on error to avoid blank screen
+      setEditCharge(null)
+      window.scrollTo({ top:0, behavior:'instant' })
+      setPage('home')
+    }
   }
 
   if (loading)  return <Loader />
@@ -119,17 +126,14 @@ export default function App() {
 
   const isAddPage = page === 'add'
 
-  // Force remount of page component when switching to avoid stale state
-  const pageKey = page
-
   return (
     <>
-      {page === 'home'     && <Dashboard key={pageKey} charges={charges} account={account} onNavigate={navigate} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
-      {page === 'history'  && <History   key={pageKey} charges={charges} onEdit={c=>navigate('edit',c)} />}
-      {page === 'add'      && <AddCharge key={pageKey} account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
-      {page === 'stats'    && <Stats     key={pageKey} charges={charges} />}
-      {page === 'map'      && <MapView   key={pageKey} charges={charges} settings={settings} theme={theme} />}
-      {page === 'settings' && <Settings  key={pageKey} account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
+      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
+      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
+      {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
+      {page === 'stats'    && <Stats     charges={charges} />}
+      {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} />}
+      {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
 
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}
       {toast && <Toast {...toast} />}
