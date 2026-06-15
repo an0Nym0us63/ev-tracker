@@ -257,7 +257,7 @@ export default function Stats({ charges }) {
           <div style={{ padding:'12px 16px 0' }}>
             <SectionLabel>Fournisseurs externes</SectionLabel>
             <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:9 }}>
-              {providers.slice(0,8).map((d,i) => {
+              {providers.slice(0,15).map((d,i) => {
                 const pct = Math.round(d.kwh/providers.reduce((s,x)=>s+x.kwh,0)*100)
                 return (
                   <div key={d.name}>

@@ -110,7 +110,7 @@ function VehicleCard({ v, charges, allStats, selected, onClick }) {
 }
 
 function ProviderChart({ charges }) {
-  const data = useMemo(() => getProviderStats(charges).slice(0,7), [charges])
+  const data = useMemo(() => getProviderStats(charges).slice(0,15), [charges])
   if (data.length === 0) return null
   const total = data.reduce((s,d)=>s+d.kwh,0)
   const useDonut = data.length <= 4
