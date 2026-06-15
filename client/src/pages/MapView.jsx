@@ -96,21 +96,21 @@ function buildPopupHTML(group) {
   const vehicleRows = Object.values(byVehicle).map(v => `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,0.08)">
       <div style="width:8px;height:8px;border-radius:50%;background:${v.color};flex-shrink:0"></div>
-      <div style="flex:1;font-size:11px;color:#94a3b8">${v.name}</div>
-      <div style="font-size:11px;font-family:monospace;color:#e2e8f0">${v.sessions}× · ${v.kwh.toFixed(1)} kWh · ${v.cost.toFixed(2)} €</div>
+      <div style="flex:1;font-size:11px;color:#475569">${v.name}</div>
+      <div style="font-size:11px;font-family:monospace;color:#1e293b">${v.sessions}× · ${v.kwh.toFixed(1)} kWh · ${v.cost.toFixed(2)} €</div>
     </div>`).join('')
   return `
     <div style="min-width:220px;font-family:'Inter',sans-serif">
-      <div style="font-weight:700;font-size:14px;margin-bottom:2px">${label}</div>
-      ${operator ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">${operator}${powerKw?` · ${powerKw} kW`:''}</div>` : ''}
-      ${approximate ? `<div style="font-size:10px;color:#f59e0b;margin-bottom:6px">📍 Position approximative</div>` : ''}
-      <div style="background:rgba(79,142,247,0.1);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:2px;color:#0f172a">${label}</div>
+      ${operator ? `<div style="font-size:11px;color:#475569;margin-bottom:6px">${operator}${powerKw?` · ${powerKw} kW`:''}</div>` : ''}
+      ${approximate ? `<div style="font-size:10px;color:#d97706;margin-bottom:6px">📍 Position approximative</div>` : ''}
+      <div style="background:rgba(79,142,247,0.12);border-radius:8px;padding:8px 10px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between">
-          <div style="font-size:11px;color:#94a3b8">${total.sessions} session${total.sessions>1?'s':''}</div>
-          <div style="font-size:13px;font-weight:700;font-family:monospace;color:#60a5fa">${total.kwh.toFixed(1)} kWh</div>
+          <div style="font-size:11px;color:#475569">${total.sessions} session${total.sessions>1?'s':''}</div>
+          <div style="font-size:13px;font-weight:700;font-family:monospace;color:#2563eb">${total.kwh.toFixed(1)} kWh</div>
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:2px">
-          <div style="font-size:12px;font-weight:600;font-family:monospace;color:#4ade80">${total.cost.toFixed(2)} €</div>
+          <div style="font-size:12px;font-weight:600;font-family:monospace;color:#16a34a">${total.cost.toFixed(2)} €</div>
         </div>
       </div>
       ${vehicleRows}
@@ -202,11 +202,12 @@ export default function MapView({ charges, settings, theme }) {
     const kwhValues = groups.map(g => g.charges.reduce((s,c)=>s+c.kwh,0))
     const minKwh = kwhValues.length ? Math.min(...kwhValues) : 0
     const maxKwh = kwhValues.length ? Math.max(...kwhValues) : 1
-    const range  = maxKwh - minKwh || 1
+    const range  = maxKwh - minKwh
 
     groups.forEach((group, i) => {
       const totalKwh = kwhValues[i]
-      const intensity = (totalKwh - minKwh) / range
+      // Single marker or all equal → green (max usage in current filter)
+      const intensity = range === 0 ? 1 : (totalKwh - minKwh) / range
       const haloExtra = Math.round(6 + intensity * 14)
       const haloSize  = 40 + haloExtra * 2
       const markerHtml = makeMarkerIcon(group.operator, group.approximate, intensity)
@@ -298,22 +299,29 @@ export default function MapView({ charges, settings, theme }) {
         )}
       </div>
 
-      {charges.length > 0 && (
-        <div style={{ margin:'8px 16px 0', display:'flex', gap:8 }}>
-          <div className="card" style={{ flex:1, padding:'10px 14px' }}>
-            <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--accent)' }}>{groupByLocation(filtered).length}</div>
-            <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>Bornes distinctes</div>
+      {charges.length > 0 && (() => {
+        const groups = groupByLocation(filtered)
+        const operators = new Set(filtered.map(c=>c.provider).filter(Boolean))
+        const totalKwh  = filtered.reduce((s,c)=>s+c.kwh,0)
+        const totalCost = filtered.reduce((s,c)=>s+(c.totalCost||0),0)
+        const stats = [
+          { val: groups.length,            label:'Bornes',     color:'var(--accent)' },
+          { val: operators.size,            label:'Fournisseurs', color:'var(--xpeng)' },
+          { val: filtered.length,           label:'Sessions',   color:'var(--text)' },
+          { val: totalKwh.toFixed(0)+' kWh', label:'Total kWh', color:'var(--mg4)', mono:true },
+          { val: totalCost.toFixed(2)+' €',  label:'Total coût', color:'var(--green)', mono:true },
+        ]
+        return (
+          <div style={{ margin:'8px 16px 0', display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
+            {stats.map(s => (
+              <div key={s.label} className="card" style={{ padding:'8px 10px' }}>
+                <div className={s.mono?'mono':''} style={{ fontSize:s.mono?11:18, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
+                <div style={{ fontSize:9, color:'var(--muted)', marginTop:3, lineHeight:1.2 }}>{s.label}</div>
+              </div>
+            ))}
           </div>
-          <div className="card" style={{ flex:1, padding:'10px 14px' }}>
-            <div className="mono" style={{ fontSize:18, fontWeight:700 }}>{filtered.length}</div>
-            <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>Sessions filtrées</div>
-          </div>
-          <div className="card" style={{ flex:1, padding:'10px 14px' }}>
-            <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--muted)' }}>{charges.filter(c=>c.lat&&c.lng).length - filtered.length > 0 ? charges.filter(c=>!c.lat||!c.lng).length : charges.filter(c=>!c.lat||!c.lng).length}</div>
-            <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>Sans localisation</div>
-          </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
