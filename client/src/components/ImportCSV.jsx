@@ -8,7 +8,9 @@ import { VEHICLES } from '../utils.js'
 // locationName is optional (derived from locationId if absent)
 
 function parseCSV(text) {
-  const lines = text.trim().split('\n').filter(Boolean)
+  // Normalize line endings (Windows \r\n, classic \r, Unix \n)
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const lines = normalized.trim().split('\n').filter(Boolean)
   if (lines.length < 2) throw new Error('CSV vide ou sans données')
   const sep = lines[0].includes(';') ? ';' : ','
   const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
