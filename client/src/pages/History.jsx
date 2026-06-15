@@ -19,7 +19,9 @@ export default function History({ charges, onEdit }) {
   const grouped = useMemo(() => {
     const g = {}
     filtered.forEach(c => { const k = c.date.slice(0,7); (g[k]=g[k]||[]).push(c) })
-    return Object.entries(g).sort((a,b) => b[0].localeCompare(a[0]))
+    return Object.entries(g)
+      .sort((a,b) => b[0].localeCompare(a[0]))
+      .map(([k, items]) => [k, items.sort((a,b) => b.date.localeCompare(a.date))])
   }, [filtered])
 
   const VF = [{id:'all',label:'Tous'},{id:'mg4',label:'MG4'},{id:'xpeng',label:'Xpeng G6'}]

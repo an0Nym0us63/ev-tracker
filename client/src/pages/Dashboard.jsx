@@ -24,7 +24,8 @@ export default function Dashboard({ charges, onNavigate }) {
   const statsMg4 = useMemo(() => computeStats(monthCharges, 'mg4'), [monthCharges])
   const statsG6  = useMemo(() => computeStats(monthCharges, 'xpeng'), [monthCharges])
   const weekly   = useMemo(() => getWeeklyData(charges, 6), [charges])
-  const recent   = charges.slice(0, 4)
+  const sorted   = [...charges].sort((a,b) => b.date.localeCompare(a.date))
+  const recent   = sorted.slice(0, 4)
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
