@@ -263,10 +263,7 @@ export default function Dashboard({ charges, account, onNavigate, onLogout, them
           <div style={{ fontSize:20, fontWeight:700 }}>Tableau de bord</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, textTransform:'capitalize' }}>{dateStr}</div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <AppLogo size={28} />
-          <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
-        </div>
+        <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
       {/* Period banners — 2x2 grid */}

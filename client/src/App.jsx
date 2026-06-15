@@ -80,6 +80,7 @@ export default function App() {
   }
 
   const navigate = useCallback((target, data=null) => {
+    window.scrollTo({ top:0, behavior:'instant' })
     if (target === 'edit') { setEditCharge(data); setPage('add') }
     else { setEditCharge(null); setPage(target) }
   }, [])
@@ -117,7 +118,7 @@ export default function App() {
     <>
       {page === 'home'     && <Dashboard charges={charges} onNavigate={navigate} />}
       {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
-      {page === 'add'      && <AddCharge account={account} lists={lists} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
+      {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}
       {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} />}
       {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}

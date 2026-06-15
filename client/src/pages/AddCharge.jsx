@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { VEHICLES, LOCATIONS } from '../utils.js'
 import ComboBox from '../components/ComboBox.jsx'
 import LocationPicker from '../components/LocationPicker.jsx'
+import NearbyStations from '../components/NearbyStations.jsx'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import { apiGetFavorites, apiBumpFavorite } from '../api.js'
 
@@ -64,7 +65,7 @@ function FavoritesSheet({ favorites, onPick, onClose }) {
   )
 }
 
-export default function AddCharge({ account, lists, onSave, onBack, editCharge }) {
+export default function AddCharge({ account, lists, settings, onSave, onBack, editCharge }) {
   const isEdit = !!editCharge
   const today  = new Date().toISOString().split('T')[0]
 
@@ -232,6 +233,19 @@ export default function AddCharge({ account, lists, onSave, onBack, editCharge }
           </button>
         )}
         {showFavSheet && <FavoritesSheet favorites={favorites} onPick={applyFavorite} onClose={()=>setShowFavSheet(false)} />}
+
+        {/* Nearby stations button (external only, no location selected) */}
+        {locationId === 'ext' && !gpsLocation && (
+          <NearbyStations settings={settings} onPick={(loc) => {
+            if (loc._isHome) {
+              // Switch to home
+              setLocationId('home')
+            } else {
+              setGpsLocation(loc)
+              if (loc.approximate || !loc.operator) setManualProvider(loc.operator || '')
+            }
+          }} />
+        )}
 
         {/* GPS location (external only) */}
         {locationId === 'ext' && (
