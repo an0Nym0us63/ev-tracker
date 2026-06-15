@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie
 import { computeStats, filterByPeriod, getChartData, getProviderStats, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
+import ProfileMenu from '../components/ProfileMenu.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
@@ -142,7 +143,7 @@ function ProviderChart({ charges }) {
   )
 }
 
-export default function Dashboard({ charges, onNavigate }) {
+export default function Dashboard({ charges, account, onNavigate, onLogout, theme, onToggleTheme }) {
   const [activePeriod,  setActivePeriod]  = useState(null)
   const [activeVehicle, setActiveVehicle] = useState(null)
 
@@ -262,10 +263,9 @@ export default function Dashboard({ charges, onNavigate }) {
           <div style={{ fontSize:20, fontWeight:700 }}>Tableau de bord</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, textTransform:'capitalize' }}>{dateStr}</div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <AppLogo size={32} />
-          <button onClick={()=>onNavigate('settings')} style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:20, padding:4 }}>⚙️</button>
-          <button onClick={()=>onNavigate('add')} style={{ background:'linear-gradient(135deg,var(--accent),var(--accent2))', border:'none', borderRadius:12, padding:'8px 14px', color:'white', fontSize:13, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 14px var(--accent-glow)' }}>＋</button>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <AppLogo size={28} />
+          <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
         </div>
       </div>
 
