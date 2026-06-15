@@ -64,6 +64,19 @@ export default function Stats({ charges }) {
     if (!w.length) return null
     return (w.reduce((s,c)=>s+c.kwh,0) / w.reduce((s,c)=>s+c.durationMin/60,0)).toFixed(1)
   }, [filtered])
+
+  // DC speed in kWh/min per vehicle
+  const dcSpeedPerVehicle = useMemo(() => {
+    const result = {}
+    for (const vid of ['mg4', 'xpeng']) {
+      const sessions = filtered.filter(c => c.vehicleId===vid && c.locationId!=='home' && c.durationMin>0 && c.kwh>0)
+      if (!sessions.length) { result[vid] = null; continue }
+      const totalKwh = sessions.reduce((s,c)=>s+c.kwh,0)
+      const totalMin = sessions.reduce((s,c)=>s+c.durationMin,0)
+      result[vid] = (totalKwh / totalMin).toFixed(3)
+    }
+    return result
+  }, [filtered])
   const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
   const maxCost    = filtered.length ? Math.max(...filtered.map(c=>c.totalCost||0)).toFixed(2) : '—'
   const topProvider = useMemo(() => {

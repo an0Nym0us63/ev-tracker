@@ -90,23 +90,25 @@ export default function App() {
       if (data.__delete) {
         await apiDeleteCharge(data.id)
         setCharges(prev => prev.filter(c => c.id !== data.id))
+        setEditCharge(null)
         showToast('Session supprimée', 'var(--red)')
-        setPage('history')
+        navigate('history')
       } else if (data.id) {
         const updated = await apiUpdateCharge(data.id, data)
         setCharges(prev => prev.map(c => c.id === updated.id ? updated : c))
         apiGetLists().then(setLists)
+        setEditCharge(null)
         showToast('Session mise à jour ✓')
-        setPage('history')
+        navigate('history')
       } else {
         const created = await apiAddCharge(data)
         setCharges(prev => [created, ...prev])
         apiGetLists().then(setLists)
+        setEditCharge(null)
         showToast('Session enregistrée ✓')
-        setPage('home')
+        navigate('home')
       }
     } catch(e) { showToast(e.message||'Erreur', 'var(--red)') }
-    setEditCharge(null)
   }
 
   if (loading)  return <Loader />
