@@ -29,10 +29,33 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-function VehicleCard({ v, stats, allStats, selected, onClick }) {
-  const isSelected = selected === v.id
+function avgPowerFor(charges, locationId) {
+  const s = locationId === 'home'
+    ? charges.filter(c => c.vehicleId && c.locationId === 'home' && c.durationMin > 0)
+    : charges.filter(c => c.vehicleId && c.locationId !== 'home' && c.durationMin > 0)
+  if (!s.length) return null
+  const kwhT = s.reduce((a,c)=>a+c.kwh,0)
+  const hT   = s.reduce((a,c)=>a+c.durationMin/60,0)
+  return hT > 0 ? (kwhT/hT).toFixed(1) : null
+}
+
+function VehicleCard({ v, charges, allStats, selected, onClick }) {
+  const vCharges   = charges.filter(c => c.vehicleId === v.id)
+  const stats      = {
+    totalKwh:  vCharges.reduce((s,c)=>s+c.kwh,0),
+    totalCost: vCharges.reduce((s,c)=>s+(c.totalCost||0),0),
+    count:     vCharges.length,
+    homeKwh:   vCharges.filter(c=>c.locationId==='home').reduce((s,c)=>s+c.kwh,0),
+    extKwh:    vCharges.filter(c=>c.locationId!=='home').reduce((s,c)=>s+c.kwh,0),
+  }
+  const isSelected      = selected === v.id
   const isOtherSelected = selected && selected !== v.id
-  const pct = allStats.totalKwh > 0 ? Math.round(stats.totalKwh / allStats.totalKwh * 100) : 0
+  const totalPct  = allStats.totalKwh > 0 ? Math.round(stats.totalKwh / allStats.totalKwh * 100) : 0
+  const homePct   = stats.totalKwh > 0 ? Math.round(stats.homeKwh / stats.totalKwh * 100) : 0
+  const extPct    = stats.totalKwh > 0 ? Math.round(stats.extKwh  / stats.totalKwh * 100) : 0
+  const pwrHome   = avgPowerFor(vCharges, 'home')
+  const pwrDC     = avgPowerFor(vCharges, 'ext')
+
   return (
     <div onClick={onClick} style={{
       flex:1, background:'var(--surface)', borderRadius:'var(--r-sm)', padding:'12px 14px', cursor:'pointer',
@@ -41,10 +64,10 @@ function VehicleCard({ v, stats, allStats, selected, onClick }) {
       opacity: isOtherSelected ? 0.55 : 1,
       transition:'all 0.15s',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
         <span style={{ fontSize:18 }}>{v.emoji}</span>
         <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
-        <span style={{ marginLeft:'auto', fontSize:11, fontWeight:600, color:v.color, background:`${v.color}18`, padding:'2px 7px', borderRadius:20 }}>{pct}%</span>
+        <span style={{ marginLeft:'auto', fontSize:11, fontWeight:600, color:v.color, background:`${v.color}18`, padding:'2px 6px', borderRadius:20 }}>{totalPct}%</span>
       </div>
       <div className="mono" style={{ fontSize:20, fontWeight:700 }}>{stats.totalKwh.toFixed(0)}<span style={{ fontSize:11, color:'var(--muted)', fontWeight:400 }}> kWh</span></div>
       <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
@@ -53,14 +76,32 @@ function VehicleCard({ v, stats, allStats, selected, onClick }) {
       </div>
       {stats.totalKwh > 0 && (
         <>
+          {/* Home/ext bar with % */}
           <div style={{ marginTop:8, display:'flex', gap:2 }}>
-            <div style={{ flex:stats.homeKwh||0.001, height:3, borderRadius:2, background:'var(--green)', opacity:.8 }} />
-            <div style={{ flex:stats.extKwh||0.001, height:3, borderRadius:2, background:'var(--amber)', opacity:.8 }} />
+            <div style={{ flex:homePct||0.001, height:3, borderRadius:2, background:'var(--green)', opacity:.85 }} />
+            <div style={{ flex:extPct||0.001,  height:3, borderRadius:2, background:'var(--amber)', opacity:.85 }} />
           </div>
-          <div style={{ display:'flex', gap:8, marginTop:3, fontSize:9, color:'var(--muted)' }}>
-            <span>🏠 {stats.homeKwh.toFixed(0)}</span>
-            <span>📍 {stats.extKwh.toFixed(0)}</span>
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:3 }}>
+            <span style={{ fontSize:9, color:'var(--green)', fontWeight:600 }}>🏠 {homePct}%</span>
+            <span style={{ fontSize:9, color:'var(--amber)', fontWeight:600 }}>{extPct}% 📍</span>
           </div>
+          {/* Avg power */}
+          {(pwrHome || pwrDC) && (
+            <div style={{ marginTop:7, display:'flex', gap:6 }}>
+              {pwrHome && (
+                <div style={{ flex:1, background:'rgba(34,197,94,0.08)', borderRadius:6, padding:'4px 7px' }}>
+                  <div className="mono" style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{pwrHome} kW</div>
+                  <div style={{ fontSize:8, color:'var(--muted)' }}>AC maison</div>
+                </div>
+              )}
+              {pwrDC && (
+                <div style={{ flex:1, background:'rgba(251,191,36,0.08)', borderRadius:6, padding:'4px 7px' }}>
+                  <div className="mono" style={{ fontSize:11, fontWeight:700, color:'var(--amber)' }}>{pwrDC} kW</div>
+                  <div style={{ fontSize:8, color:'var(--muted)' }}>DC externe</div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -126,8 +167,6 @@ export default function Dashboard({ charges, onNavigate }) {
   }, [charges, activePeriod])
 
   const stats      = useMemo(() => computeStats(filtered),          [filtered])
-  const statsMg4   = useMemo(() => computeStats(periodFiltered, 'mg4'),   [periodFiltered])
-  const statsXpeng = useMemo(() => computeStats(periodFiltered, 'xpeng'), [periodFiltered])
   const statsAll   = useMemo(() => computeStats(periodFiltered),          [periodFiltered])
 
   // Adaptive chart
@@ -263,8 +302,8 @@ export default function Dashboard({ charges, onNavigate }) {
       <div style={{ margin:'10px 16px 0' }}>
         <div className="section-label">{`Véhicules — ${periodLabel}`}</div>
         <div style={{ display:'flex', gap:8 }}>
-          <VehicleCard v={VEHICLES.mg4}   stats={statsMg4}   allStats={statsAll} selected={activeVehicle} onClick={()=>toggleVehicle('mg4')} />
-          <VehicleCard v={VEHICLES.xpeng} stats={statsXpeng} allStats={statsAll} selected={activeVehicle} onClick={()=>toggleVehicle('xpeng')} />
+          <VehicleCard v={VEHICLES.mg4}   charges={periodFiltered} allStats={statsAll} selected={activeVehicle} onClick={()=>toggleVehicle('mg4')} />
+          <VehicleCard v={VEHICLES.xpeng} charges={periodFiltered} allStats={statsAll} selected={activeVehicle} onClick={()=>toggleVehicle('xpeng')} />
         </div>
       </div>
 
