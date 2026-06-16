@@ -3,9 +3,8 @@ import { createPortal } from 'react-dom'
 import { VEHICLES, getProviderStats } from '../utils.js'
 
 const TILE_LAYERS = {
-  dark:     { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',       label:'🌑 Sombre' },
-  positron: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', label:'🗺️ Voyager' },
-  light:    { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',      label:'☀️ Clair' },
+  dark:     'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light:    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
 }
 
 function toLogoName(n='') { return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') }
@@ -110,7 +109,7 @@ function FilterSheet({ onClose, filters, setFilters, charges, today }) {
         <div style={{ padding:'14px 20px 10px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div style={{ fontSize:16, fontWeight:700 }}>Filtres carte</div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <button onClick={()=>setFilters({vehicle:'all',period:'all',customFrom:'',customTo:'',provider:'all',mapStyle:''})}
+            <button onClick={()=>setFilters({vehicle:'all',period:'all',customFrom:'',customTo:'',provider:'all'})}
               style={{ fontSize:11, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>Réinitialiser</button>
             <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', cursor:'pointer', fontSize:16 }}>×</button>
           </div>
@@ -144,16 +143,6 @@ function FilterSheet({ onClose, filters, setFilters, charges, today }) {
               {chip(vehicle==='all','Tous',()=>setFilters(f=>({...f,vehicle:'all'})))}
               {chip(vehicle==='mg4','MG4',()=>setFilters(f=>({...f,vehicle:'mg4'})),'var(--mg4)')}
               {chip(vehicle==='xpeng','Xpeng G6',()=>setFilters(f=>({...f,vehicle:'xpeng'})),'var(--xpeng)')}
-            </div>
-          </div>
-
-          {/* Map style */}
-          <div>
-            <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Fond de carte</div>
-            <div style={{ display:'flex', gap:6 }}>
-              {Object.entries(TILE_LAYERS).map(([id,t]) =>
-                chip(filters.mapStyle===id || (!filters.mapStyle && id==='positron'), t.label, ()=>setFilters(f=>({...f,mapStyle:id})))
-              )}
             </div>
           </div>
 
@@ -194,8 +183,8 @@ export default function MapView({ charges, settings, theme }) {
   const tileRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ vehicle:'all', period:'all', customFrom:'', customTo:'', provider:'all', mapStyle:'' })
-  const mapStyle = filters.mapStyle || (theme === 'light' ? 'positron' : 'dark')
+  const [filters, setFilters] = useState({ vehicle:'all', period:'all', customFrom:'', customTo:'', provider:'all' })
+  const mapStyle = theme === 'light' ? 'light' : 'dark'
   const today = new Date().toISOString().slice(0,10)
 
   const activeFilterCount = [
@@ -231,8 +220,7 @@ export default function MapView({ charges, settings, theme }) {
     }
     const map = mapInst.current
     if (tileRef.current) { map.removeLayer(tileRef.current) }
-    const t = TILE_LAYERS[mapStyle]
-    tileRef.current = window.L.tileLayer(t.url, { maxZoom:19 }).addTo(map)
+    tileRef.current = window.L.tileLayer(TILE_LAYERS[mapStyle]||TILE_LAYERS.dark, { maxZoom:19 }).addTo(map)
   }, [ready, mapStyle])
 
   useEffect(() => {
