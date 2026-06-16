@@ -13,12 +13,12 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
   const alertIds = useMemo(() => {
     if (!alertFilter?.length) return null
     const ids = new Set()
-    alertFilter.forEach(a => (a.ids||[]).forEach(id => ids.add(id)))
+    alertFilter.forEach(a => (a.ids||[]).forEach(id => ids.add(Number(id))))
     return ids
   }, [alertFilter])
 
   const filtered = useMemo(() => {
-    if (alertIds) return charges.filter(c => alertIds.has(c.id))
+    if (alertIds) return charges.filter(c => alertIds.has(Number(c.id)))
     return applyFilters(charges)
   }, [charges, filters, alertIds])
 
