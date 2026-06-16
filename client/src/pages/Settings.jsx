@@ -3,7 +3,7 @@ import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
 import { VERSION } from '../version.js'
 import ImportCSV from '../components/ImportCSV.jsx'
-import { apiV2CSync, apiV2CSyncHistory } from '../api.js'
+import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
 
 function Field({ label, children, hint }) {
@@ -248,9 +248,18 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
                       disabled={v2cSyncing} style={{ flex:1, padding:'8px', borderRadius:'var(--r-sm)', background:'rgba(79,142,247,0.1)', border:'1.5px solid var(--accent)', color:'var(--accent)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
                       {v2cSyncing ? '…' : '🔄 Sync'}
                     </button>
-                    <button onClick={async()=>{ setV2cSyncing(true); setV2cMsg(null); try { const r=await apiV2CSyncHistory(); setV2cMsg({type:'ok',text:`✓ ${r.created} créée(s)`}) } catch(e){setV2cMsg({type:'err',text:'Erreur: '+e.message})} setV2cSyncing(false) }}
+                    <button onClick={async()=>{
+                        const date = prompt('Date à synchroniser (YYYY-MM-DD) :', new Date().toISOString().slice(0,10))
+                        if (!date) return
+                        setV2cSyncing(true); setV2cMsg(null)
+                        try {
+                          const r = await apiV2CSyncDate(date)
+                          setV2cMsg({type:'ok', text:`✓ ${date} : ${r.created} créée(s), ${r.skipped} ignorée(s)`})
+                        } catch(e) { setV2cMsg({type:'err', text:'Erreur: '+e.message}) }
+                        setV2cSyncing(false)
+                      }}
                       disabled={v2cSyncing} style={{ flex:1, padding:'8px', borderRadius:'var(--r-sm)', background:'var(--surface2)', border:'1.5px solid var(--border)', color:'var(--muted)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                      {v2cSyncing ? '…' : '📅 6 mois'}
+                      {v2cSyncing ? '…' : '📅 Sync date'}
                     </button>
                   </div>
                   {v2cMsg && <div style={{ padding:'7px 12px', borderRadius:'var(--r-sm)', background:v2cMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:v2cMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:11, fontWeight:600 }}>{v2cMsg.text}</div>}

@@ -467,6 +467,15 @@ app.post('/api/v2c/sync', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }) }
 })
 
+app.post('/api/v2c/sync/date', requireAuth, async (req, res) => {
+  const { date } = req.query
+  if (!date) return res.status(400).json({ error: 'date requis (YYYY-MM-DD)' })
+  try {
+    const result = await syncV2C(req.user.id, { startDate: date, endDate: date })
+    res.json(result)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
 app.post('/api/v2c/sync/history', requireAuth, async (req, res) => {
   try {
     const result = await syncV2CHistory(req.user.id)
