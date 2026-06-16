@@ -215,8 +215,6 @@ export default function MapView({ charges, settings, theme }) {
         zoomControl: false,
         attributionControl: false,
       }).setView([46.8, 2.3], 6)
-      const tileUrl = TILE_LAYERS[mapStyle] || TILE_LAYERS.dark
-      tileRef.current = window.L.tileLayer(tileUrl, { maxZoom:19 }).addTo(mapInst.current)
     }
     const map = mapInst.current
     if (tileRef.current) { map.removeLayer(tileRef.current) }
@@ -227,6 +225,7 @@ export default function MapView({ charges, settings, theme }) {
     if (!ready || !mapRef.current) return
     if (!mapInst.current) return
     const map = mapInst.current
+    // Remove only markers, never tile layers
     map.eachLayer(l => { if (l instanceof window.L.Marker) map.removeLayer(l) })
 
     if (settings?.homeLat && settings?.homeLng) {
@@ -250,7 +249,7 @@ export default function MapView({ charges, settings, theme }) {
       bounds.push([group.lat, group.lng])
     })
 
-    if (bounds.length > 0) map.fitBounds(bounds, { padding:[60,60], maxZoom:14 })
+    if (bounds.length > 0) map.fitBounds(bounds, { padding:[50,50], maxZoom:12 })
   }, [ready, filtered, settings])
 
   useEffect(() => () => { if (mapInst.current) { mapInst.current.remove(); mapInst.current = null } }, [])
@@ -281,7 +280,7 @@ export default function MapView({ charges, settings, theme }) {
       </div>
 
       {/* Map — full width, no margin */}
-      <div style={{ position:'relative', height:'70vh', minHeight:400, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
+      <div style={{ position:'relative', height:'60vh', minHeight:380, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
         {!ready ? (
           <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface)', color:'var(--muted)', fontSize:13 }}>Chargement…</div>
         ) : withCoords.length === 0 ? (
