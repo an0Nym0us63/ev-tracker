@@ -214,7 +214,7 @@ export default function Stats({ charges }) {
         </div>
 
         {(totalSolar > 0 || totalFuel > 0) && (
-          <div style={{ padding:'0 16px' }}>
+          <div style={{ padding:'12px 16px 0' }}>
             <SectionLabel>Économies réalisées</SectionLabel>
             <div className="card" style={{ padding:'16px' }}>
 
