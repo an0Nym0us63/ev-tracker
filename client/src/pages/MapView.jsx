@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { VEHICLES, getProviderStats } from '../utils.js'
+import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
 const TILE_LAYERS = {
   dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -93,77 +94,7 @@ function startOf(period) {
   return null
 }
 
-// Filter panel sheet
-function FilterSheet({ onClose, filters, setFilters, charges, today }) {
-  const providers = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort(), [charges])
-  const { vehicle, period, customFrom, customTo, provider } = filters
 
-  function chip(active, label, onClick, color='var(--accent)') {
-    return <button onClick={onClick} style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, flexShrink:0, border:`1.5px solid ${active?color:'var(--border)'}`, background:active?`${color}18`:'var(--surface)', color:active?color:'var(--muted)', cursor:'pointer', whiteSpace:'nowrap' }}>{label}</button>
-  }
-
-  return createPortal(
-    <>
-      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:500 }} />
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--surface)', borderRadius:'20px 20px 0 0', zIndex:501, maxHeight:'80vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 32px rgba(0,0,0,0.4)', animation:'slideUp 0.2s ease' }}>
-        <div style={{ padding:'14px 20px 10px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-          <div style={{ fontSize:16, fontWeight:700 }}>Filtres carte</div>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <button onClick={()=>setFilters({vehicle:'all',period:'all',customFrom:'',customTo:'',provider:'all'})}
-              style={{ fontSize:11, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>Réinitialiser</button>
-            <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', cursor:'pointer', fontSize:16 }}>×</button>
-          </div>
-        </div>
-
-        <div style={{ overflowY:'auto', padding:'0 16px 32px', display:'flex', flexDirection:'column', gap:18 }}>
-
-          {/* Period */}
-          <div>
-            <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Période</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-              {[{id:'all',l:'Tout'},{id:'today',l:"Aujourd'hui"},{id:'week',l:'Cette semaine'},{id:'month',l:'Ce mois'},{id:'3months',l:'3 mois'},{id:'year',l:'Cette année'},{id:'custom',l:'📅 Plage'}].map(p =>
-                chip(period===p.id, p.l, ()=>setFilters(f=>({...f,period:p.id})))
-              )}
-            </div>
-            {period==='custom' && (
-              <div style={{ display:'flex', gap:8, marginTop:10, alignItems:'center' }}>
-                <input type="date" value={customFrom} max={customTo||today} onChange={e=>setFilters(f=>({...f,customFrom:e.target.value}))}
-                  style={{ flex:1, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:'8px 10px', fontSize:13, color:'var(--text)', colorScheme:'dark' }} />
-                <span style={{ color:'var(--muted)', flexShrink:0 }}>→</span>
-                <input type="date" value={customTo} min={customFrom} max={today} onChange={e=>setFilters(f=>({...f,customTo:e.target.value}))}
-                  style={{ flex:1, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:'8px 10px', fontSize:13, color:'var(--text)', colorScheme:'dark' }} />
-              </div>
-            )}
-          </div>
-
-          {/* Vehicle */}
-          <div>
-            <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Véhicule</div>
-            <div style={{ display:'flex', gap:6 }}>
-              {chip(vehicle==='all','Tous',()=>setFilters(f=>({...f,vehicle:'all'})))}
-              {chip(vehicle==='mg4','MG4',()=>setFilters(f=>({...f,vehicle:'mg4'})),'var(--mg4)')}
-              {chip(vehicle==='xpeng','Xpeng G6',()=>setFilters(f=>({...f,vehicle:'xpeng'})),'var(--xpeng)')}
-            </div>
-          </div>
-
-          {/* Provider */}
-          {providers.length > 0 && (
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Fournisseur</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                {chip(provider==='all','Tous',()=>setFilters(f=>({...f,provider:'all'})))}
-                {providers.map(p => chip(provider===p, p, ()=>setFilters(f=>({...f,provider:p}))))}
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
-      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-    </>,
-    document.body
-  )
-}
 
 function loadLeaflet() {
   return new Promise(resolve => {
@@ -195,18 +126,7 @@ export default function MapView({ charges, settings, theme }) {
 
   useEffect(() => { loadLeaflet().then(() => setReady(true)) }, [])
 
-  const filtered = useMemo(() => charges.filter(c => {
-    if (filters.vehicle !== 'all' && c.vehicleId !== filters.vehicle) return false
-    if (filters.provider !== 'all' && c.provider !== filters.provider) return false
-    if (filters.period === 'custom') {
-      if (filters.customFrom && c.date < filters.customFrom) return false
-      if (filters.customTo   && c.date > filters.customTo)   return false
-    } else {
-      const from = startOf(filters.period)
-      if (from && c.date < from) return false
-    }
-    return c.lat && c.lng
-  }), [charges, filters])
+  const filtered = useMemo(() => applyFilters(charges).filter(c => c.lat && c.lng), [charges, filters])
 
   useEffect(() => {
     if (!ready || !mapRef.current) return
@@ -267,7 +187,7 @@ export default function MapView({ charges, settings, theme }) {
         <div style={{ fontSize:20, fontWeight:700 }}>Carte</div>
         <button onClick={()=>setShowFilters(true)} style={{
           display:'flex', alignItems:'center', gap:6, padding:'7px 14px',
-          borderRadius:20, border:`1.5px solid ${activeFilterCount>0?'var(--accent)':'var(--border)'}`,
+          borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`,
           background: activeFilterCount>0 ? 'rgba(79,142,247,0.1)' : 'var(--surface)',
           color: activeFilterCount>0 ? 'var(--accent)' : 'var(--muted)',
           fontSize:13, fontWeight:600, cursor:'pointer'
@@ -335,7 +255,10 @@ export default function MapView({ charges, settings, theme }) {
         )
       })()}
 
-      {showFilters && <FilterSheet onClose={()=>setShowFilters(false)} filters={filters} setFilters={setFilters} charges={charges} today={today} />}
+      {showFilters && (
+        <FilterSheet onClose={()=>setShowFilters(false)} filters={filters} setFilters={setFilters}
+          config={{ showLocation:true, providers, cards }} />
+      )}
     </div>
   )
 }

@@ -8,26 +8,47 @@ function Chip({ active, label, onClick, color='var(--accent)' }) {
       border:`1.5px solid ${active ? color : 'var(--border)'}`,
       background: active ? `${color}18` : 'var(--surface)',
       color: active ? color : 'var(--muted)',
-      cursor:'pointer', whiteSpace:'nowrap',
+      cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.12s',
     }}>{label}</button>
   )
 }
 
+function MultiSelect({ label, options, selected, onChange, color='var(--accent)' }) {
+  const allSelected = selected.length === 0 // empty = all
+  function toggle(val) {
+    if (selected.includes(val)) {
+      onChange(selected.filter(v => v !== val))
+    } else {
+      onChange([...selected, val])
+    }
+  }
+  return (
+    <div>
+      <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{label}</div>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+        <Chip active={allSelected} label="Tous" onClick={()=>onChange([])} color={color} />
+        {options.map(o => (
+          <Chip key={o} active={selected.includes(o)} label={o} onClick={()=>toggle(o)} color={color} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function FilterSheet({ onClose, filters, setFilters, config }) {
-  // config: { periods, vehicles, providers, cards, showLocation }
   const today = new Date().toISOString().slice(0,10)
-  const { period, customFrom, customTo, vehicle, provider, card, location } = filters
+  const { period, customFrom, customTo, vehicles, providers, cards, locations } = filters
 
   function reset() {
-    setFilters({ period:'all', customFrom:'', customTo:'', vehicle:'all', provider:'all', card:'all', location:'all' })
+    setFilters({ period:'all', customFrom:'', customTo:'', vehicles:[], providers:[], cards:[], locations:[] })
   }
 
   const activeCount = [
     period !== 'all',
-    vehicle !== 'all',
-    provider !== 'all',
-    card !== 'all',
-    location !== 'all',
+    vehicles.length > 0,
+    providers.length > 0,
+    cards.length > 0,
+    locations.length > 0,
   ].filter(Boolean).length
 
   const periods = [
@@ -42,19 +63,19 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
   return createPortal(
     <>
       <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:500 }} />
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--surface)', borderRadius:'20px 20px 0 0', zIndex:501, maxHeight:'82vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 32px rgba(0,0,0,0.4)', animation:'slideUp 0.2s ease' }}>
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--surface)', borderRadius:'20px 20px 0 0', zIndex:501, maxHeight:'85vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 32px rgba(0,0,0,0.4)', animation:'slideUp 0.2s ease' }}>
 
-        <div style={{ padding:'14px 20px 10px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+        <div style={{ padding:'14px 20px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
           <div style={{ fontSize:16, fontWeight:700 }}>Filtres{activeCount > 0 ? ` (${activeCount})` : ''}</div>
           <div style={{ display:'flex', gap:8 }}>
             {activeCount > 0 && (
-              <button onClick={reset} style={{ fontSize:11, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>Réinitialiser</button>
+              <button onClick={reset} style={{ fontSize:12, color:'var(--red)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>Réinitialiser</button>
             )}
             <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', cursor:'pointer', fontSize:16 }}>×</button>
           </div>
         </div>
 
-        <div style={{ overflowY:'auto', padding:'14px 16px 32px', display:'flex', flexDirection:'column', gap:18 }}>
+        <div style={{ overflowY:'auto', padding:'16px 16px 32px', display:'flex', flexDirection:'column', gap:20 }}>
 
           {/* Period */}
           <div>
@@ -73,13 +94,15 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
             )}
           </div>
 
-          {/* Vehicle */}
+          {/* Vehicle — multi */}
           <div>
             <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Véhicule</div>
             <div style={{ display:'flex', gap:6 }}>
-              <Chip active={vehicle==='all'}   label="Tous"      onClick={()=>setFilters(f=>({...f,vehicle:'all'}))} />
-              <Chip active={vehicle==='mg4'}   label="MG4"       onClick={()=>setFilters(f=>({...f,vehicle:'mg4'}))}   color="var(--mg4)" />
-              <Chip active={vehicle==='xpeng'} label="Xpeng G6"  onClick={()=>setFilters(f=>({...f,vehicle:'xpeng'}))} color="var(--xpeng)" />
+              <Chip active={vehicles.length===0} label="Tous" onClick={()=>setFilters(f=>({...f,vehicles:[]}))} />
+              {[{id:'mg4',label:'MG4',color:'var(--mg4)'},{id:'xpeng',label:'Xpeng G6',color:'var(--xpeng)'}].map(v => (
+                <Chip key={v.id} active={vehicles.includes(v.id)} label={v.label} color={v.color}
+                  onClick={()=>setFilters(f=>({...f,vehicles:f.vehicles.includes(v.id)?f.vehicles.filter(x=>x!==v.id):[...f.vehicles,v.id]}))} />
+              ))}
             </div>
           </div>
 
@@ -88,33 +111,25 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
             <div>
               <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Lieu</div>
               <div style={{ display:'flex', gap:6 }}>
-                <Chip active={location==='all'}  label="Tous"     onClick={()=>setFilters(f=>({...f,location:'all'}))} />
-                <Chip active={location==='home'} label="🏠 Maison"  onClick={()=>setFilters(f=>({...f,location:'home'}))} color="var(--green)" />
-                <Chip active={location==='ext'}  label="📍 Externe" onClick={()=>setFilters(f=>({...f,location:'ext'}))}  color="var(--amber)" />
+                <Chip active={locations.length===0} label="Tous" onClick={()=>setFilters(f=>({...f,locations:[]}))} />
+                {[{id:'home',label:'🏠 Maison',color:'var(--green)'},{id:'ext',label:'📍 Externe',color:'var(--amber)'}].map(l => (
+                  <Chip key={l.id} active={locations.includes(l.id)} label={l.label} color={l.color}
+                    onClick={()=>setFilters(f=>({...f,locations:f.locations.includes(l.id)?f.locations.filter(x=>x!==l.id):[...f.locations,l.id]}))} />
+                ))}
               </div>
             </div>
           )}
 
-          {/* Provider */}
+          {/* Providers — multi */}
           {config?.providers?.length > 0 && (
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Fournisseur</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                <Chip active={provider==='all'} label="Tous" onClick={()=>setFilters(f=>({...f,provider:'all'}))} />
-                {config.providers.map(p => <Chip key={p} active={provider===p} label={p} onClick={()=>setFilters(f=>({...f,provider:p}))} />)}
-              </div>
-            </div>
+            <MultiSelect label="Fournisseur" options={config.providers} selected={providers}
+              onChange={v=>setFilters(f=>({...f,providers:v}))} />
           )}
 
-          {/* Card */}
+          {/* Cards — multi */}
           {config?.cards?.length > 0 && (
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Carte utilisée</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                <Chip active={card==='all'} label="Toutes" onClick={()=>setFilters(f=>({...f,card:'all'}))} />
-                {config.cards.map(c => <Chip key={c} active={card===c} label={c} onClick={()=>setFilters(f=>({...f,card:c}))} />)}
-              </div>
-            </div>
+            <MultiSelect label="Carte utilisée" options={config.cards} selected={cards}
+              onChange={v=>setFilters(f=>({...f,cards:v}))} color="var(--xpeng)" />
           )}
 
         </div>
@@ -128,17 +143,24 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
 export function useFilters() {
   const [filters, setFilters] = React.useState({
     period:'all', customFrom:'', customTo:'',
-    vehicle:'all', provider:'all', card:'all', location:'all'
+    vehicles:[], providers:[], cards:[], locations:[]
   })
   const [showFilters, setShowFilters] = React.useState(false)
 
   function applyFilters(charges) {
     return charges.filter(c => {
-      if (filters.vehicle !== 'all' && c.vehicleId !== filters.vehicle) return false
-      if (filters.provider !== 'all' && c.provider !== filters.provider) return false
-      if (filters.card !== 'all' && c.card !== filters.card) return false
-      if (filters.location === 'home' && c.locationId !== 'home') return false
-      if (filters.location === 'ext'  && c.locationId === 'home') return false
+      // Vehicles — multi
+      if (filters.vehicles.length > 0 && !filters.vehicles.includes(c.vehicleId)) return false
+      // Providers — multi
+      if (filters.providers.length > 0 && !filters.providers.includes(c.provider)) return false
+      // Cards — multi
+      if (filters.cards.length > 0 && !filters.cards.includes(c.card)) return false
+      // Locations — multi
+      if (filters.locations.length > 0) {
+        const loc = c.locationId === 'home' ? 'home' : 'ext'
+        if (!filters.locations.includes(loc)) return false
+      }
+      // Period
       if (filters.period === 'custom') {
         if (filters.customFrom && c.date < filters.customFrom) return false
         if (filters.customTo   && c.date > filters.customTo)   return false
@@ -157,10 +179,10 @@ export function useFilters() {
 
   const activeCount = [
     filters.period !== 'all',
-    filters.vehicle !== 'all',
-    filters.provider !== 'all',
-    filters.card !== 'all',
-    filters.location !== 'all',
+    filters.vehicles.length > 0,
+    filters.providers.length > 0,
+    filters.cards.length > 0,
+    filters.locations.length > 0,
   ].filter(Boolean).length
 
   return { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount }
