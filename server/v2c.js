@@ -53,7 +53,7 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
   return {
     account_id: accountId, vehicle_id: vehicleId || 'unknown',
     location_id: 'home', location_name: 'Maison',
-    provider: 'V2C', card: 'V2C Trydan',
+    provider: 'V2C', card: 'V2C',
     date, kwh: s.energy, total_cost: totalCost,
     duration_min: durationMin > 0 ? durationMin : null,
     source: 'v2c', v2c_id: s.id,
