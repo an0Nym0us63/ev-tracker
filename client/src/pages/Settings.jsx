@@ -44,6 +44,10 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
       setHomeLabel(s.homeLabel || '')
       setHomeLat(s.homeLat || null)
       setHomeLng(s.homeLng || null)
+      setFuelPrice(s.fuelPrice?.toString() || '1.85')
+      setV2cEnabled(!!s.v2cEnabled)
+      setV2cApiKey(s.v2cApiKey || '')
+      setV2cDeviceId(s.v2cDeviceId || '')
     }).catch(() => {})
   }, [])
 
