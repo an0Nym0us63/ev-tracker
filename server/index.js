@@ -66,64 +66,72 @@ app.put('/api/settings', requireAuth, (req, res) => {
 // Search charging stations by name/location
 app.get('/api/ocm/search', requireAuth, (req, res) => {
   const s = db.prepare('SELECT ocm_api_key FROM settings WHERE account_id = ?').get(req.user.id)
-  // Use user key if available, otherwise use keyless public endpoint (rate limited but works)
   const apiKey = s?.ocm_api_key || ''
-
   const { q, lat, lng } = req.query
-  // 100 results, no country restriction, 25km radius — client filters
-  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=false&verbose=true${apiKey?'&key='+apiKey:''}`
-  if (lat && lng) { url += `&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM` } else if (q) { url += `&cityname=${encodeURIComponent(q)}` }
-  
 
-  https.get(url, (apiRes) => {
-    let data = ''
-    apiRes.on('data', chunk => data += chunk)
-    apiRes.on('end', () => {
-      try {
-        const stations = JSON.parse(data)
-        res.json(stations.map(s => {
-          // Collect unique connector types and max power
-          const connections = s.Connections || []
-          const connectorTypes = [...new Set(
-            connections
-              .map(c => c.ConnectionType?.Title || c.ConnectionType?.FormalName || '')
-              .filter(Boolean)
-              .map(t => {
-                // Normalize common names
-                if (t.includes('CCS') || t.includes('Combo')) return 'CCS'
-                if (t.includes('CHAdeMO')) return 'CHAdeMO'
-                if (t.includes('Type 2') || t.includes('Mennekes')) return 'Type 2'
-                if (t.includes('Type 1')) return 'Type 1'
-                if (t.includes('Tesla')) return 'Tesla'
-                return t.split('(')[0].trim()
-              })
-          )]
-          const maxPower = Math.max(0, ...connections.map(c => c.PowerKW || 0)) || null
-
-          // Operator: try multiple fields
-          const operator = s.OperatorInfo?.Title
-            || s.AddressInfo?.RelatedURL
-            || ''
-
-          return {
-            id:             s.ID,
-            name:           s.AddressInfo?.Title || '',
-            address:        s.AddressInfo?.AddressLine1 || '',
-            city:           s.AddressInfo?.Town || '',
-            lat:            s.AddressInfo?.Latitude,
-            lng:            s.AddressInfo?.Longitude,
-            operator:       operator.replace(/\(.*?\)/g, '').trim(),
-            network:        s.OperatorInfo?.Title || '',
-            power:          maxPower,
-            connectorTypes, // ['CCS', 'Type 2'] etc.
-            totalPoints:    s.NumberOfPoints || connections.length || null,
-          }
-        }))
-      } catch { res.json([]) }
+  function normalize(stations) {
+    return stations.map(s => {
+      const connections = s.Connections || []
+      const connectorTypes = [...new Set(
+        connections
+          .map(c => c.ConnectionType?.Title || c.ConnectionType?.FormalName || '')
+          .filter(Boolean)
+          .map(t => {
+            if (t.includes('CCS') || t.includes('Combo')) return 'CCS'
+            if (t.includes('CHAdeMO')) return 'CHAdeMO'
+            if (t.includes('Type 2') || t.includes('Mennekes')) return 'Type 2'
+            if (t.includes('Type 1')) return 'Type 1'
+            if (t.includes('Tesla')) return 'Tesla'
+            return t.split('(')[0].trim()
+          })
+      )]
+      const maxPower = Math.max(0, ...connections.map(c => c.PowerKW || 0)) || null
+      const operator = s.OperatorInfo?.Title || ''
+      return {
+        id: s.ID, name: s.AddressInfo?.Title || '',
+        address: s.AddressInfo?.AddressLine1 || '',
+        city: s.AddressInfo?.Town || '',
+        lat: s.AddressInfo?.Latitude, lng: s.AddressInfo?.Longitude,
+        operator, network: operator,
+        power: maxPower, connectorTypes,
+        totalPoints: connections.length,
+      }
     })
-  }).on('error', () => res.json([]))
-})
+  }
 
+  function fetchOCM(url) {
+    return new Promise((resolve) => {
+      https.get(url, (r) => {
+        let d = ''
+        r.on('data', c => d += c)
+        r.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve([]) } })
+      }).on('error', () => resolve([]))
+    })
+  }
+
+  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=false&verbose=true${apiKey?'&key='+apiKey:''}`
+
+  if (lat && lng) {
+    url += `&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM`
+    if (q) {
+      // Dual search: by coords + by text query, merged and deduped
+      const urlQ = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=50&compact=false&verbose=true${apiKey?'&key='+apiKey:''}&cityname=${encodeURIComponent(q)}`
+      Promise.all([fetchOCM(url), fetchOCM(urlQ)]).then(([byCoords, byText]) => {
+        const seen = new Set()
+        const merged = [...byCoords, ...byText].filter(s => {
+          if (seen.has(s.ID)) return false
+          seen.add(s.ID); return true
+        })
+        res.json(normalize(merged))
+      }).catch(() => res.json([]))
+      return
+    }
+  } else if (q) {
+    url += `&cityname=${encodeURIComponent(q)}`
+  }
+
+  fetchOCM(url).then(stations => res.json(normalize(stations))).catch(() => res.json([]))
+            lng:            s.AddressInfo?.Longitude,
 // Geocode worldwide — returns structured results for display
 app.get('/api/geocode', requireAuth, (req, res) => {
   const { q } = req.query

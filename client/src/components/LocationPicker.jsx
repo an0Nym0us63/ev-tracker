@@ -66,7 +66,15 @@ export default function LocationPicker({ value, onChange }) {
     setStationFilter('')
     setLoading(true)
     try {
-      const results = await apiOcmSearch({ lat: place.lat, lng: place.lng })
+      // Extract extra keywords beyond the city name (e.g. "Lyon Izivia" → q="Izivia")
+      const cityWords = place.name.toLowerCase().split(/\s+/)
+      const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+      const extraKeywords = queryWords.filter(w => !cityWords.some(c => c.includes(w) || w.includes(c)))
+      const extraQ = extraKeywords.join(' ').trim()
+
+      const results = await apiOcmSearch({ lat: place.lat, lng: place.lng, q: extraQ || undefined })
+      // If extra keywords, also pre-fill the station filter
+      if (extraQ) setStationFilter(extraQ)
       setStations(results)
     } catch { setStations([]) }
     finally { setLoading(false) }
