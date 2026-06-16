@@ -69,7 +69,7 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
   const apiKey = s?.ocm_api_key || ''
   const { q, lat, lng, radius } = req.query
   const dist = parseInt(radius) || 25
-  const maxResults = dist > 25 ? 500 : 300
+  const maxResults = dist > 25 ? 500 : 500
 
   function normalize(stations) {
     return stations.map(s => {

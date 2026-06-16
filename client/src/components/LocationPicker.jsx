@@ -67,7 +67,19 @@ export default function LocationPicker({ value, onChange }) {
     setLoading(true)
     try {
       const results = await apiOcmSearch({ lat: place.lat, lng: place.lng, radius })
-      setStations(results)
+      // Sort by distance from city center
+      const sorted = results
+        .filter(s => s.lat && s.lng)
+        .map(s => ({
+          ...s,
+          _dist: (() => {
+            const R=6371, dLat=(s.lat-place.lat)*Math.PI/180, dLng=(s.lng-place.lng)*Math.PI/180
+            const a=Math.sin(dLat/2)**2+Math.cos(place.lat*Math.PI/180)*Math.cos(s.lat*Math.PI/180)*Math.sin(dLng/2)**2
+            return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
+          })()
+        }))
+        .sort((a,b) => a._dist - b._dist)
+      setStations(sorted)
     } catch { setStations([]) }
     finally { setLoading(false) }
   }
