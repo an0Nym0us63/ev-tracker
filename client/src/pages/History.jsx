@@ -22,12 +22,16 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
     return applyFilters(charges)
   }, [charges, filters, alertIds])
 
-  const totalKwh  = filtered.reduce((s,c) => s + c.kwh, 0)
-  const totalCost = filtered.reduce((s,c) => s + c.totalCost, 0)
+  const totalKwh  = filtered.reduce((s,c) => s + (c.kwh||0), 0)
+  const totalCost = filtered.reduce((s,c) => s + (c.totalCost||0), 0)
 
   const grouped = useMemo(() => {
     const g = {}
-    filtered.forEach(c => { const k = c.date.slice(0,7); (g[k]=g[k]||[]).push(c) })
+    filtered.forEach(c => {
+      if (!c.date) return
+      const k = c.date.slice(0,7)
+      ;(g[k]=g[k]||[]).push(c)
+    })
     return Object.entries(g)
       .sort((a,b) => b[0].localeCompare(a[0]))
       .map(([k, items]) => [k, items.sort((a,b) => b.date.localeCompare(a.date))])
@@ -78,8 +82,8 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
         )}
 
         {grouped.map(([key, items]) => {
-          const mKwh  = items.reduce((s,c)=>s+c.kwh,0)
-          const mCost = items.reduce((s,c)=>s+c.totalCost,0)
+          const mKwh  = items.reduce((s,c)=>s+(c.kwh||0),0)
+          const mCost = items.reduce((s,c)=>s+(c.totalCost||0),0)
           return (
             <div key={key}>
               {/* Month header */}
@@ -142,7 +146,7 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
                           {c.startTime && <span style={{ marginLeft:4, fontFamily:"'JetBrains Mono',monospace", fontSize:10 }}>{c.startTime}</span>}
                         </div>
                         <div className="mono" style={{ fontSize:15, fontWeight:700 }}>{c.kwh} kWh</div>
-                        <span className="mono" style={{ fontSize:13, fontWeight:700, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{c.totalCost.toFixed(2)} €</span>
+                        <span className="mono" style={{ fontSize:13, fontWeight:700, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{(c.totalCost||0).toFixed(2)} €</span>
                         <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'flex-end', marginTop:2 }}>
                           {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(34,197,94,0.12)', color:'var(--green)' }}>🚗 +{c.fuelSavings.toFixed(0)}€</span>}
                           {c.solarSavings >= 0.01 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(251,191,36,0.12)', color:'var(--amber)' }}>☀️ {c.solarSavings.toFixed(2)}€</span>}
