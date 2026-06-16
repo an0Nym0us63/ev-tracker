@@ -288,6 +288,60 @@ export default function Stats({ charges }) {
           </div>
         )}
 
+        {/* Price per provider */}
+        {providers.length > 0 && (
+          <div style={{ padding:'0 16px 0' }}>
+            <SectionLabel>Prix moyen €/kWh par fournisseur</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:8 }}>
+              {[...providers]
+                .filter(d => d.kwh > 0)
+                .map(d => ({ ...d, avgPrice: d.cost / d.kwh }))
+                .sort((a,b) => a.avgPrice - b.avgPrice)
+                .map((d, i) => (
+                  <div key={d.name} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <OperatorLogo name={d.name} size={18} />
+                    <span style={{ fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
+                    <span style={{ fontSize:10, color:'var(--muted)', marginRight:4 }}>{d.sessions} sess.</span>
+                    <span className="mono" style={{ fontSize:13, fontWeight:700, color: d.avgPrice < 0.25 ? 'var(--green)' : d.avgPrice < 0.45 ? 'var(--accent)' : 'var(--amber)' }}>{d.avgPrice.toFixed(3)} €/kWh</span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        )}
+
+        {/* Price per card */}
+        {(() => {
+          const cardStats = {}
+          filtered.forEach(c => {
+            const card = c.card || 'Sans carte'
+            if (!cardStats[card]) cardStats[card] = { kwh:0, cost:0, sessions:0 }
+            cardStats[card].kwh     += c.kwh
+            cardStats[card].cost    += c.totalCost||0
+            cardStats[card].sessions++
+          })
+          const cards = Object.entries(cardStats)
+            .filter(([,v]) => v.kwh > 0 && v.cost > 0)
+            .map(([name,v]) => ({ name, ...v, avgPrice: v.cost/v.kwh }))
+            .sort((a,b) => a.avgPrice - b.avgPrice)
+          if (!cards.length) return null
+          return (
+            <div style={{ padding:'0 16px 0' }}>
+              <SectionLabel>Prix moyen €/kWh par carte</SectionLabel>
+              <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:8 }}>
+                {cards.map(d => (
+                  <div key={d.name} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ width:18, height:18, borderRadius:4, background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, flexShrink:0 }}>💳</div>
+                    <span style={{ fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
+                    <span style={{ fontSize:10, color:'var(--muted)', marginRight:4 }}>{d.sessions} sess.</span>
+                    <span className="mono" style={{ fontSize:13, fontWeight:700, color: d.avgPrice < 0.25 ? 'var(--green)' : d.avgPrice < 0.45 ? 'var(--accent)' : 'var(--amber)' }}>{d.avgPrice.toFixed(3)} €/kWh</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Monthly cost cumulative trend */}
         {period === 'all' && costData.length > 1 && (
           <div style={{ padding:'12px 16px 0' }}>
