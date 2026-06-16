@@ -459,16 +459,11 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:2 }}>
                   <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh} kWh</div>
-                  <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
-                    <span className="mono" style={{ fontSize:11, fontWeight:600, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</span>
-                    {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:600, color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)', opacity:0.8 }}>{c.fuelSavings >= 0 ? '+' : '-'}{Math.abs(c.fuelSavings).toFixed(0)}€</span>}
+                  <span className="mono" style={{ fontSize:12, fontWeight:700, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</span>
+                  <div style={{ display:'flex', gap:3, flexWrap:'wrap', justifyContent:'flex-end', marginTop:2 }}>
+                    {c.fuelSavings > 0.5 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(34,197,94,0.12)', color:'var(--green)' }}>🚗 +{c.fuelSavings.toFixed(0)}€</span>}
+                    {c.solarSavings > 0.05 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(251,191,36,0.12)', color:'var(--amber)' }}>☀️ {c.solarSavings.toFixed(2)}€</span>}
                   </div>
-                  {c.solarSavings > 0.05 && (
-                    <div style={{ display:'flex', alignItems:'center', gap:3 }}>
-                      <span style={{ fontSize:9 }}>☀️</span>
-                      <span className="mono" style={{ fontSize:9, fontWeight:600, color:'var(--amber)', opacity:0.9 }}>-{c.solarSavings.toFixed(2)}€</span>
-                    </div>
-                  )}
                 </div>
               </div>
             )

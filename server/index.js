@@ -436,9 +436,18 @@ function getAlerts(accountId) {
     })
   }
 
-  // Règle 2 : fournisseur manquant (hors maison sans V2C)
-  // const noProvider = db.prepare("SELECT id FROM charges WHERE account_id=? AND location_id!='home' AND (provider IS NULL OR provider='')").all(accountId)
-  // if (noProvider.length > 0) alerts.push({ type: 'no_provider', count: noProvider.length, label: 'Fournisseur manquant', ids: noProvider.map(r => r.id) })
+  // Règle 2 : carte manquante (hors maison)
+  const noCardRows = db.prepare(
+    "SELECT id FROM charges WHERE account_id=? AND location_id!='home' AND (card IS NULL OR card='')"
+  ).all(accountId)
+  if (noCardRows.length > 0) {
+    alerts.push({
+      type: 'no_card',
+      count: noCardRows.length,
+      label: 'Carte manquante',
+      ids: noCardRows.map(r => r.id)
+    })
+  }
 
   // Ajouter d'autres règles ici au fur et à mesure
 
