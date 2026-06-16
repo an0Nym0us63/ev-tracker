@@ -232,9 +232,9 @@ app.get('/api/charges', requireAuth, (req, res) => {
 app.post('/api/charges', requireAuth, (req, res) => {
   const c = req.body
   const result = db.prepare(`
-    INSERT INTO charges (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh, total_cost, duration_min, odometer, notes, source, lat, lng, location_approximate, ocm_id, power_kw, connector_types)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-  `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null)
+    INSERT INTO charges (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh, total_cost, duration_min, odometer, notes, source, lat, lng, location_approximate, ocm_id, power_kw, connector_types, start_time)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   // Compute fuel savings
@@ -251,9 +251,9 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Session introuvable' })
   const c = req.body
   db.prepare(`
-    UPDATE charges SET vehicle_id=?, location_id=?, location_name=?, provider=?, card=?, date=?, kwh=?, total_cost=?, duration_min=?, odometer=?, notes=?, lat=?, lng=?, location_approximate=?, ocm_id=?, power_kw=?, connector_types=?
+    UPDATE charges SET vehicle_id=?, location_id=?, location_name=?, provider=?, card=?, date=?, kwh=?, total_cost=?, duration_min=?, odometer=?, notes=?, lat=?, lng=?, location_approximate=?, ocm_id=?, power_kw=?, connector_types=?, start_time=?
     WHERE id=? AND account_id=?
-  `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, req.params.id, req.user.id)
+  `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null, req.params.id, req.user.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   const settings204 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)

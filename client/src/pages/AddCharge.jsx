@@ -78,6 +78,11 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
   const [hours,        setHours]        = useState(editCharge ? Math.floor((editCharge.durationMin||0)/60).toString() : '')
   const [minutes,      setMinutes]      = useState(editCharge ? ((editCharge.durationMin||0)%60).toString() : '')
   const [notes,        setNotes]        = useState(editCharge?.notes || '')
+  const [startTime,    setStartTime]    = useState(() => {
+    if (editCharge) return editCharge.startTime || ''
+    const now = new Date()
+    return `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+  })
   const [errors,       setErrors]       = useState({})
 
   // Manual provider — only shown when approx location or home
@@ -156,6 +161,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
       card: card.trim(),
       date, kwh: kwhNum, totalCost: costNum,
       durationMin: durationMin || null,
+    startTime: startTime || null,
       notes: notes.trim(),
       lat:                 gpsLocation?.lat  || null,
       lng:                 gpsLocation?.lng  || null,
@@ -293,6 +299,16 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         </Field>
 
         {/* kWh + durée */}
+        <Field label="Heure de début">
+          <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'10px 14px' }}>
+            <span style={{ fontSize:16 }}>🕐</span>
+            <input type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}
+              style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:15, color:'var(--text)', fontFamily:"'JetBrains Mono',monospace", colorScheme:'dark' }} />
+            {!editCharge && <button onClick={()=>{ const n=new Date(); setStartTime(`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`) }}
+              style={{ fontSize:11, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>Maintenant</button>}
+          </div>
+        </Field>
+
         <Field label="Énergie & durée" hint={errors.kwh?'⚠ Énergie requise':undefined}>
           <div style={{ display:'flex', gap:8 }}>
             <div style={{ flex:2 }}>
