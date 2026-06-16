@@ -46,7 +46,7 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
   const date = s.startChargeDate.slice(0, 10)
   const totalCost   = parseFloat((s.costFv  || 0).toFixed(4))
   const solarSavings = parseFloat(((s.cost || 0) - (s.costFv || 0)).toFixed(4))
-  const fuelSavings = vehicleId ? global.calcSavings(vehicleId, s.energy, totalCost, fuelPrice) : null
+  const fuelSavings = vehicleId ? calcSavings(vehicleId, s.energy, totalCost, fuelPrice) : null
 
   const startTime = s.startChargeDate.slice(11, 16) // HH:MM
 

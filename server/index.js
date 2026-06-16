@@ -7,6 +7,17 @@ const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
 const { syncV2C, syncV2CHistory, addLog } = require('./v2c')
 
+function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
+  const config = {
+    mg4:   { kwhPer100: 14.5, litresPer100: 6.0 },
+    xpeng: { kwhPer100: 16.0, litresPer100: 7.5 },
+  }
+  const v = config[vehicleId]
+  if (!v || !kwh) return null
+  const fuelCost = (kwh / v.kwhPer100) * v.litresPer100 * (fuelPrice || 1.85)
+  return parseFloat((fuelCost - totalCost).toFixed(2))
+}
+
 const app = express()
 app.use(express.json())
 
@@ -240,7 +251,7 @@ app.post('/api/charges', requireAuth, (req, res) => {
   // Compute fuel savings
   const settings201 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)
   const fuelPrice201 = settings201?.fuel_price || 1.85
-  const savings201 = global.calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice201)
+  const savings201 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice201)
   if (savings201 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings201, result.lastInsertRowid)
   recalcFavorites(req.user.id)
   res.status(201).json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(result.lastInsertRowid)))
@@ -258,7 +269,7 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   const settings204 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)
   const fuelPrice204 = settings204?.fuel_price || 1.85
-  const savings204 = global.calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice204)
+  const savings204 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice204)
   if (savings204 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings204, req.params.id)
   recalcFavorites(req.user.id)
   res.json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(req.params.id)))
