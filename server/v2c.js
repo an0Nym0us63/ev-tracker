@@ -91,7 +91,8 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
   if (startDate) path += `&chargeDateStart=${startDate}`
   if (endDate)   path += `&chargeDateEnd=${endDate}`
 
-  addLog(accountId, 'info', `Sync V2C → ${path}`)
+  const isManual = !startDate // manual sync has no date range
+  if (isManual) addLog(accountId, 'info', `Sync V2C → ${path}`)
 
   let sessions
   try {
@@ -102,18 +103,18 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     return { created: 0, skipped: 0, errors: 1 }
   }
 
-  addLog(accountId, 'info', `${sessions.length} session(s) reçue(s)`)
+  if (isManual) addLog(accountId, 'info', `${sessions.length} session(s) reçue(s)`)
 
   let created = 0, skipped = 0
   for (const s of sessions) {
     // Skip sessions without energy
     if (!s.energy || s.energy <= 0) {
-      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — energy=0 (${s.startChargeDate})`)
+      if (isManual) addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — energy=0 (${s.startChargeDate})`)
       skipped++
       continue
     }
     if (!s.finished) {
-      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — non terminée (${s.startChargeDate})`)
+      if (isManual) addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — non terminée (${s.startChargeDate})`)
       skipped++
       continue
     }
@@ -121,7 +122,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     // Check already imported by v2c_id
     const exists = db.prepare('SELECT id FROM charges WHERE account_id=? AND v2c_id=?').get(accountId, s.id)
     if (exists) {
-      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — déjà importée le ${s.startChargeDate} (charge id=${exists.id})`)
+      if (isManual) addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — déjà importée le ${s.startChargeDate} (charge id=${exists.id})`)
       skipped++
       continue
     }
@@ -172,7 +173,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     }
   }
 
-  addLog(accountId, 'info', `Sync terminée: ${created} créée(s), ${skipped} ignorée(s)`)
+  if (isManual || created > 0) addLog(accountId, 'info', `Sync terminée: ${created} créée(s), ${skipped} ignorée(s)`)
   return { created, skipped, errors: 0 }
 }
 
