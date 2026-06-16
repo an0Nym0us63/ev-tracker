@@ -238,7 +238,13 @@ export default function LocationPicker({ value, onChange }) {
                       </div>
                       {s.address && <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>{s.address}</div>}
                     </div>
-                    <span style={{ fontSize:11, color:'var(--green)', flexShrink:0, marginTop:2, fontWeight:600 }}>→</span>
+                    {s._dist != null && (
+                      <div style={{ flexShrink:0, textAlign:'right', marginTop:2 }}>
+                        <div className="mono" style={{ fontSize:11, fontWeight:700, color: s._dist<2?'var(--green)':s._dist<10?'var(--accent)':'var(--muted)' }}>
+                          {s._dist < 1 ? `${Math.round(s._dist*1000)}m` : `${s._dist.toFixed(1)}km`}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
             }
