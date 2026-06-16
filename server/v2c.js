@@ -177,31 +177,32 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
   return { created, skipped, errors: 0 }
 }
 
-// ─── Historical sync: last 6 months by 30-day chunks ─────────────────────────
+// ─── Historical sync: last 6 months by weekly chunks ─────────────────────────
 async function syncV2CHistory(accountId) {
-  addLog(accountId, 'info', '=== Sync historique V2C (6 mois) ===')
+  addLog(accountId, 'info', '=== Sync historique V2C (6 mois par semaine) ===')
   const now   = new Date()
-  let totalCreated = 0, totalSkipped = 0
+  const start = new Date(now)
+  start.setMonth(start.getMonth() - 6)
 
-  for (let i = 0; i < 6; i++) {
-    const end   = new Date(now)
-    end.setMonth(end.getMonth() - i)
-    const start = new Date(end)
-    start.setDate(1)
+  let totalCreated = 0, totalSkipped = 0, chunk = 0
 
-    const startDate = start.toISOString().slice(0, 10)
-    const endDate   = end.toISOString().slice(0, 10)
+  // Iterate week by week from oldest to newest
+  let cursor = new Date(start)
+  while (cursor < now) {
+    const chunkStart = cursor.toISOString().slice(0, 10)
+    const chunkEnd   = new Date(Math.min(cursor.getTime() + 7*24*3600*1000, now.getTime())).toISOString().slice(0, 10)
+    chunk++
 
-    addLog(accountId, 'info', `Chunk ${i+1}/6: ${startDate} → ${endDate}`)
-    const res = await syncV2C(accountId, { startDate, endDate })
+    addLog(accountId, 'info', `Chunk ${chunk}: ${chunkStart} → ${chunkEnd}`)
+    const res = await syncV2C(accountId, { startDate: chunkStart, endDate: chunkEnd })
     totalCreated += res.created
     totalSkipped += res.skipped
 
-    // Small delay between calls to respect rate limits
-    await new Promise(r => setTimeout(r, 300))
+    cursor.setDate(cursor.getDate() + 7)
+    await new Promise(r => setTimeout(r, 200))
   }
 
-  addLog(accountId, 'info', `=== Historique terminé: ${totalCreated} créée(s), ${totalSkipped} ignorée(s) ===`)
+  addLog(accountId, 'info', `=== Historique terminé: ${totalCreated} créée(s), ${totalSkipped} ignorée(s) sur ${chunk} chunks ===`)
   return { created: totalCreated, skipped: totalSkipped }
 }
 

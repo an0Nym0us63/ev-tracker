@@ -266,6 +266,22 @@ export default function Dashboard({ charges, account, onNavigate, onLogout, them
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
+      {/* Sessions à compléter */}
+      {(() => {
+        const toReview = charges.filter(c => c.needsReview || c.vehicleId === 'unknown')
+        if (!toReview.length) return null
+        return (
+          <div onClick={()=>onNavigate('history')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+            <span style={{ fontSize:20 }}>⚠️</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'var(--amber)' }}>{toReview.length} session{toReview.length>1?'s':''} à compléter</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>Véhicule non identifié — appuyer pour voir</div>
+            </div>
+            <span style={{ color:'var(--amber)', fontSize:16 }}>›</span>
+          </div>
+        )
+      })()}
+
       {/* Period banners — 2x2 grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:'14px 16px 0' }}>
         {periodStats.map(p => {
