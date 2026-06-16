@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs')
 const https = require('https')
 const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
+const { syncV2C, syncV2CHistory, addLog } = require('./v2c')
 
 const app = express()
 app.use(express.json())
