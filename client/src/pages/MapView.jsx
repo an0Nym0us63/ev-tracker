@@ -113,16 +113,11 @@ export default function MapView({ charges, settings, theme }) {
   const mapInst = useRef(null)
   const tileRef = useRef(null)
   const [ready, setReady] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ vehicle:'all', period:'all', customFrom:'', customTo:'', provider:'all' })
+  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
   const mapStyle = theme === 'light' ? 'light' : 'dark'
   const today = new Date().toISOString().slice(0,10)
-
-  const activeFilterCount = [
-    filters.vehicle !== 'all',
-    filters.period !== 'all',
-    filters.provider !== 'all',
-  ].filter(Boolean).length
+  const providers = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+  const cards = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
   useEffect(() => { loadLeaflet().then(() => setReady(true)) }, [])
 
@@ -188,14 +183,14 @@ export default function MapView({ charges, settings, theme }) {
         <button onClick={()=>setShowFilters(true)} style={{
           display:'flex', alignItems:'center', gap:6, padding:'7px 14px',
           borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`,
-          background: activeFilterCount>0 ? 'rgba(79,142,247,0.1)' : 'var(--surface)',
-          color: activeFilterCount>0 ? 'var(--accent)' : 'var(--muted)',
+          background: activeCount>0 ? 'rgba(79,142,247,0.1)' : 'var(--surface)',
+          color: activeCount>0 ? 'var(--accent)' : 'var(--muted)',
           fontSize:13, fontWeight:600, cursor:'pointer'
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
           </svg>
-          Filtres{activeFilterCount>0 ? ` (${activeFilterCount})` : ''}
+          Filtres{activeCount>0 ? ` (${activeCount})` : ''}
         </button>
       </div>
 
