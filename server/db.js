@@ -175,3 +175,11 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_sync_log_account ON sync_log(account_id, created_at DESC);
 `)
+
+// ─── Cleanup V2C Trydan → V2C ─────────────────────────────────────────────────
+try {
+  db.exec("UPDATE charges SET provider='V2C' WHERE provider='V2C Trydan'")
+  db.exec("UPDATE charges SET card='V2C' WHERE card='V2C Trydan'")
+  db.exec("UPDATE lists SET value='V2C' WHERE type='providers' AND value='V2C Trydan'")
+  db.exec("UPDATE lists SET value='V2C' WHERE type='cards' AND value='V2C Trydan'")
+} catch(e) {}

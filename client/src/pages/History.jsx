@@ -127,7 +127,7 @@ export default function History({ charges, onEdit }) {
                           <span className="mono" style={{ fontSize:12, fontWeight:600, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{c.totalCost.toFixed(2)} €</span>
                           {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:600, color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)', opacity:0.8 }}>{c.fuelSavings >= 0 ? '+' : '-'}{Math.abs(c.fuelSavings).toFixed(0)}€</span>}
                         </div>
-                        {c.solarSavings > 0 && (
+                        {c.solarSavings > 0.05 && (
                           <div style={{ display:'flex', alignItems:'center', gap:3, marginTop:1 }}>
                             <span style={{ fontSize:9 }}>☀️</span>
                             <span className="mono" style={{ fontSize:9, fontWeight:600, color:'var(--amber)', opacity:0.9 }}>-{c.solarSavings.toFixed(2)}€</span>
