@@ -342,7 +342,20 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'10px 16px 0' }}>
         {kpis.map((k,i) => (
           <div key={k.label} className="card" style={{ padding:'10px 10px', gridColumn: k.type==='bar' ? 'span 2' : undefined }}>
-            {k.type === 'streak' ? (
+            {k.type === 'savings' ? (
+              <>
+                <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
+                {k.savings > 0 && <div style={{ display:'flex', alignItems:'center', gap:3, marginBottom:2 }}>
+                  <span style={{ fontSize:9 }}>🚗</span>
+                  <span className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--green)' }}>+{k.savings.toFixed(0)}€</span>
+                </div>}
+                {k.solarSavings > 0.05 && <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                  <span style={{ fontSize:9 }}>☀️</span>
+                  <span className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{k.solarSavings.toFixed(1)}€</span>
+                </div>}
+                {k.savings <= 0 && k.solarSavings <= 0.05 && <div className="mono" style={{ fontSize:14, fontWeight:700, color:'var(--muted)' }}>—</div>}
+              </>
+            ) : k.type === 'streak' ? (
               <>
                 <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
                 <div style={{ display:'flex', gap:6 }}>
