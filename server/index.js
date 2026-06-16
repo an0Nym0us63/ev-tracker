@@ -290,7 +290,7 @@ function saveList(accountId, type, value) {
 
 function toClient(c) {
   return {
-    id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id, fuelSavings: c.fuel_savings, solarSavings: c.solar_savings, needsReview: !!c.needs_review, v2cId: c.v2c_id,
+    id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id, fuelSavings: c.fuel_savings, solarSavings: c.solar_savings, needsReview: !!c.needs_review, v2cId: c.v2c_id, startTime: c.start_time||null,
     locationName: c.location_name, provider: c.provider, card: c.card,
     date: c.date, kwh: c.kwh, totalCost: c.total_cost,
     durationMin: c.duration_min, odometer: c.odometer, notes: c.notes,

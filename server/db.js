@@ -159,6 +159,7 @@ if (!settingsCols.includes('v2c_last_id'))    db.exec("ALTER TABLE settings ADD 
 // ─── Charges migrations ───────────────────────────────────────────────────────
 const chargeCols2 = db.pragma('table_info(charges)').map(c => c.name)
 if (!chargeCols2.includes('v2c_id'))        db.exec("ALTER TABLE charges ADD COLUMN v2c_id INTEGER")
+if (!chargeCols2.includes('start_time'))    db.exec("ALTER TABLE charges ADD COLUMN start_time TEXT")
 if (!chargeCols2.includes('solar_savings')) db.exec("ALTER TABLE charges ADD COLUMN solar_savings REAL")
 if (!chargeCols2.includes('needs_review'))  db.exec("ALTER TABLE charges ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
 

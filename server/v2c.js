@@ -48,13 +48,16 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
   const solarSavings = parseFloat(((s.cost || 0) - (s.costFv || 0)).toFixed(4))
   const fuelSavings = vehicleId ? global.calcSavings(vehicleId, s.energy, totalCost, fuelPrice) : null
 
+  const startTime = s.startChargeDate.slice(11, 16) // HH:MM
+
   return {
-    account_id: accountId, vehicle_id: vehicleId || null,
+    account_id: accountId, vehicle_id: vehicleId || 'unknown',
     location_id: 'home', location_name: 'Maison',
     provider: 'V2C Trydan', card: 'V2C Trydan',
     date, kwh: s.energy, total_cost: totalCost,
     duration_min: durationMin > 0 ? durationMin : null,
     source: 'v2c', v2c_id: s.id,
+    start_time: startTime,
     solar_savings: solarSavings > 0 ? solarSavings : 0,
     fuel_savings: fuelSavings,
     needs_review: vehicleId ? 0 : 1,
@@ -65,10 +68,10 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
 const insertCharge = db.prepare(`
   INSERT OR IGNORE INTO charges
     (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh,
-     total_cost, duration_min, source, v2c_id, solar_savings, fuel_savings, needs_review)
+     total_cost, duration_min, source, v2c_id, start_time, solar_savings, fuel_savings, needs_review)
   VALUES
     (@account_id, @vehicle_id, @location_id, @location_name, @provider, @card, @date, @kwh,
-     @total_cost, @duration_min, @source, @v2c_id, @solar_savings, @fuel_savings, @needs_review)
+     @total_cost, @duration_min, @source, @v2c_id, @start_time, @solar_savings, @fuel_savings, @needs_review)
 `)
 
 // Add unique index for v2c_id dedup
