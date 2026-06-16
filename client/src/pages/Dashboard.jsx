@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie, AreaChart, Area, YAxis } from 'recharts'
 import { computeStats, filterByPeriod, getChartData, getProviderStats, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
+import { apiGetAlerts } from '../api.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
@@ -146,6 +147,9 @@ function ProviderChart({ charges }) {
 export default function Dashboard({ charges, account, onNavigate, onLogout, theme, onToggleTheme }) {
   const [activePeriod,  setActivePeriod]  = useState(null)
   const [activeVehicle, setActiveVehicle] = useState(null)
+  const [alerts, setAlerts] = useState([])
+
+  useEffect(() => { apiGetAlerts().then(setAlerts).catch(()=>{}) }, [charges])
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
@@ -266,25 +270,19 @@ export default function Dashboard({ charges, account, onNavigate, onLogout, them
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
-      {/* Sessions à compléter — règles dynamiques */}
-      {(() => {
-        const rules = [
-          { check: c => c.vehicleId === 'unknown', label: 'Véhicule non identifié' },
-        ]
-        const toReview = charges.filter(c => rules.some(r => r.check(c)))
-        if (!toReview.length) return null
-        const labels = [...new Set(toReview.flatMap(c => rules.filter(r => r.check(c)).map(r => r.label)))]
-        return (
-          <div onClick={()=>onNavigate('history')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
-            <span style={{ fontSize:20 }}>⚠️</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:'var(--amber)' }}>{toReview.length} session{toReview.length>1?'s':''} à compléter</div>
-              <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>{labels.join(' · ')}</div>
+      {/* Alertes dynamiques depuis le serveur */}
+      {alerts.length > 0 && (
+        <div onClick={()=>onNavigate('history')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+          <span style={{ fontSize:20 }}>⚠️</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'var(--amber)' }}>
+              {alerts.reduce((s,a)=>s+a.count,0)} session{alerts.reduce((s,a)=>s+a.count,0)>1?'s':''} à compléter
             </div>
-            <span style={{ color:'var(--amber)', fontSize:16 }}>›</span>
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>{alerts.map(a=>a.label).join(' · ')}</div>
           </div>
-        )
-      })()}
+          <span style={{ color:'var(--amber)', fontSize:16 }}>›</span>
+        </div>
+      )}
 
       {/* Period banners — 2x2 grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:'14px 16px 0' }}>

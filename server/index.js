@@ -418,6 +418,28 @@ app.post('/api/import/charges', requireAuth, (req, res) => {
   }
 })
 
+// ─── Alerts endpoint ─────────────────────────────────────────────────────────
+
+function getAlerts(accountId) {
+  const alerts = []
+
+  // Règle 1 : véhicule non identifié
+  const unknownVehicle = db.prepare(
+    "SELECT COUNT(*) as count FROM charges WHERE account_id=? AND vehicle_id='unknown'"
+  ).get(accountId)
+  if (unknownVehicle.count > 0) {
+    alerts.push({ type: 'unknown_vehicle', count: unknownVehicle.count, label: 'Véhicule non identifié' })
+  }
+
+  // Ajouter d'autres règles ici au fur et à mesure
+
+  return alerts
+}
+
+app.get('/api/alerts', requireAuth, (req, res) => {
+  res.json(getAlerts(req.user.id))
+})
+
 // ─── V2C Sync endpoints ──────────────────────────────────────────────────────
 
 app.post('/api/v2c/sync', requireAuth, async (req, res) => {

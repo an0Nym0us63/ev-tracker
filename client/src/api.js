@@ -81,3 +81,6 @@ export async function apiV2CSyncHistory() { return req('POST', '/api/v2c/sync/hi
 // ─── Logs ─────────────────────────────────────────────────────────────────────
 export async function apiGetLogs(limit=100)  { return req('GET', `/api/logs?limit=${limit}`) }
 export async function apiClearLogs()         { return req('DELETE', '/api/logs') }
+
+// ─── Alerts ──────────────────────────────────────────────────────────────────
+export async function apiGetAlerts() { return req('GET', '/api/alerts') }
