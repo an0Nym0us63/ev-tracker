@@ -192,7 +192,14 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
     <div className="page fade-up" style={{ paddingBottom:120 }}>
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'16px 20px 0' }}>
         <button onClick={onBack} style={{ width:36, height:36, borderRadius:'50%', background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, cursor:'pointer' }}>←</button>
-        <div style={{ fontSize:20, fontWeight:700 }}>{isEdit ? 'Modifier la charge' : 'Nouvelle charge'}</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:20, fontWeight:700 }}>{isEdit ? 'Modifier la charge' : 'Nouvelle charge'}</div>
+          {isEdit && editCharge?.v2cId && (
+            <div style={{ fontSize:10, color:'var(--green)', fontWeight:600, display:'flex', alignItems:'center', gap:4, marginTop:2 }}>
+              <span>⚡</span><span>Synchronisé V2C Trydan</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Vehicle */}

@@ -126,14 +126,15 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       continue
     }
 
-    // Check if a manual charge matches this session (same date + same start hour)
-    const startHour = s.startChargeDate.slice(0, 13) // "2026-06-14T19"
+    // Check if a manual charge matches this session (same date, and start_time if available)
     const manual = db.prepare(`
       SELECT id FROM charges
-      WHERE account_id=? AND date=? AND (start_time=? OR start_time IS NULL)
+      WHERE account_id=? AND date=?
         AND source='manual' AND v2c_id IS NULL
+        ${row.start_time ? "AND (start_time=? OR start_time IS NULL)" : ""}
+      ORDER BY id DESC
       LIMIT 1
-    `).get(accountId, row.date, row.start_time)
+    `).get(accountId, row.date, ...(row.start_time ? [row.start_time] : []))
 
     if (manual) {
       // Enrich manual charge with V2C data
