@@ -1,17 +1,10 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
+import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area } from 'recharts'
 import { computeStats, filterByPeriod, getChartData, getProviderStats, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
-
-const PERIODS = [
-  { id:'month', label:'Ce mois' },
-  { id:'year',  label:'Cette année' },
-  { id:'30d',   label:'30 jours' },
-  { id:'12m',   label:'12 mois' },
-  { id:'all',   label:'Tout' },
-]
 
 const Tip = ({ active, payload, label }) => {
   if (!active||!payload?.length) return null
@@ -30,11 +23,16 @@ function SectionLabel({ children }) {
 }
 
 export default function Stats({ charges }) {
-  const [period,  setPeriod]  = useState('month')
-  const [vehicle, setVehicle] = useState('all')
+  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
+
+  const providerOptions = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+  const cardOptions = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+
+  const period  = filters.period === 'all' ? 'month' : filters.period
+  const vehicle = filters.vehicle
 
   const periodFiltered  = useMemo(() => filterByPeriod(charges, period), [charges, period])
-  const filtered = useMemo(() => vehicle === 'all' ? periodFiltered : periodFiltered.filter(c=>c.vehicleId===vehicle), [periodFiltered, vehicle])
+  const filtered = useMemo(() => applyFilters(charges), [charges, filters])
 
   const stats      = useMemo(() => computeStats(filtered),          [filtered])
   const statsMg4   = useMemo(() => computeStats(periodFiltered,'mg4'),   [periodFiltered])
@@ -103,26 +101,18 @@ export default function Stats({ charges }) {
     })
   }, [filtered, period])
 
-  const chipStyle = (active, color='var(--accent)') => ({
-    padding:'5px 13px', borderRadius:20, fontSize:12, fontWeight:600, flexShrink:0,
-    border:`1.5px solid ${active?color:'var(--border)'}`,
-    background:active?`rgba(79,142,247,0.1)`:'var(--surface)',
-    color:active?color:'var(--muted)', cursor:'pointer',
-  })
-
   return (
     <div className="page fade-up" style={{ paddingBottom:100 }}>
       <div style={{ padding:'16px 20px 8px' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Statistiques</div>
       </div>
 
-      {/* Filters */}
-      <div style={{ display:'flex', gap:6, padding:'0 16px 0', overflowX:'auto', scrollbarWidth:'none' }}>
-        {PERIODS.map(p => <button key={p.id} onClick={()=>setPeriod(p.id)} style={chipStyle(period===p.id)}>{p.label}</button>)}
-        <div style={{ width:1, background:'var(--border)', margin:'4px 2px', flexShrink:0 }} />
-        {[{id:'all',label:'Tous'},{id:'mg4',label:'MG4'},{id:'xpeng',label:'Xpeng'}].map(v =>
-          <button key={v.id} onClick={()=>setVehicle(v.id)} style={chipStyle(vehicle===v.id, v.id==='mg4'?'var(--mg4)':v.id==='xpeng'?'var(--xpeng)':'var(--accent)')}>{v.label}</button>
-        )}
+      {/* Filter button */}
+      <div style={{ padding:'0 16px 0', display:'flex', justifyContent:'flex-end' }}>
+        <button onClick={()=>setShowFilters(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`, background:activeCount>0?'rgba(79,142,247,0.1)':'var(--surface)', color:activeCount>0?'var(--accent)':'var(--muted)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          Filtres{activeCount>0?` (${activeCount})`:''}
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -359,6 +349,13 @@ export default function Stats({ charges }) {
         )}
 
       </>)}
+    {showFilters && (
+        <FilterSheet
+          onClose={()=>setShowFilters(false)}
+          filters={filters} setFilters={setFilters}
+          config={{ providers: providerOptions, cards: cardOptions }}
+        />
+      )}
     </div>
   )
 }

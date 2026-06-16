@@ -1,17 +1,15 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
+import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
 export default function History({ charges, onEdit }) {
-  const [vf, setVf] = useState('all')
-  const [lf, setLf] = useState('all')
+  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
 
-  const filtered = useMemo(() => charges.filter(c => {
-    if (vf !== 'all' && c.vehicleId !== vf) return false
-    if (lf === 'home' && c.locationId !== 'home') return false
-    if (lf === 'ext'  && c.locationId === 'home') return false
-    return true
-  }), [charges, vf, lf])
+  const providers = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+  const cards = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+
+  const filtered = useMemo(() => applyFilters(charges), [charges, filters])
 
   const totalKwh  = filtered.reduce((s,c) => s + c.kwh, 0)
   const totalCost = filtered.reduce((s,c) => s + c.totalCost, 0)
@@ -24,18 +22,7 @@ export default function History({ charges, onEdit }) {
       .map(([k, items]) => [k, items.sort((a,b) => b.date.localeCompare(a.date))])
   }, [filtered])
 
-  const VF = [{id:'all',label:'Tous'},{id:'mg4',label:'MG4'},{id:'xpeng',label:'Xpeng G6'}]
-  const LF = [{id:'all',label:'Tous lieux'},{id:'home',label:'🏠 Maison'},{id:'ext',label:'📍 Externe'}]
 
-  function chipStyle(active, color = 'var(--accent)') {
-    return {
-      flexShrink:0, padding:'5px 13px', borderRadius:20,
-      border:`1.5px solid ${active ? color : 'var(--border)'}`,
-      background: active ? `rgba(${color==='var(--mg4)'?'79,142,247':color==='var(--xpeng)'?'124,92,252':'79,142,247'},0.1)` : 'var(--surface)',
-      color: active ? color : 'var(--muted)',
-      fontSize:12, fontWeight:600, cursor:'pointer',
-    }
-  }
 
   function monthLabel(key) {
     const [y,m] = key.split('-')
@@ -49,28 +36,20 @@ export default function History({ charges, onEdit }) {
         <div style={{ fontSize:20, fontWeight:700 }}>Historique</div>
       </div>
 
-      {/* Filters */}
-      <div style={{ display:'flex', gap:6, padding:'12px 16px 0', overflowX:'auto', scrollbarWidth:'none' }}>
-        {VF.map(f => (
-          <button key={f.id} onClick={() => setVf(f.id)}
-            style={chipStyle(vf===f.id, f.id==='mg4'?'var(--mg4)':f.id==='xpeng'?'var(--xpeng)':'var(--accent)')}>
-            {f.label}
-          </button>
-        ))}
-        <div style={{ width:1, background:'var(--border)', flexShrink:0, margin:'4px 2px' }} />
-        {LF.map(f => (
-          <button key={f.id} onClick={() => setLf(f.id)} style={chipStyle(lf===f.id)}>{f.label}</button>
-        ))}
+      {/* Filter button */}
+      <div style={{ padding:'10px 16px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ fontSize:12, color:'var(--muted)' }}>{filtered.length} session{filtered.length!==1?'s':''}</div>
+        <button onClick={()=>setShowFilters(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`, background:activeCount>0?'rgba(79,142,247,0.1)':'var(--surface)', color:activeCount>0?'var(--accent)':'var(--muted)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          Filtres{activeCount>0?` (${activeCount})`:''}
+        </button>
       </div>
 
       {/* Summary */}
       {filtered.length > 0 && (
-        <div style={{ margin:'10px 16px 0', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:12, color:'var(--muted)' }}>{filtered.length} session{filtered.length>1?'s':''}</span>
-          <div style={{ display:'flex', gap:16 }}>
-            <span className="mono" style={{ fontSize:13, fontWeight:700 }}>{totalKwh.toFixed(0)} kWh</span>
-            <span className="mono" style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{totalCost.toFixed(2)} €</span>
-          </div>
+        <div style={{ margin:'8px 16px 0', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:'8px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span className="mono" style={{ fontSize:13, fontWeight:700 }}>{totalKwh.toFixed(0)} kWh</span>
+          <span className="mono" style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{totalCost.toFixed(2)} €</span>
         </div>
       )}
 
@@ -156,6 +135,13 @@ export default function History({ charges, onEdit }) {
           )
         })}
       </div>
+    {showFilters && (
+        <FilterSheet
+          onClose={()=>setShowFilters(false)}
+          filters={filters} setFilters={setFilters}
+          config={{ showLocation:true, providers, cards }}
+        />
+      )}
     </div>
   )
 }

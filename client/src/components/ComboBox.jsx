@@ -16,7 +16,9 @@ export default function ComboBox({ value, onChange, options = [], placeholder, l
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()) && o !== query)
+  const filtered = options
+    .filter(o => o.toLowerCase().includes(query.toLowerCase()) && o !== query)
+    .sort((a,b) => a.localeCompare(b, 'fr'))
 
   function select(val) {
     setQuery(val)
