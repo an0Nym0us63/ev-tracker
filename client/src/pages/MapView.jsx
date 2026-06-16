@@ -5,7 +5,7 @@ import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
 const TILE_LAYERS = {
   dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 }
 
 function toLogoName(n='') { return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') }
@@ -164,7 +164,7 @@ export default function MapView({ charges, settings, theme }) {
       bounds.push([group.lat, group.lng])
     })
 
-    if (bounds.length > 0) map.fitBounds(bounds, { padding:[50,50], maxZoom:12 })
+    if (bounds.length > 0) map.fitBounds(bounds, { padding:[40,40], maxZoom:13, animate:false })
   }, [ready, filtered, settings])
 
   useEffect(() => () => { if (mapInst.current) { mapInst.current.remove(); mapInst.current = null } }, [])
