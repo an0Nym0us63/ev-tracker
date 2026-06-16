@@ -60,7 +60,6 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
     start_time: startTime,
     solar_savings: solarSavings > 0 ? solarSavings : 0,
     fuel_savings: fuelSavings,
-    needs_review: vehicleId ? 0 : 1,
   }
 }
 
@@ -68,10 +67,10 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
 const insertCharge = db.prepare(`
   INSERT OR IGNORE INTO charges
     (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh,
-     total_cost, duration_min, source, v2c_id, start_time, solar_savings, fuel_savings, needs_review)
+     total_cost, duration_min, source, v2c_id, start_time, solar_savings, fuel_savings)
   VALUES
     (@account_id, @vehicle_id, @location_id, @location_name, @provider, @card, @date, @kwh,
-     @total_cost, @duration_min, @source, @v2c_id, @start_time, @solar_savings, @fuel_savings, @needs_review)
+     @total_cost, @duration_min, @source, @v2c_id, @start_time, @solar_savings, @fuel_savings)
 `)
 
 // Add unique index for v2c_id dedup
