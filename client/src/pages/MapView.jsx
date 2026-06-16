@@ -195,7 +195,7 @@ export default function MapView({ charges, settings, theme }) {
       </div>
 
       {/* Map — full width, no margin */}
-      <div style={{ position:'relative', height:'60vh', minHeight:380, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
+      <div style={{ position:'relative', height:'65vh', minHeight:400, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
         {!ready ? (
           <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface)', color:'var(--muted)', fontSize:13 }}>Chargement…</div>
         ) : withCoords.length === 0 ? (

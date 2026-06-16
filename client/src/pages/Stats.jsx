@@ -28,20 +28,19 @@ export default function Stats({ charges }) {
   const providerOptions = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
   const cardOptions = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
-  const period  = filters.period === 'all' ? 'month' : filters.period
-  const vehicle = filters.vehicle
+  const period  = filters.period === 'all' ? 'all' : filters.period
 
-  const periodFiltered  = useMemo(() => filterByPeriod(charges, period), [charges, period])
   const filtered = useMemo(() => applyFilters(charges), [charges, filters])
 
-  const stats      = useMemo(() => computeStats(filtered),          [filtered])
-  const statsMg4   = useMemo(() => computeStats(periodFiltered,'mg4'),   [periodFiltered])
-  const statsXpeng = useMemo(() => computeStats(periodFiltered,'xpeng'), [periodFiltered])
-  const statsAll   = useMemo(() => computeStats(periodFiltered),         [periodFiltered])
+  const stats      = useMemo(() => computeStats(filtered),         [filtered])
+  const statsMg4   = useMemo(() => computeStats(filtered, 'mg4'),  [filtered])
+  const statsXpeng = useMemo(() => computeStats(filtered, 'xpeng'),[filtered])
+  const statsAll   = stats
 
-  const chartData  = useMemo(() => getChartData(filtered, period), [filtered, period])
+  const chartData  = useMemo(() => getChartData(filtered, filters.period === 'all' ? 'all' : period), [filtered, period])
   const providers  = useMemo(() => getProviderStats(filtered), [filtered])
   const isDailyChart = period === 'month' || period === '30d'
+  const chartPeriod = period === 'all' ? 'all' : period
 
   // Extra stats
   const savings    = filtered.reduce((s,c)=>s+(c.fuelSavings||0),0)
@@ -99,7 +98,7 @@ export default function Stats({ charges }) {
       cum += cost
       return { ...row, mg4: parseFloat(mg4Cost.toFixed(2)), xpeng: parseFloat(xpengCost.toFixed(2)), cost: parseFloat(cost.toFixed(2)), cumCost: parseFloat(cum.toFixed(2)) }
     })
-  }, [filtered, period])
+  }, [filtered, period, filters.period])
 
   return (
     <div className="page fade-up" style={{ paddingBottom:100 }}>
