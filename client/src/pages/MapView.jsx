@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom'
 import { VEHICLES, getProviderStats } from '../utils.js'
 
 const TILE_LAYERS = {
-  dark:  { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: '' },
-  light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attr: '' },
+  dark:     { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',       label:'🌑 Sombre' },
+  positron: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', label:'🗺️ Voyager' },
+  light:    { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',      label:'☀️ Clair' },
 }
 
 function toLogoName(n='') { return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') }
@@ -109,7 +110,7 @@ function FilterSheet({ onClose, filters, setFilters, charges, today }) {
         <div style={{ padding:'14px 20px 10px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div style={{ fontSize:16, fontWeight:700 }}>Filtres carte</div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <button onClick={()=>setFilters({vehicle:'all',period:'all',customFrom:'',customTo:'',provider:'all'})}
+            <button onClick={()=>setFilters({vehicle:'all',period:'all',customFrom:'',customTo:'',provider:'all',mapStyle:''})}
               style={{ fontSize:11, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>Réinitialiser</button>
             <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'var(--surface2)', border:'1px solid var(--border)', cursor:'pointer', fontSize:16 }}>×</button>
           </div>
@@ -143,6 +144,16 @@ function FilterSheet({ onClose, filters, setFilters, charges, today }) {
               {chip(vehicle==='all','Tous',()=>setFilters(f=>({...f,vehicle:'all'})))}
               {chip(vehicle==='mg4','MG4',()=>setFilters(f=>({...f,vehicle:'mg4'})),'var(--mg4)')}
               {chip(vehicle==='xpeng','Xpeng G6',()=>setFilters(f=>({...f,vehicle:'xpeng'})),'var(--xpeng)')}
+            </div>
+          </div>
+
+          {/* Map style */}
+          <div>
+            <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Fond de carte</div>
+            <div style={{ display:'flex', gap:6 }}>
+              {Object.entries(TILE_LAYERS).map(([id,t]) =>
+                chip(filters.mapStyle===id || (!filters.mapStyle && id==='positron'), t.label, ()=>setFilters(f=>({...f,mapStyle:id})))
+              )}
             </div>
           </div>
 
@@ -183,8 +194,8 @@ export default function MapView({ charges, settings, theme }) {
   const tileRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ vehicle:'all', period:'all', customFrom:'', customTo:'', provider:'all' })
-  const mapStyle = theme === 'light' ? 'light' : 'dark'
+  const [filters, setFilters] = useState({ vehicle:'all', period:'all', customFrom:'', customTo:'', provider:'all', mapStyle:'' })
+  const mapStyle = filters.mapStyle || (theme === 'light' ? 'positron' : 'dark')
   const today = new Date().toISOString().slice(0,10)
 
   const activeFilterCount = [
@@ -247,7 +258,7 @@ export default function MapView({ charges, settings, theme }) {
       const haloExtra = Math.round(6 + intensity * 14)
       const haloSize = 40 + haloExtra * 2
       const icon = window.L.divIcon({ html:makeMarkerIcon(group.operator, group.approximate, intensity), className:'', iconSize:[haloSize,haloSize], iconAnchor:[haloSize/2,haloSize/2] })
-      window.L.marker([group.lat, group.lng], { icon }).addTo(map).bindPopup(buildPopupHTML(group), { maxWidth:300 })
+      window.L.marker([group.lat, group.lng], { icon, zIndexOffset: Math.round(intensity * 1000) }).addTo(map).bindPopup(buildPopupHTML(group), { maxWidth:300 })
       bounds.push([group.lat, group.lng])
     })
 
@@ -282,7 +293,7 @@ export default function MapView({ charges, settings, theme }) {
       </div>
 
       {/* Map — full width, no margin */}
-      <div style={{ position:'relative', height:420, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
+      <div style={{ position:'relative', height:'55vh', minHeight:340, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
         {!ready ? (
           <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface)', color:'var(--muted)', fontSize:13 }}>Chargement…</div>
         ) : withCoords.length === 0 ? (
@@ -307,22 +318,35 @@ export default function MapView({ charges, settings, theme }) {
       </div>
 
       {/* KPIs */}
-      {charges.length > 0 && (
-        <div style={{ margin:'10px 16px 0', display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
-          {[
-            { val:groups.length,              label:'Bornes',       color:'var(--accent)' },
-            { val:new Set(filtered.map(c=>c.provider).filter(Boolean)).size, label:'Fournisseurs', color:'var(--xpeng)' },
-            { val:filtered.length,            label:'Sessions',     color:'var(--text)' },
-            { val:totalKwh.toFixed(0)+' kWh', label:'Total kWh',   color:'var(--mg4)',   mono:true },
-            { val:totalCost.toFixed(2)+' €',  label:'Total coût',  color:'var(--green)', mono:true },
-          ].map(s => (
-            <div key={s.label} className="card" style={{ padding:'8px 10px' }}>
-              <div className={s.mono?'mono':''} style={{ fontSize:s.mono?10:17, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
-              <div style={{ fontSize:9, color:'var(--muted)', marginTop:3, lineHeight:1.2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      {charges.length > 0 && (() => {
+        const avgPrice = totalKwh > 0 && totalCost > 0 ? totalCost/totalKwh : null
+        const approxCount = groups.filter(g=>g.approximate).length
+        const exactCount  = groups.filter(g=>!g.approximate).length
+        const mg4Sessions   = filtered.filter(c=>c.vehicleId==='mg4').length
+        const xpengSessions = filtered.filter(c=>c.vehicleId==='xpeng').length
+        const kpis = [
+          { val:groups.length,                    label:'Bornes',        color:'var(--accent)' },
+          { val:exactCount+' / '+approxCount,     label:'Exactes / Approx', color:'var(--muted)' },
+          { val:filtered.length,                  label:'Sessions',      color:'var(--text)' },
+          { val:totalKwh.toFixed(0)+' kWh',       label:'Total kWh',    color:'var(--mg4)', mono:true },
+          { val:totalCost.toFixed(2)+' €',        label:'Total coût',   color:'var(--green)', mono:true },
+          { val:avgPrice?avgPrice.toFixed(3):'—', label:'€/kWh moy.',   color:'var(--muted)', mono:true },
+          { val:mg4Sessions,                       label:'Sessions MG4', color:'var(--mg4)' },
+          { val:xpengSessions,                     label:'Sessions G6',  color:'var(--xpeng)' },
+          { val:new Set(filtered.map(c=>c.provider).filter(Boolean)).size, label:'Fournisseurs', color:'var(--xpeng)' },
+          { val:filtered.length > 0 ? (totalKwh/filtered.length).toFixed(1) : '—', label:'kWh/session', color:'var(--accent)', mono:true },
+        ]
+        return (
+          <div style={{ margin:'10px 16px 0', display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
+            {kpis.map(s => (
+              <div key={s.label} className="card" style={{ padding:'8px 10px' }}>
+                <div className={s.mono?'mono':''} style={{ fontSize:10, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
+                <div style={{ fontSize:8.5, color:'var(--muted)', marginTop:3, lineHeight:1.3 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {showFilters && <FilterSheet onClose={()=>setShowFilters(false)} filters={filters} setFilters={setFilters} charges={charges} today={today} />}
     </div>
