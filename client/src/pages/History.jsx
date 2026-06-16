@@ -120,6 +120,7 @@ export default function History({ charges, onEdit }) {
                       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', justifyContent:'center', padding:'10px 14px 10px 8px', flexShrink:0, gap:2 }}>
                         <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500 }}>
                           {day.getDate()} {day.toLocaleDateString('fr-FR',{month:'short'})}
+                          {c.startTime && <span style={{ marginLeft:4, fontFamily:"'JetBrains Mono',monospace", fontSize:10 }}>{c.startTime}</span>}
                         </div>
                         <div className="mono" style={{ fontSize:15, fontWeight:700 }}>{c.kwh} kWh</div>
                         <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
