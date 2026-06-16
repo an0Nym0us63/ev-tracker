@@ -55,6 +55,7 @@ export default function App() {
   const [settings,   setSettings]   = useState({})
   const [loading,    setLoading]    = useState(true)
   const [page,       setPage]       = useState('home')
+  const [alertFilter, setAlertFilter] = useState(null)
   const [editCharge, setEditCharge] = useState(null)
   const [toast,      setToast]      = useState(null)
 
@@ -92,6 +93,11 @@ export default function App() {
   function handleLogout() {
     clearToken(); setAccount(null); setCharges([]); setLists({ providers:[], cards:[] }); setSettings({})
     setPage('home')
+  }
+
+  function navigateWithAlert(filter) {
+    setAlertFilter(filter)
+    setPage('history')
   }
 
   const navigate = useCallback((target, data=null) => {
@@ -144,8 +150,8 @@ export default function App() {
   return (
     <ErrorBoundary>
     <>
-      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
-      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
+      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
+      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} />}
       {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}
       {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} />}

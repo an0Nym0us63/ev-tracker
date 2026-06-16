@@ -144,7 +144,7 @@ function ProviderChart({ charges }) {
   )
 }
 
-export default function Dashboard({ charges, account, onNavigate, onLogout, theme, onToggleTheme }) {
+export default function Dashboard({ charges, account, onNavigate, onNavigateAlert, onLogout, theme, onToggleTheme }) {
   const [activePeriod,  setActivePeriod]  = useState(null)
   const [activeVehicle, setActiveVehicle] = useState(null)
   const [alerts, setAlerts] = useState([])
@@ -272,7 +272,7 @@ export default function Dashboard({ charges, account, onNavigate, onLogout, them
 
       {/* Alertes dynamiques depuis le serveur */}
       {alerts.length > 0 && (
-        <div onClick={()=>onNavigate('history')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+        <div onClick={()=>onNavigateAlert && onNavigateAlert({ unknownVehicle: true })} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
           <span style={{ fontSize:20 }}>⚠️</span>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:13, fontWeight:700, color:'var(--amber)' }}>

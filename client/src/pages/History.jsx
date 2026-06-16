@@ -3,13 +3,19 @@ import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
-export default function History({ charges, onEdit }) {
+export default function History({ charges, onEdit, alertFilter, onClearAlertFilter }) {
   const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
 
   const providers = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
   const cards = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
-  const filtered = useMemo(() => applyFilters(charges), [charges, filters])
+  // Apply alertFilter (from dashboard notification) or normal filters
+  const filtered = useMemo(() => {
+    if (alertFilter?.unknownVehicle) {
+      return charges.filter(c => c.vehicleId === 'unknown')
+    }
+    return applyFilters(charges)
+  }, [charges, filters, alertFilter])
 
   const totalKwh  = filtered.reduce((s,c) => s + c.kwh, 0)
   const totalCost = filtered.reduce((s,c) => s + c.totalCost, 0)
@@ -35,6 +41,14 @@ export default function History({ charges, onEdit }) {
       <div style={{ padding:'16px 20px 0' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Historique</div>
       </div>
+
+      {/* Alert filter banner */}
+      {alertFilter && (
+        <div style={{ margin:'10px 16px 0', padding:'8px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:12, color:'var(--amber)', fontWeight:600, flex:1 }}>⚠️ Filtre actif : sessions à compléter</span>
+          <button onClick={onClearAlertFilter} style={{ fontSize:11, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>✕ Effacer</button>
+        </div>
+      )}
 
       {/* Filter button */}
       <div style={{ padding:'10px 16px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
