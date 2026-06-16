@@ -146,7 +146,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
           v2c_id=@v2c_id, start_time=@start_time,
           kwh=@kwh, total_cost=@total_cost, duration_min=@duration_min,
           solar_savings=@solar_savings, fuel_savings=@fuel_savings,
-          source='v2c', needs_review=0
+          source='v2c'
         WHERE id=@id
       `).run({ ...row, id: manual.id })
       addLog(accountId, 'info', `✓ Enrichie charge manuelle id=${manual.id} avec v2c_id=${s.id} | ${s.energy} kWh | ${row.date} ${row.start_time}`)
@@ -157,11 +157,11 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       continue
     }
 
-    // Determine vehicle — for now null (needs_review=1), HA webhook will set it later
+    // Determine vehicle — for now unknown, HA will set it later
     const result = insertCharge.run(row)
 
     if (result.changes > 0) {
-      addLog(accountId, 'info', `✓ Créée v2c_id=${s.id} | ${s.energy} kWh | ${row.date} | needs_review=${row.needs_review}`)
+      addLog(accountId, 'info', `✓ Créée v2c_id=${s.id} | ${s.energy} kWh | ${row.date} ${row.start_time||''} | vehicleId=${row.vehicle_id}`)
       if (!settings.v2c_last_id || s.id > settings.v2c_last_id) {
         db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, accountId)
       }
