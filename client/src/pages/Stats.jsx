@@ -40,15 +40,17 @@ export default function Stats({ charges }) {
   const chartData  = useMemo(() => getChartData(filtered, filters.period === 'all' ? 'all' : period), [filtered, period])
   const providers  = useMemo(() => getProviderStats(filtered), [filtered])
 
-  // Solar & fuel savings — exclude Wallbox (manual home charger, no V2C data)
-  const filteredNoWallbox = filtered.filter(c => !(c.provider||'').toLowerCase().includes('wallbox'))
-  const totalSolar   = filteredNoWallbox.reduce((s,c)=>s+(c.solarSavings||0),0)
-  const totalFuel    = filteredNoWallbox.reduce((s,c)=>s+(c.fuelSavings||0),0)
-  const homeCharges  = filteredNoWallbox.filter(c=>c.locationId==='home')
-  const solarCharges = homeCharges.filter(c=>(c.solarSavings||0)>0.05)
-  const solarPct     = homeCharges.length>0 ? Math.round(solarCharges.length/homeCharges.length*100) : 0
-  const totalCostAll = filteredNoWallbox.reduce((s,c)=>s+(c.totalCost||0),0)
-  const equivalentFuel = totalFuel + totalCostAll // what it would have cost thermally
+  // Fuel savings & thermal comparison — all charges
+  const totalFuel    = filtered.reduce((s,c)=>s+(c.fuelSavings||0),0)
+  const totalCostAll = filtered.reduce((s,c)=>s+(c.totalCost||0),0)
+  const equivalentFuel = totalFuel + totalCostAll
+
+  // Solar savings — exclude Wallbox (no V2C data, no solar tracking)
+  const filteredSolar = filtered.filter(c => !(c.provider||'').toLowerCase().includes('wallbox'))
+  const totalSolar    = filteredSolar.reduce((s,c)=>s+(c.solarSavings||0),0)
+  const homeCharges   = filteredSolar.filter(c=>c.locationId==='home')
+  const solarCharges  = homeCharges.filter(c=>(c.solarSavings||0)>0.05)
+  const solarPct      = homeCharges.length>0 ? Math.round(solarCharges.length/homeCharges.length*100) : 0
   const isDailyChart = period === 'month' || period === '30d'
   const chartPeriod = period === 'all' ? 'all' : period
 
