@@ -74,7 +74,7 @@ export default function History({ charges, onEdit }) {
 
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {items.map(c => {
-                  const v   = VEHICLES[c.vehicleId]
+                  const v   = VEHICLES[c.vehicleId] || { color:'var(--muted)', name:'?', emoji:'🚗' }
                   const loc = LOCATIONS[c.locationId]
                   const day = new Date(c.date+'T00:00:00')
                   const isHome = c.locationId === 'home'

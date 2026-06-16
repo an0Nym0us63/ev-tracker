@@ -431,7 +431,7 @@ export default function Dashboard({ charges, account, onNavigate, onLogout, them
               )}
             </div>
           ) : recentFiltered.map((c, idx) => {
-            const v = VEHICLES[c.vehicleId]
+            const v = VEHICLES[c.vehicleId] || { color:'var(--muted)', name:'?', emoji:'🚗' }
             const isHome = c.locationId === 'home'
             const logoName = isHome ? (c.provider||'v2c') : (c.provider||'')
             return (
