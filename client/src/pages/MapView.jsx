@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom'
 import { VEHICLES, getProviderStats } from '../utils.js'
 
 const TILE_LAYERS = {
-  dark:     'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light:    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
+  dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
 }
 
 function toLogoName(n='') { return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') }
@@ -215,8 +215,8 @@ export default function MapView({ charges, settings, theme }) {
         zoomControl: false,
         attributionControl: false,
       }).setView([46.8, 2.3], 6)
-      const t = TILE_LAYERS[mapStyle]
-      tileRef.current = window.L.tileLayer(t.url, { maxZoom:19 }).addTo(mapInst.current)
+      const tileUrl = TILE_LAYERS[mapStyle] || TILE_LAYERS.dark
+      tileRef.current = window.L.tileLayer(tileUrl, { maxZoom:19 }).addTo(mapInst.current)
     }
     const map = mapInst.current
     if (tileRef.current) { map.removeLayer(tileRef.current) }
