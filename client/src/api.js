@@ -73,3 +73,11 @@ export async function apiDeleteFavorite(id){ return req('DELETE', `/api/favorite
 
 // ─── Import ───────────────────────────────────────────────────────────────────
 export async function apiImportCharges(rows) { return req('POST', '/api/import/charges', { rows }) }
+
+// ─── V2C Sync ─────────────────────────────────────────────────────────────────
+export async function apiV2CSync()        { return req('POST', '/api/v2c/sync') }
+export async function apiV2CSyncHistory() { return req('POST', '/api/v2c/sync/history') }
+
+// ─── Logs ─────────────────────────────────────────────────────────────────────
+export async function apiGetLogs(limit=100)  { return req('GET', `/api/logs?limit=${limit}`) }
+export async function apiClearLogs()         { return req('DELETE', '/api/logs') }

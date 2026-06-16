@@ -5,6 +5,7 @@ import AppLogo from './components/AppLogo.jsx'
 import { usePullToRefresh } from './usePullToRefresh.js'
 import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateCharge, apiDeleteCharge, apiGetLists, apiGetSettings } from './api.js'
 import Login from './pages/Login.jsx'
+import Logs from './pages/Logs.jsx'
 import BottomNav from './components/BottomNav.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AddCharge from './pages/AddCharge.jsx'
@@ -131,6 +132,7 @@ export default function App() {
       {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} />}
       {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} />}
+      {page === 'logs'     && <Logs onBack={()=>setPage('settings')} />}
       {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
 
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}

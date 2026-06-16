@@ -148,3 +148,29 @@ const seedFavs = db.prepare(`
 seedFavs.run()
 
 module.exports = db
+
+// ─── V2C Settings migrations ──────────────────────────────────────────────────
+const settingsCols = db.pragma('table_info(settings)').map(c => c.name)
+if (!settingsCols.includes('v2c_enabled'))    db.exec("ALTER TABLE settings ADD COLUMN v2c_enabled INTEGER NOT NULL DEFAULT 0")
+if (!settingsCols.includes('v2c_api_key'))    db.exec("ALTER TABLE settings ADD COLUMN v2c_api_key TEXT")
+if (!settingsCols.includes('v2c_device_id'))  db.exec("ALTER TABLE settings ADD COLUMN v2c_device_id TEXT")
+if (!settingsCols.includes('v2c_last_id'))    db.exec("ALTER TABLE settings ADD COLUMN v2c_last_id INTEGER")
+
+// ─── Charges migrations ───────────────────────────────────────────────────────
+const chargeCols2 = db.pragma('table_info(charges)').map(c => c.name)
+if (!chargeCols2.includes('v2c_id'))        db.exec("ALTER TABLE charges ADD COLUMN v2c_id INTEGER")
+if (!chargeCols2.includes('solar_savings')) db.exec("ALTER TABLE charges ADD COLUMN solar_savings REAL")
+if (!chargeCols2.includes('needs_review'))  db.exec("ALTER TABLE charges ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0")
+
+// ─── Sync log table ───────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sync_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    level      TEXT NOT NULL DEFAULT 'info',
+    source     TEXT NOT NULL DEFAULT 'system',
+    message    TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_sync_log_account ON sync_log(account_id, created_at DESC);
+`)

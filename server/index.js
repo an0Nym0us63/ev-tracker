@@ -289,7 +289,7 @@ function saveList(accountId, type, value) {
 
 function toClient(c) {
   return {
-    id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id, fuelSavings: c.fuel_savings,
+    id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id, fuelSavings: c.fuel_savings, solarSavings: c.solar_savings, needsReview: !!c.needs_review, v2cId: c.v2c_id,
     locationName: c.location_name, provider: c.provider, card: c.card,
     date: c.date, kwh: c.kwh, totalCost: c.total_cost,
     durationMin: c.duration_min, odometer: c.odometer, notes: c.notes,
@@ -402,6 +402,35 @@ app.post('/api/import/charges', requireAuth, (req, res) => {
   }
 })
 
+// ─── V2C Sync endpoints ──────────────────────────────────────────────────────
+
+app.post('/api/v2c/sync', requireAuth, async (req, res) => {
+  try {
+    const result = await syncV2C(req.user.id)
+    res.json(result)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.post('/api/v2c/sync/history', requireAuth, async (req, res) => {
+  try {
+    const result = await syncV2CHistory(req.user.id)
+    res.json(result)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+// ─── Sync log endpoints ──────────────────────────────────────────────────────
+
+app.get('/api/logs', requireAuth, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500)
+  const logs = db.prepare('SELECT * FROM sync_log WHERE account_id=? ORDER BY created_at DESC LIMIT ?').all(req.user.id, limit)
+  res.json(logs)
+})
+
+app.delete('/api/logs', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM sync_log WHERE account_id=?').run(req.user.id)
+  res.json({ ok: true })
+})
+
 // ─── Operator logos ──────────────────────────────────────────────────────────
 
 // /api/logos/providers/:name  or  /api/logos/cards/:name
@@ -451,3 +480,13 @@ app.get('*', (req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')))
 
 const PORT = process.env.PORT || 3080
 app.listen(PORT, '0.0.0.0', () => console.log(`EV Tracker on port ${PORT}`))
+
+// ─── V2C auto-sync cron (every 10 min) ───────────────────────────────────────
+setInterval(async () => {
+  try {
+    const accounts = db.prepare("SELECT id FROM settings WHERE v2c_enabled=1 AND v2c_api_key IS NOT NULL AND v2c_device_id IS NOT NULL").all()
+    for (const acc of accounts) {
+      await syncV2C(acc.id)
+    }
+  } catch(e) { console.error('[cron v2c]', e.message) }
+}, 10 * 60 * 1000)

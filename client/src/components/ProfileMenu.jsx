@@ -28,6 +28,7 @@ export default function ProfileMenu({ account, onNavigate, onLogout, theme, onTo
 
   const items = [
     { icon:'⚙️', label:'Réglages',        action: () => { onNavigate('settings'); setOpen(false) } },
+    { icon:'📋', label:'Journal',          action: () => { onNavigate('logs'); setOpen(false) } },
     { icon: theme==='dark'?'☀️':'🌙',     label: theme==='dark'?'Mode clair':'Mode sombre', action: () => { onToggleTheme(); setOpen(false) } },
     { icon:'🚪', label:'Se déconnecter',   action: () => { onLogout(); setOpen(false) }, danger: true },
   ]

@@ -3,6 +3,7 @@ import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
 import { VERSION } from '../version.js'
 import ImportCSV from '../components/ImportCSV.jsx'
+import { apiV2CSync, apiV2CSyncHistory } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
 
 function Field({ label, children, hint }) {
@@ -223,6 +224,61 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
         <button onClick={onLogout} style={{ background:'none', color:'var(--red)', fontSize:14, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'14px 16px', cursor:'pointer' }}>
           Se déconnecter
         </button>
+
+        {/* V2C Cloud */}
+        <div>
+          <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:8 }}>V2C Cloud — Import auto</div>
+          
+          {/* Toggle */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', marginBottom:8 }}>
+            <div>
+              <div style={{ fontSize:13, fontWeight:600 }}>Synchronisation automatique</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>Importe les sessions de ta Trydan toutes les 10 min</div>
+            </div>
+            <button onClick={()=>setV2cEnabled(v=>!v)} style={{ width:44, height:26, borderRadius:13, background:v2cEnabled?'var(--accent)':'var(--surface2)', border:`2px solid ${v2cEnabled?'var(--accent)':'var(--border)'}`, cursor:'pointer', position:'relative', transition:'all 0.2s', flexShrink:0 }}>
+              <div style={{ width:18, height:18, borderRadius:'50%', background:'white', position:'absolute', top:2, left:v2cEnabled?22:2, transition:'left 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.3)' }} />
+            </button>
+          </div>
+
+          {v2cEnabled && (<>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div>
+                <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>Clé API V2C Cloud</div>
+                <input value={v2cApiKey} onChange={e=>setV2cApiKey(e.target.value)} placeholder="Depuis v2c.cloud → API"
+                  style={{ width:'100%', background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'10px 14px', fontSize:13, color:'var(--text)', fontFamily:"'JetBrains Mono',monospace", outline:'none', boxSizing:'border-box' }} />
+              </div>
+              <div>
+                <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>Device ID</div>
+                <input value={v2cDeviceId} onChange={e=>setV2cDeviceId(e.target.value)} placeholder="Ex: GPPFMU"
+                  style={{ width:'100%', background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'10px 14px', fontSize:13, color:'var(--text)', fontFamily:"'JetBrains Mono',monospace", outline:'none', boxSizing:'border-box' }} />
+              </div>
+            </div>
+
+            <div style={{ display:'flex', gap:8, marginTop:10 }}>
+              <button onClick={async()=>{
+                setV2cSyncing(true); setV2cMsg(null)
+                try {
+                  const r = await apiV2CSync()
+                  setV2cMsg({ type:'ok', text:`✓ ${r.created} créée(s), ${r.skipped} ignorée(s)` })
+                } catch(e) { setV2cMsg({ type:'err', text:'Erreur: '+e.message }) }
+                setV2cSyncing(false)
+              }} disabled={v2cSyncing} style={{ flex:1, padding:'10px', borderRadius:'var(--r-sm)', background:'rgba(79,142,247,0.1)', border:'1.5px solid var(--accent)', color:'var(--accent)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                {v2cSyncing ? '…' : '🔄 Sync maintenant'}
+              </button>
+              <button onClick={async()=>{
+                setV2cSyncing(true); setV2cMsg(null)
+                try {
+                  const r = await apiV2CSyncHistory()
+                  setV2cMsg({ type:'ok', text:`✓ Historique: ${r.created} créée(s), ${r.skipped} ignorée(s)` })
+                } catch(e) { setV2cMsg({ type:'err', text:'Erreur: '+e.message }) }
+                setV2cSyncing(false)
+              }} disabled={v2cSyncing} style={{ flex:1, padding:'10px', borderRadius:'var(--r-sm)', background:'var(--surface)', border:'1.5px solid var(--border)', color:'var(--muted)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                {v2cSyncing ? '…' : '📅 Sync 6 mois'}
+              </button>
+            </div>
+            {v2cMsg && <div style={{ marginTop:8, padding:'8px 12px', borderRadius:'var(--r-sm)', background:v2cMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:v2cMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:12, fontWeight:600 }}>{v2cMsg.text}</div>}
+          </>)}
+        </div>
 
         {/* Import */}
         <div>
