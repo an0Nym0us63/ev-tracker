@@ -471,7 +471,10 @@ app.post('/api/v2c/sync/date', requireAuth, async (req, res) => {
   const { date } = req.query
   if (!date) return res.status(400).json({ error: 'date requis (YYYY-MM-DD)' })
   try {
-    const result = await syncV2C(req.user.id, { startDate: date, endDate: date })
+    const nextDay = new Date(date + 'T00:00:00')
+    nextDay.setDate(nextDay.getDate() + 1)
+    const endDate = nextDay.toISOString().slice(0, 10)
+    const result = await syncV2C(req.user.id, { startDate: date, endDate })
     res.json(result)
   } catch(e) { res.status(500).json({ error: e.message }) }
 })
