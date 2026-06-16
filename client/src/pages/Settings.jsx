@@ -37,6 +37,12 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   const [saved,      setSaved]      = useState(false)
   const [geoResults, setGeoResults] = useState([])
   const [debugInfo,  setDebugInfo]  = useState(null)
+  const [fuelPrice,   setFuelPrice]   = useState('1.85')
+  const [v2cEnabled,  setV2cEnabled]  = useState(false)
+  const [v2cApiKey,   setV2cApiKey]   = useState('')
+  const [v2cDeviceId, setV2cDeviceId] = useState('')
+  const [v2cSyncing,  setV2cSyncing]  = useState(false)
+  const [v2cMsg,      setV2cMsg]      = useState(null)
 
   useEffect(() => {
     apiGetSettings().then(s => {
