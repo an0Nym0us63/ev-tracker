@@ -205,7 +205,16 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const daysAC = lastAC ? Math.floor((now-new Date(lastAC.date+'T00:00:00'))/86400000) : null
   const daysDC = lastDC ? Math.floor((now-new Date(lastDC.date+'T00:00:00'))/86400000) : null
   // Savings from DB (computed at save time with user's fuel price)
-  const savings = filtered.reduce((s,c) => s + (c.fuelSavings||0), 0)
+  const savings     = filtered.reduce((s,c) => s + (c.fuelSavings||0), 0)
+  const solarSavings = filtered.reduce((s,c) => s + (c.solarSavings||0), 0)
+  const homeCharges  = filtered.filter(c => c.locationId === 'home')
+  const solarCharges = homeCharges.filter(c => (c.solarSavings||0) > 0.05)
+  const solarPct     = homeCharges.length > 0 ? Math.round(solarCharges.length / homeCharges.length * 100) : null
+  // Estimate kWh from solar: solarSavings / avgPrice
+  const avgPriceHome = homeCharges.length > 0 && homeCharges.reduce((s,c)=>s+(c.totalCost||0),0) > 0
+    ? homeCharges.reduce((s,c)=>s+(c.totalCost||0),0) / homeCharges.reduce((s,c)=>s+(c.kwh||0),0)
+    : 0.15
+  const solarKwh = avgPriceHome > 0 ? solarSavings / avgPriceHome : 0
 
   const periodLabel  = activePeriod ? PERIODS.find(p=>p.id===activePeriod)?.label : 'Tout'
   const vehicleLabel = activeVehicle ? VEHICLES[activeVehicle]?.name : 'Tous véhicules'
@@ -253,7 +262,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
     { val:`${avgCost} €`,   label:'Coût/session moy.',    color:'var(--xpeng)',  mono:true },
     { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
     { type:'streak', daysAC, daysDC, label:'Dernière charge' },
-    { val: savings > 0 ? `${savings.toFixed(0)} €` : '—', label:'Économies vs thermique', color:'var(--green)' },
+    { type:'savings', savings, solarSavings, label:'Économies' },
     { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
     { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy. (kWh/h)', color:'var(--accent)', mono:true },
     { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },

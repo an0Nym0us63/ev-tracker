@@ -39,6 +39,15 @@ export default function Stats({ charges }) {
 
   const chartData  = useMemo(() => getChartData(filtered, filters.period === 'all' ? 'all' : period), [filtered, period])
   const providers  = useMemo(() => getProviderStats(filtered), [filtered])
+
+  // Solar & fuel savings
+  const totalSolar   = filtered.reduce((s,c)=>s+(c.solarSavings||0),0)
+  const totalFuel    = filtered.reduce((s,c)=>s+(c.fuelSavings||0),0)
+  const homeCharges  = filtered.filter(c=>c.locationId==='home')
+  const solarCharges = homeCharges.filter(c=>(c.solarSavings||0)>0.05)
+  const solarPct     = homeCharges.length>0 ? Math.round(solarCharges.length/homeCharges.length*100) : 0
+  const totalCostAll = filtered.reduce((s,c)=>s+(c.totalCost||0),0)
+  const equivalentFuel = totalFuel + totalCostAll // what it would have cost thermally
   const isDailyChart = period === 'month' || period === '30d'
   const chartPeriod = period === 'all' ? 'all' : period
 
@@ -330,6 +339,70 @@ export default function Stats({ charges }) {
             </div>
           )
         })()}
+
+        {/* Solar & Savings section */}
+        {(totalSolar > 0 || totalFuel > 0) && (
+          <div style={{ padding:'0 16px' }}>
+            <SectionLabel>Économies réalisées</SectionLabel>
+            <div className="card" style={{ padding:'16px' }}>
+
+              {/* Summary pills */}
+              <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+                {totalFuel > 0 && (
+                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(34,197,94,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(34,197,94,0.2)' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🚗 vs thermique</div>
+                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--green)' }}>+{totalFuel.toFixed(0)} €</div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>soit {((totalFuel/(totalCostAll||1))*100).toFixed(0)}% du coût EV</div>
+                  </div>
+                )}
+                {totalSolar > 0.1 && (
+                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(251,191,36,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(251,191,36,0.2)' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>☀️ gain solaire</div>
+                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--amber)' }}>{totalSolar.toFixed(1)} €</div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{solarPct}% charges maison avec PV</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bar: EV cost vs what thermal would have cost */}
+              {totalFuel > 0 && (() => {
+                const evPct   = Math.round(totalCostAll / equivalentFuel * 100)
+                const fuelPct = 100 - evPct
+                return (
+                  <div>
+                    <div style={{ fontSize:11, color:'var(--muted)', marginBottom:6 }}>Coût EV vs équivalent thermique</div>
+                    <div style={{ display:'flex', height:20, borderRadius:10, overflow:'hidden', gap:2 }}>
+                      <div style={{ width:`${evPct}%`, background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ fontSize:9, color:'white', fontWeight:700 }}>{totalCostAll.toFixed(0)}€</span>
+                      </div>
+                      <div style={{ flex:1, background:'rgba(239,68,68,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ fontSize:9, color:'var(--red)', fontWeight:700 }}>+{totalFuel.toFixed(0)}€ therm.</span>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+                      <span style={{ fontSize:10, color:'var(--muted)' }}>EV : {totalCostAll.toFixed(2)} €</span>
+                      <span style={{ fontSize:10, color:'var(--muted)' }}>Thermique : {equivalentFuel.toFixed(2)} €</span>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Solar sessions gauge */}
+              {solarPct > 0 && (
+                <div style={{ marginTop:14 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                    <span style={{ fontSize:11, color:'var(--muted)' }}>Sessions maison avec solaire</span>
+                    <span className="mono" style={{ fontSize:11, fontWeight:700, color:'var(--amber)' }}>{solarCharges.length}/{homeCharges.length}</span>
+                  </div>
+                  <div style={{ height:8, borderRadius:4, background:'var(--surface2)', overflow:'hidden' }}>
+                    <div style={{ width:`${solarPct}%`, height:'100%', background:'linear-gradient(90deg,var(--amber),#f59e0b)', borderRadius:4, transition:'width 0.5s' }} />
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--muted)', marginTop:4 }}>{solarPct}% des charges maison bénéficient du photovoltaïque</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Monthly cost cumulative trend */}
         {period === 'all' && costData.length > 1 && (
