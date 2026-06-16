@@ -126,6 +126,9 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       continue
     }
 
+    // Parse session data first
+    const row = parseSession(s, accountId, null, fuelPrice)
+
     // Check if a manual charge matches this session (same date, and start_time if available)
     const manual = db.prepare(`
       SELECT id FROM charges
@@ -155,7 +158,6 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     }
 
     // Determine vehicle — for now null (needs_review=1), HA webhook will set it later
-    const row = parseSession(s, accountId, null, fuelPrice)
     const result = insertCharge.run(row)
 
     if (result.changes > 0) {
