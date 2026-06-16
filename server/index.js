@@ -48,14 +48,14 @@ app.get('/api/settings', requireAuth, (req, res) => {
 })
 
 app.put('/api/settings', requireAuth, (req, res) => {
-  const { ocmApiKey, homeLat, homeLng, homeLabel } = req.body
+  const { ocmApiKey, homeLat, homeLng, homeLabel, fuelPrice, v2cEnabled, v2cApiKey, v2cDeviceId } = req.body
   const existing = db.prepare('SELECT id FROM settings WHERE account_id = ?').get(req.user.id)
   if (existing) {
-    db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=? WHERE account_id=?')
-      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, req.user.id)
+    db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=?, fuel_price=?, v2c_enabled=?, v2c_api_key=?, v2c_device_id=? WHERE account_id=?')
+      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, req.user.id)
   } else {
-    db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label) VALUES (?,?,?,?,?)')
-      .run(req.user.id, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null)
+    db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label, fuel_price, v2c_enabled, v2c_api_key, v2c_device_id) VALUES (?,?,?,?,?,?,?,?,?)')
+      .run(req.user.id, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null)
   }
   const s = db.prepare('SELECT * FROM settings WHERE account_id = ?').get(req.user.id)
   res.json(toClientSettings(s))
@@ -307,6 +307,10 @@ function toClientSettings(s) {
     homeLat:    s.home_lat,
     homeLng:    s.home_lng,
     homeLabel:  s.home_label   || '',
+    fuelPrice:  s.fuel_price   || 1.85,
+    v2cEnabled: !!s.v2c_enabled,
+    v2cApiKey:  s.v2c_api_key  || '',
+    v2cDeviceId:s.v2c_device_id|| '',
   }
 }
 

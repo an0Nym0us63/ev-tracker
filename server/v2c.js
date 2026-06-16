@@ -28,7 +28,17 @@ function v2cFetch(path, apiKey) {
   })
 }
 
-// ─── Parse V2C session → charge row ──────────────────────────────────────────
+// ─── Fuel savings calc ────────────────────────────────────────────────────────
+function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
+  const config = {
+    mg4:   { kwhPer100: 14.5, litresPer100: 6.0 },
+    xpeng: { kwhPer100: 16.0, litresPer100: 7.5 },
+  }
+  const v = config[vehicleId]
+  if (!v || !kwh) return null
+  const fuelCost = (kwh / v.kwhPer100) * v.litresPer100 * (fuelPrice || 1.85)
+  return parseFloat((fuelCost - totalCost).toFixed(2))
+}
 function parseSession(s, accountId, vehicleId, fuelPrice) {
   const start = new Date(s.startChargeDate)
   const end   = new Date(s.endChargeDate)
