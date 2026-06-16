@@ -206,17 +206,6 @@ export default function MapView({ charges, settings, theme }) {
           <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
         )}
 
-        {/* Legend overlay */}
-        <div style={{ position:'absolute', bottom:8, left:8, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(6px)', borderRadius:8, padding:'4px 10px', display:'flex', gap:8, alignItems:'center', fontSize:10, color:'white', zIndex:1000, pointerEvents:'none' }}>
-          <span style={{ opacity:.7 }}>📍 Approx.</span>
-          <div style={{ width:1, height:10, background:'rgba(255,255,255,0.3)' }} />
-          {[['#4f8ef7','faible'],['#fbbf24','moyen'],['#22c55e','fort']].map(([c,l]) => (
-            <div key={l} style={{ display:'flex', alignItems:'center', gap:3 }}>
-              <div style={{ width:8, height:8, borderRadius:'50%', background:c }} />
-              <span style={{ opacity:.8 }}>{l}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* KPIs */}
