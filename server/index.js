@@ -131,7 +131,8 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
   }
 
   fetchOCM(url).then(stations => res.json(normalize(stations))).catch(() => res.json([]))
-            lng:            s.AddressInfo?.Longitude,
+})
+
 // Geocode worldwide — returns structured results for display
 app.get('/api/geocode', requireAuth, (req, res) => {
   const { q } = req.query

@@ -59,6 +59,7 @@ export default function LocationPicker({ value, onChange }) {
 
   async function pickPlace(place) {
     const label = [place.name, place.postcode].filter(Boolean).join(' ')
+    const currentQuery = query // capture before setQuery overwrites it
     setQuery(label)
     setGeoResults([])
     setSelectedPlace(place)
@@ -66,14 +67,13 @@ export default function LocationPicker({ value, onChange }) {
     setStationFilter('')
     setLoading(true)
     try {
-      // Extract extra keywords beyond the city name (e.g. "Lyon Izivia" → q="Izivia")
-      const cityWords = place.name.toLowerCase().split(/\s+/)
-      const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+      // Extract extra keywords beyond the city name (e.g. "Lyon Izivia" → extraQ="Izivia")
+      const cityWords = (place.name || '').toLowerCase().split(/\s+/)
+      const queryWords = currentQuery.toLowerCase().split(/\s+/).filter(w => w.length > 2)
       const extraKeywords = queryWords.filter(w => !cityWords.some(c => c.includes(w) || w.includes(c)))
       const extraQ = extraKeywords.join(' ').trim()
 
       const results = await apiOcmSearch({ lat: place.lat, lng: place.lng, q: extraQ || undefined })
-      // If extra keywords, also pre-fill the station filter
       if (extraQ) setStationFilter(extraQ)
       setStations(results)
     } catch { setStations([]) }
