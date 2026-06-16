@@ -75,7 +75,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   async function handleSave() {
     setSaving(true)
     try {
-      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng })
+      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng, fuelPrice: parseFloat(fuelPrice)||1.85, v2cEnabled, v2cApiKey, v2cDeviceId })
       onSettingsSaved?.(result)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch {} finally { setSaving(false) }
