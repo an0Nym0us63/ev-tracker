@@ -118,11 +118,38 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       continue
     }
 
-    // Check already imported
+    // Check already imported by v2c_id
     const exists = db.prepare('SELECT id FROM charges WHERE account_id=? AND v2c_id=?').get(accountId, s.id)
     if (exists) {
       addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — déjà importée le ${s.startChargeDate} (charge id=${exists.id})`)
       skipped++
+      continue
+    }
+
+    // Check if a manual charge matches this session (same date + same start hour)
+    const startHour = s.startChargeDate.slice(0, 13) // "2026-06-14T19"
+    const manual = db.prepare(`
+      SELECT id FROM charges
+      WHERE account_id=? AND date=? AND (start_time=? OR start_time IS NULL)
+        AND source='manual' AND v2c_id IS NULL
+      LIMIT 1
+    `).get(accountId, row.date, row.start_time)
+
+    if (manual) {
+      // Enrich manual charge with V2C data
+      db.prepare(`
+        UPDATE charges SET
+          v2c_id=@v2c_id, start_time=@start_time,
+          kwh=@kwh, total_cost=@total_cost, duration_min=@duration_min,
+          solar_savings=@solar_savings, fuel_savings=@fuel_savings,
+          source='v2c', needs_review=0
+        WHERE id=@id
+      `).run({ ...row, id: manual.id })
+      addLog(accountId, 'info', `✓ Enrichie charge manuelle id=${manual.id} avec v2c_id=${s.id} | ${s.energy} kWh | ${row.date} ${row.start_time}`)
+      if (!settings.v2c_last_id || s.id > settings.v2c_last_id) {
+        db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, accountId)
+      }
+      created++
       continue
     }
 
