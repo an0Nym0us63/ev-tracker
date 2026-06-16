@@ -67,7 +67,9 @@ app.put('/api/settings', requireAuth, (req, res) => {
 app.get('/api/ocm/search', requireAuth, (req, res) => {
   const s = db.prepare('SELECT ocm_api_key FROM settings WHERE account_id = ?').get(req.user.id)
   const apiKey = s?.ocm_api_key || ''
-  const { q, lat, lng } = req.query
+  const { q, lat, lng, radius } = req.query
+  const dist = parseInt(radius) || 25
+  const maxResults = dist > 25 ? 500 : 300
 
   function normalize(stations) {
     return stations.map(s => {
@@ -109,23 +111,10 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
     })
   }
 
-  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=100&compact=false&verbose=true${apiKey?'&key='+apiKey:''}`
+  let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=${maxResults}&compact=false&verbose=true${apiKey?'&key='+apiKey:''}`
 
   if (lat && lng) {
-    url += `&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM`
-    if (q) {
-      // Dual search: by coords + by text query, merged and deduped
-      const urlQ = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=50&compact=false&verbose=true${apiKey?'&key='+apiKey:''}&cityname=${encodeURIComponent(q)}`
-      Promise.all([fetchOCM(url), fetchOCM(urlQ)]).then(([byCoords, byText]) => {
-        const seen = new Set()
-        const merged = [...byCoords, ...byText].filter(s => {
-          if (seen.has(s.ID)) return false
-          seen.add(s.ID); return true
-        })
-        res.json(normalize(merged))
-      }).catch(() => res.json([]))
-      return
-    }
+    url += `&latitude=${lat}&longitude=${lng}&distance=${dist}&distanceunit=KM`
   } else if (q) {
     url += `&cityname=${encodeURIComponent(q)}`
   }

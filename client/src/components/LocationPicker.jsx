@@ -57,26 +57,28 @@ export default function LocationPicker({ value, onChange }) {
     finally { setLoading(false) }
   }
 
-  async function pickPlace(place) {
+  async function pickPlace(place, radius=25) {
     const label = [place.name, place.postcode].filter(Boolean).join(' ')
-    const currentQuery = query // capture before setQuery overwrites it
     setQuery(label)
     setGeoResults([])
     setSelectedPlace(place)
     setStep('stations')
-    setStationFilter('')
+    if (radius === 25) setStationFilter('')
     setLoading(true)
     try {
-      // Extract extra keywords beyond the city name (e.g. "Lyon Izivia" → extraQ="Izivia")
-      const cityWords = (place.name || '').toLowerCase().split(/\s+/)
-      const queryWords = currentQuery.toLowerCase().split(/\s+/).filter(w => w.length > 2)
-      const extraKeywords = queryWords.filter(w => !cityWords.some(c => c.includes(w) || w.includes(c)))
-      const extraQ = extraKeywords.join(' ').trim()
-
-      const results = await apiOcmSearch({ lat: place.lat, lng: place.lng, q: extraQ || undefined })
-      if (extraQ) setStationFilter(extraQ)
+      const results = await apiOcmSearch({ lat: place.lat, lng: place.lng, radius })
       setStations(results)
     } catch { setStations([]) }
+    finally { setLoading(false) }
+  }
+
+  async function loadMore() {
+    if (!selectedPlace) return
+    setLoading(true)
+    try {
+      const results = await apiOcmSearch({ lat: selectedPlace.lat, lng: selectedPlace.lng, radius: 100 })
+      setStations(results)
+    } catch {}
     finally { setLoading(false) }
   }
 

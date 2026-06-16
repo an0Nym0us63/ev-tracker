@@ -53,11 +53,12 @@ export async function apiGetSettings()    { return req('GET', '/api/settings') }
 export async function apiSaveSettings(s)  { return req('PUT', '/api/settings', s) }
 
 // ─── OCM + Geocode ────────────────────────────────────────────────────────────
-export async function apiOcmSearch({ q, lat, lng }) {
+export async function apiOcmSearch({ q, lat, lng, radius }) {
   const params = new URLSearchParams()
-  if (q)   params.set('q', q)
-  if (lat)  params.set('lat', lat)
-  if (lng)  params.set('lng', lng)
+  if (q)      params.set('q', q)
+  if (lat)    params.set('lat', lat)
+  if (lng)    params.set('lng', lng)
+  if (radius) params.set('radius', radius)
   return req('GET', `/api/ocm/search?${params}`)
 }
 
