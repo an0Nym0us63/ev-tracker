@@ -4,7 +4,7 @@ import { VEHICLES, getProviderStats } from '../utils.js'
 
 const TILE_LAYERS = {
   dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  light: 'https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
 }
 
 function toLogoName(n='') { return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') }
@@ -281,7 +281,7 @@ export default function MapView({ charges, settings, theme }) {
       </div>
 
       {/* Map — full width, no margin */}
-      <div style={{ position:'relative', height:'55vh', minHeight:340, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
+      <div style={{ position:'relative', height:'70vh', minHeight:400, overflow:'hidden', border:'1px solid var(--border)', margin:'0 16px', borderRadius:'var(--r)' }}>
         {!ready ? (
           <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface)', color:'var(--muted)', fontSize:13 }}>Chargement…</div>
         ) : withCoords.length === 0 ? (
