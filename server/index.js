@@ -427,7 +427,7 @@ app.post('/api/v2c/sync/history', requireAuth, async (req, res) => {
 
 app.get('/api/logs', requireAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 500)
-  const logs = db.prepare('SELECT * FROM sync_log WHERE account_id=? ORDER BY created_at DESC LIMIT ?').all(req.user.id, limit)
+  const logs = db.prepare('SELECT * FROM sync_log WHERE account_id=? ORDER BY id DESC LIMIT ?').all(req.user.id, limit)
   res.json(logs)
 })
 
