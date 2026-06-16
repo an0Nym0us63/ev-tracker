@@ -105,12 +105,12 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
   for (const s of sessions) {
     // Skip sessions without energy
     if (!s.energy || s.energy <= 0) {
-      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} (energy=0)`)
+      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — energy=0 (${s.startChargeDate})`)
       skipped++
       continue
     }
     if (!s.finished) {
-      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} (non terminée)`)
+      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — non terminée (${s.startChargeDate})`)
       skipped++
       continue
     }
@@ -118,7 +118,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     // Check already imported
     const exists = db.prepare('SELECT id FROM charges WHERE account_id=? AND v2c_id=?').get(accountId, s.id)
     if (exists) {
-      addLog(accountId, 'info', `Déjà importée v2c_id=${s.id}`)
+      addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — déjà importée le ${s.startChargeDate} (charge id=${exists.id})`)
       skipped++
       continue
     }
@@ -129,12 +129,12 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
 
     if (result.changes > 0) {
       addLog(accountId, 'info', `✓ Créée v2c_id=${s.id} | ${s.energy} kWh | ${row.date} | needs_review=${row.needs_review}`)
-      // Update last known id
       if (!settings.v2c_last_id || s.id > settings.v2c_last_id) {
         db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, accountId)
       }
       created++
     } else {
+      addLog(accountId, 'warn', `INSERT ignoré v2c_id=${s.id} — doublon index unique (${row.date})`)
       skipped++
     }
   }
