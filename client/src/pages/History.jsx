@@ -10,12 +10,17 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
   const cards = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
   // Apply alertFilter (from dashboard notification) or normal filters
+  const alertIds = useMemo(() => {
+    if (!alertFilter?.length) return null
+    const ids = new Set()
+    alertFilter.forEach(a => (a.ids||[]).forEach(id => ids.add(id)))
+    return ids
+  }, [alertFilter])
+
   const filtered = useMemo(() => {
-    if (alertFilter?.unknownVehicle) {
-      return charges.filter(c => c.vehicleId === 'unknown')
-    }
+    if (alertIds) return charges.filter(c => alertIds.has(c.id))
     return applyFilters(charges)
-  }, [charges, filters, alertFilter])
+  }, [charges, filters, alertIds])
 
   const totalKwh  = filtered.reduce((s,c) => s + c.kwh, 0)
   const totalCost = filtered.reduce((s,c) => s + c.totalCost, 0)

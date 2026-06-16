@@ -424,12 +424,21 @@ function getAlerts(accountId) {
   const alerts = []
 
   // Règle 1 : véhicule non identifié
-  const unknownVehicle = db.prepare(
-    "SELECT COUNT(*) as count FROM charges WHERE account_id=? AND vehicle_id='unknown'"
-  ).get(accountId)
-  if (unknownVehicle.count > 0) {
-    alerts.push({ type: 'unknown_vehicle', count: unknownVehicle.count, label: 'Véhicule non identifié' })
+  const unknownVehicleRows = db.prepare(
+    "SELECT id FROM charges WHERE account_id=? AND vehicle_id='unknown'"
+  ).all(accountId)
+  if (unknownVehicleRows.length > 0) {
+    alerts.push({
+      type: 'unknown_vehicle',
+      count: unknownVehicleRows.length,
+      label: 'Véhicule non identifié',
+      ids: unknownVehicleRows.map(r => r.id)
+    })
   }
+
+  // Règle 2 : fournisseur manquant (hors maison sans V2C)
+  // const noProvider = db.prepare("SELECT id FROM charges WHERE account_id=? AND location_id!='home' AND (provider IS NULL OR provider='')").all(accountId)
+  // if (noProvider.length > 0) alerts.push({ type: 'no_provider', count: noProvider.length, label: 'Fournisseur manquant', ids: noProvider.map(r => r.id) })
 
   // Ajouter d'autres règles ici au fur et à mesure
 
