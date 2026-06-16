@@ -14,6 +14,22 @@ import Stats from './pages/Stats.jsx'
 import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(e) { return { error: e } }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding:24, fontFamily:'monospace', fontSize:12, color:'#ef4444', background:'#0f172a', minHeight:'100vh', overflowY:'auto' }}>
+        <div style={{ fontWeight:700, fontSize:16, marginBottom:12 }}>⚠️ Erreur JS</div>
+        <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-all' }}>{this.state.error.toString()}</div>
+        <div style={{ marginTop:12, opacity:0.6 }}>{this.state.error.stack}</div>
+        <button onClick={()=>this.setState({error:null})} style={{ marginTop:16, padding:'8px 16px', background:'#1e293b', color:'white', border:'1px solid #334155', borderRadius:8, cursor:'pointer' }}>Réessayer</button>
+      </div>
+    )
+    return this.props.children
+  }
+}
+
 function Toast({ msg, color }) {
   return (
     <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'var(--surface2)', border:`1px solid ${color}`, color, fontWeight:600, fontSize:13, padding:'10px 20px', borderRadius:24, boxShadow:'0 8px 32px rgba(0,0,0,0.4)', zIndex:200, whiteSpace:'nowrap', animation:'fadeUp 0.2s ease' }}>
@@ -126,6 +142,7 @@ export default function App() {
   const isAddPage = page === 'add'
 
   return (
+    <ErrorBoundary>
     <>
       {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
       {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} />}
@@ -138,5 +155,6 @@ export default function App() {
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}
       {toast && <Toast {...toast} />}
     </>
+    </ErrorBoundary>
   )
 }
