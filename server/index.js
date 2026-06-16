@@ -68,7 +68,7 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
   const s = db.prepare('SELECT ocm_api_key FROM settings WHERE account_id = ?').get(req.user.id)
   const apiKey = s?.ocm_api_key || ''
   const { q, lat, lng, radius } = req.query
-  const dist = parseInt(radius) || 25
+  const dist = parseInt(radius) || 50
   const maxResults = dist > 25 ? 500 : 500
 
   function normalize(stations) {
@@ -114,7 +114,7 @@ app.get('/api/ocm/search', requireAuth, (req, res) => {
   let url = `https://api.openchargemap.io/v3/poi/?output=json&maxresults=${maxResults}&compact=false&verbose=true${apiKey?'&key='+apiKey:''}`
 
   if (lat && lng) {
-    url += `&latitude=${lat}&longitude=${lng}&distance=${dist}&distanceunit=KM`
+    url += `&latitude=${lat}&longitude=${lng}&distance=${dist || 50}&distanceunit=KM`
   } else if (q) {
     url += `&cityname=${encodeURIComponent(q)}`
   }
