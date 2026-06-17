@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie, AreaChart, Area, YAxis } from 'recharts'
 import { computeStats, filterByPeriod, getChartData, getProviderStats, getMonthlyAvgByVehicle, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
-import { apiGetAlerts } from '../api.js'
+import { apiGetAlerts, apiGetLiveCharger } from '../api.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
@@ -149,8 +149,10 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const [activePeriod,  setActivePeriod]  = useState(null)
   const [activeVehicle, setActiveVehicle] = useState(null)
   const [alerts, setAlerts] = useState([])
+  const [liveCharging, setLiveCharging] = useState(null)
 
   useEffect(() => { apiGetAlerts().then(setAlerts).catch(()=>{}) }, [charges])
+  useEffect(() => { apiGetLiveCharger().then(setLiveCharging).catch(()=>{}) }, [charges])
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
@@ -328,6 +330,22 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
             <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>{alerts.map(a=>a.label).join(' · ')}</div>
           </div>
           <span style={{ color:'var(--amber)', fontSize:16 }}>›</span>
+        </div>
+      )}
+
+      {/* Bandeau session de charge en cours (détecté via la borne V2C / HA) */}
+      {liveCharging?.available && liveCharging.charging && (
+        <div onClick={()=>onNavigate('live')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(34,197,94,0.08)', border:'1.5px solid rgba(34,197,94,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+          <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--green)', display:'inline-block', boxShadow:'0 0 8px var(--green)', flexShrink:0 }} />
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>⚡ Charge en cours</div>
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>
+              {liveCharging.powerW != null ? `${(liveCharging.powerW/1000).toFixed(1)} kW` : ''}
+              {liveCharging.energyKwh != null ? ` · ${liveCharging.energyKwh.toFixed(2)} kWh` : ''}
+              {liveCharging.duration ? ` · ${liveCharging.duration}` : ''}
+            </div>
+          </div>
+          <span style={{ color:'var(--green)', fontSize:16 }}>›</span>
         </div>
       )}
 
