@@ -87,6 +87,8 @@ export default function App() {
     } catch(e) { console.error('reload error', e) }
   }, [])
 
+  const { pulling, progress, refreshing } = usePullToRefresh(reload)
+
   useEffect(() => {
     async function init() {
       if (!getToken()) { setLoading(false); return }
@@ -171,6 +173,23 @@ export default function App() {
   return (
     <ErrorBoundary>
     <>
+      {(pulling || refreshing) && (
+        <div style={{
+          position:'fixed', top:0, left:0, right:0, zIndex:150,
+          display:'flex', justifyContent:'center', alignItems:'flex-end',
+          height: refreshing ? 54 : Math.round(progress * 54),
+          overflow:'hidden', pointerEvents:'none',
+          transition: refreshing ? 'height 0.2s ease' : 'none',
+        }}>
+          <div style={{
+            marginBottom:10, width:26, height:26, borderRadius:'50%',
+            border:'2.5px solid var(--border)', borderTopColor:'var(--accent)',
+            opacity: refreshing ? 1 : progress,
+            transform: refreshing ? 'none' : `rotate(${progress*360}deg)`,
+            animation: refreshing ? 'spin 0.7s linear infinite' : 'none',
+          }} />
+        </div>
+      )}
       {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} />}
       {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
       {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
