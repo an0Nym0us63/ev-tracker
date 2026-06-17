@@ -196,6 +196,14 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const homePct    = stats.totalKwh > 0 ? Math.round(stats.homeKwh/stats.totalKwh*100) : 0
   const avgSession = stats.count > 0 ? (stats.totalKwh/stats.count).toFixed(1) : '—'
   const avgCost    = stats.count > 0 ? (stats.totalCost/stats.count).toFixed(2) : '—'
+
+  // AC (home) / DC (external) breakdowns
+  const acCharges = filtered.filter(c => c.locationId === 'home')
+  const dcCharges = filtered.filter(c => c.locationId !== 'home')
+  const avgSessionAC = acCharges.length ? (acCharges.reduce((s,c)=>s+(c.kwh||0),0)/acCharges.length).toFixed(1) : '—'
+  const avgSessionDC = dcCharges.length ? (dcCharges.reduce((s,c)=>s+(c.kwh||0),0)/dcCharges.length).toFixed(1) : '—'
+  const avgCostAC = acCharges.length ? (acCharges.reduce((s,c)=>s+(c.totalCost||0),0)/acCharges.length).toFixed(2) : '—'
+  const avgCostDC = dcCharges.length ? (dcCharges.reduce((s,c)=>s+(c.totalCost||0),0)/dcCharges.length).toFixed(2) : '—'
   const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
   const avgPrice   = stats.avgPrice > 0 ? stats.avgPrice.toFixed(3) : '—'
   const lastCharge  = activeVehicle
@@ -259,12 +267,11 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
       homePct, extPct,
       label:'Maison / Externe',
     },
-    { val:`${avgSession}`,  label:'kWh/session moy.',     color:'var(--mg4)',    mono:true },
-    { val:`${avgCost} €`,   label:'Coût/session moy.',    color:'var(--xpeng)',  mono:true },
+    { type:'acdc', valAC:avgSessionAC, valDC:avgSessionDC, suffix:'kWh', label:'kWh/session moy.', color:'var(--mg4)' },
+    { type:'acdc', valAC:avgCostAC, valDC:avgCostDC, suffix:'€', label:'Coût/session moy.', color:'var(--xpeng)' },
     { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
     { type:'streak', daysAC, daysDC, label:'Dernière charge' },
-    { type:'savings', savings, solarSavings, label:'Économies' },
-    { val: solarKwh > 0.5 ? `${solarKwh.toFixed(0)} kWh` : '—', label:'☀️ Énergie solaire', color:'var(--amber)', mono:true },
+    { type:'savings', savings, solarSavings, solarKwh, label:'Économies' },
     { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
     { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy. (kWh/h)', color:'var(--accent)', mono:true },
     { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },
@@ -353,9 +360,24 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                 </div>}
                 {k.solarSavings > 0.05 && <div style={{ display:'flex', alignItems:'center', gap:3 }}>
                   <span style={{ fontSize:9 }}>☀️</span>
-                  <span className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{k.solarSavings.toFixed(1)}€</span>
+                  <span className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{k.solarSavings.toFixed(1)}€{k.solarKwh > 0.5 ? ` · ${k.solarKwh.toFixed(0)}kWh` : ''}</span>
                 </div>}
                 {k.savings === 0 && k.solarSavings <= 0.05 && <div className="mono" style={{ fontSize:14, fontWeight:700, color:'var(--muted)' }}>—</div>}
+              </>
+            ) : k.type === 'acdc' ? (
+              <>
+                <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <div style={{ flex:1 }}>
+                    <div className="mono" style={{ fontSize:13, fontWeight:700, color:k.color }}>{k.valAC}{k.valAC!=='—'?` ${k.suffix}`:''}</div>
+                    <div style={{ fontSize:8, color:'var(--green)', marginTop:2 }}>🏠 AC</div>
+                  </div>
+                  <div style={{ width:1, background:'var(--border)' }} />
+                  <div style={{ flex:1 }}>
+                    <div className="mono" style={{ fontSize:13, fontWeight:700, color:k.color }}>{k.valDC}{k.valDC!=='—'?` ${k.suffix}`:''}</div>
+                    <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>⚡ DC</div>
+                  </div>
+                </div>
               </>
             ) : k.type === 'streak' ? (
               <>
@@ -383,9 +405,9 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                   <div style={{ flex:k.extKwh||0.001, background:'var(--amber)', opacity:.85 }} />
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-                  <span style={{ fontSize:8.5, color:'var(--green)' }}>🏠 {k.homeKwh.toFixed(0)} kWh</span>
+                  <span style={{ fontSize:8.5, color:'var(--green)' }}>🏠 AC · {k.homeKwh.toFixed(0)} kWh</span>
                   <span style={{ fontSize:8, color:'var(--muted)' }}>{k.label}</span>
-                  <span style={{ fontSize:8.5, color:'var(--amber)' }}>{k.extKwh.toFixed(0)} kWh 📍</span>
+                  <span style={{ fontSize:8.5, color:'var(--amber)' }}>{k.extKwh.toFixed(0)} kWh · DC ⚡</span>
                 </div>
               </>
             ) : (
