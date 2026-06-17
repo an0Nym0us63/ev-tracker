@@ -181,4 +181,35 @@ async function getLiveVehicle() {
   }
 }
 
-module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle, getLiveCharger }
+// ─── Live: historique de puissance de la session de charge en cours ──────────
+// Reconstruit le graphe complet même si la page Live a été ouverte après le
+// début de la charge, en s'appuyant sur l'historique HA du capteur de puissance
+// depuis le dernier changement d'état de "charge en cours".
+async function getSessionPowerHistory() {
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  if (!s?.ha_enabled || !s?.ha_url || !s?.ha_token) {
+    return { available: false, reason: 'HA non configuré ou désactivé' }
+  }
+  try {
+    const all = await getAllStates(s.ha_url, s.ha_token)
+    const map = {}
+    for (const e of all) map[e.entity_id] = e
+
+    const chargingEnt = map[CHARGER_ENTITY_IDS.charging]
+    if (!chargingEnt || chargingEnt.state !== 'on') {
+      return { available: false, reason: 'Aucune charge en cours' }
+    }
+
+    const sessionStart = chargingEnt.last_changed
+    const history = await getEntityHistory(s.ha_url, s.ha_token, CHARGER_ENTITY_IDS.powerW, sessionStart, new Date().toISOString())
+    const points = history
+      .map(e => ({ t: e.last_changed, w: parseFloat(e.state) }))
+      .filter(p => Number.isFinite(p.w))
+
+    return { available: true, sessionStart, points }
+  } catch(e) {
+    return { available: false, reason: `Erreur HA: ${e.message}` }
+  }
+}
+
+module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle, getLiveCharger, getSessionPowerHistory }

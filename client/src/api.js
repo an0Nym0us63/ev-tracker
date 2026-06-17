@@ -89,4 +89,5 @@ export async function apiV2CSyncDate(date) { return req('POST', `/api/v2c/sync/d
 export async function apiHACheck() { return req('POST', '/api/ha/check') }
 export async function apiGetLiveVehicle() { return req('GET', '/api/live/vehicle') }
 export async function apiGetLiveCharger() { return req('GET', '/api/live/charger') }
+export async function apiGetSessionPower() { return req('GET', '/api/live/session-power') }
 export async function apiWallboxRecomputeSolar() { return req('POST', '/api/wallbox/recompute-solar') }

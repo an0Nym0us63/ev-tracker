@@ -6,7 +6,7 @@ const https = require('https')
 const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
 const { syncV2C, syncV2CHistory, addLog, checkHA30Days } = require('./v2c')
-const { getLiveVehicle, getLiveCharger } = require('./ha')
+const { getLiveVehicle, getLiveCharger, getSessionPowerHistory } = require('./ha')
 
 function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
   const config = {
@@ -554,6 +554,14 @@ app.get('/api/live/vehicle', requireAuth, async (req, res) => {
 app.get('/api/live/charger', requireAuth, async (req, res) => {
   try {
     const result = await getLiveCharger()
+    res.json(result)
+  } catch(e) { res.status(500).json({ available: false, reason: e.message }) }
+})
+
+// ─── Live page: power history of the current charging session ───────────────
+app.get('/api/live/session-power', requireAuth, async (req, res) => {
+  try {
+    const result = await getSessionPowerHistory()
     res.json(result)
   } catch(e) { res.status(500).json({ available: false, reason: e.message }) }
 })

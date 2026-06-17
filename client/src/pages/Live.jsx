@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import ProfileMenu from '../components/ProfileMenu.jsx'
-import { apiGetLiveVehicle, apiGetLiveCharger } from '../api.js'
+import { apiGetLiveVehicle, apiGetLiveCharger, apiGetSessionPower } from '../api.js'
 import { VEHICLES } from '../utils.js'
 
 const POLL_INTERVAL_MS = 5000
@@ -26,6 +27,10 @@ function fmtKw(w) {
   return (w / 1000).toFixed(1)
 }
 
+function fmtTime(t) {
+  return new Date(t).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+}
+
 function Kpi({ label, value, unit, color }) {
   return (
     <div className="card" style={{ padding:'12px 12px' }}>
@@ -42,9 +47,11 @@ function Kpi({ label, value, unit, color }) {
 export default function Live({ account, onLogout, theme, onToggleTheme, onNavigate }) {
   const [vehicleData, setVehicleData] = useState(null)
   const [chargerData, setChargerData] = useState(null)
+  const [powerHistory, setPowerHistory] = useState([])  // [{ t: ms, kw: number }]
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const intervalRef = useRef(null)
+  const wasChargingRef = useRef(false)
 
   const fetchLive = useCallback(async () => {
     try {
@@ -52,6 +59,27 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
       setVehicleData(v)
       setChargerData(c)
       setError(null)
+
+      const nowCharging = !!(c?.available && c.charging)
+      if (nowCharging) {
+        if (!wasChargingRef.current) {
+          // Nouvelle session (ou page ouverte en cours de charge) : on récupère
+          // l'historique complet depuis HA pour reconstruire le graphe entier.
+          try {
+            const hist = await apiGetSessionPower()
+            if (hist?.available) {
+              setPowerHistory(hist.points.map(p => ({ t: new Date(p.t).getTime(), kw: p.w / 1000 })))
+            } else {
+              setPowerHistory([])
+            }
+          } catch { setPowerHistory([]) }
+        } else if (c.powerW != null) {
+          // Session déjà en cours : on ajoute juste le point courant, pas de
+          // nouvel appel d'historique HA à chaque poll.
+          setPowerHistory(prev => [...prev, { t: Date.now(), kw: c.powerW / 1000 }])
+        }
+      }
+      wasChargingRef.current = nowCharging
     } catch (e) {
       setError(e.message || 'Erreur de connexion')
     } finally {
@@ -153,6 +181,36 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
                 <div style={{ fontSize:12, color:'var(--muted)', marginTop:10 }}>{chargerData?.reason}</div>
               )}
             </div>
+
+            {/* Graphe de puissance de la session en cours */}
+            {chargerData?.available && chargerData.charging && powerHistory.length > 1 && (
+              <div className="card" style={{ padding:'14px 14px 4px' }}>
+                <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>
+                  Puissance — session en cours
+                </div>
+                <div style={{ width:'100%', height:130 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={powerHistory} margin={{ top:6, right:6, left:-22, bottom:0 }}>
+                      <defs>
+                        <linearGradient id="livePowerGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="t" type="number" domain={['dataMin','dataMax']} tickFormatter={fmtTime}
+                        tick={{ fontSize:9, fill:'var(--muted)' }} axisLine={false} tickLine={false} minTickGap={50} />
+                      <YAxis tick={{ fontSize:9, fill:'var(--muted)' }} axisLine={false} tickLine={false} width={30} />
+                      <Tooltip
+                        formatter={(v)=>[`${v.toFixed(1)} kW`, 'Puissance']}
+                        labelFormatter={(t)=> new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+                        contentStyle={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }}
+                      />
+                      <Area type="monotone" dataKey="kw" stroke="var(--accent)" strokeWidth={2} fill="url(#livePowerGrad)" isAnimationActive={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
 
             {/* KPIs borne en temps réel */}
             {chargerData?.available && (
