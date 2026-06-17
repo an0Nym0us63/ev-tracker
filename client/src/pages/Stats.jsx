@@ -45,10 +45,9 @@ export default function Stats({ charges }) {
   const totalCostAll = filtered.reduce((s,c)=>s+(c.totalCost||0),0)
   const equivalentFuel = totalFuel + totalCostAll
 
-  // Solar savings — exclude Wallbox (no V2C data, no solar tracking)
-  const filteredSolar = filtered.filter(c => !(c.provider||'').toLowerCase().includes('wallbox'))
-  const totalSolar    = filteredSolar.reduce((s,c)=>s+(c.solarSavings||0),0)
-  const homeCharges   = filteredSolar.filter(c=>c.locationId==='home')
+  // Solar savings — includes Wallbox (now has solar_savings from one-time recompute)
+  const totalSolar    = filtered.reduce((s,c)=>s+(c.solarSavings||0),0)
+  const homeCharges   = filtered.filter(c=>c.locationId==='home')
   const solarCharges  = homeCharges.filter(c=>(c.solarSavings||0)>0.05)
   const solarPct      = homeCharges.length>0 ? Math.round(solarCharges.length/homeCharges.length*100) : 0
   const isDailyChart = period === 'month' || period === '30d'
