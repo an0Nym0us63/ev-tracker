@@ -33,8 +33,8 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(409).json({ error: 'Ce nom est déjà pris' })
   const hash = bcrypt.hashSync(password, 10)
   const result = db.prepare('INSERT INTO accounts (name, password_hash, vehicle_id) VALUES (?, ?, ?)').run(name.trim(), hash, vehicleId)
-  const account = db.prepare('SELECT id, name, vehicle_id FROM accounts WHERE id = ?').get(result.lastInsertRowid)
-  res.json({ token: signToken(account), account: { id: account.id, name: account.name, vehicleId: account.vehicle_id } })
+  const account = db.prepare('SELECT id, name, vehicle_id, profile_color FROM accounts WHERE id = ?').get(result.lastInsertRowid)
+  res.json({ token: signToken(account), account: { id: account.id, name: account.name, vehicleId: account.vehicle_id, profileColor: account.profile_color || '' } })
 })
 
 app.post('/api/auth/login', (req, res) => {
@@ -43,13 +43,20 @@ app.post('/api/auth/login', (req, res) => {
   const account = db.prepare('SELECT * FROM accounts WHERE name = ?').get(name.trim())
   if (!account || !bcrypt.compareSync(password, account.password_hash))
     return res.status(401).json({ error: 'Identifiant ou mot de passe incorrect' })
-  res.json({ token: signToken(account), account: { id: account.id, name: account.name, vehicleId: account.vehicle_id } })
+  res.json({ token: signToken(account), account: { id: account.id, name: account.name, vehicleId: account.vehicle_id, profileColor: account.profile_color || '' } })
 })
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  const account = db.prepare('SELECT id, name, vehicle_id FROM accounts WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id, name, vehicle_id, profile_color FROM accounts WHERE id = ?').get(req.user.id)
   if (!account) return res.status(404).json({ error: 'Compte introuvable' })
-  res.json({ id: account.id, name: account.name, vehicleId: account.vehicle_id })
+  res.json({ id: account.id, name: account.name, vehicleId: account.vehicle_id, profileColor: account.profile_color || '' })
+})
+
+app.put('/api/auth/profile-color', requireAuth, (req, res) => {
+  const { profileColor } = req.body
+  db.prepare('UPDATE accounts SET profile_color=? WHERE id=?').run(profileColor||null, req.user.id)
+  const account = db.prepare('SELECT id, name, vehicle_id, profile_color FROM accounts WHERE id = ?').get(req.user.id)
+  res.json({ id: account.id, name: account.name, vehicleId: account.vehicle_id, profileColor: account.profile_color || '' })
 })
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
@@ -60,15 +67,15 @@ app.get('/api/settings', requireAuth, (req, res) => {
 })
 
 app.put('/api/settings', requireAuth, (req, res) => {
-  const { ocmApiKey, homeLat, homeLng, homeLabel, fuelPrice, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId } = req.body
+  const { ocmApiKey, homeLat, homeLng, homeLabel, fuelPrice, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId, mg4Color, xpengColor } = req.body
   const existing = db.prepare('SELECT account_id FROM settings ORDER BY account_id ASC LIMIT 1').get()
   const targetAccountId = existing ? existing.account_id : req.user.id
   if (existing) {
-    db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=?, fuel_price=?, v2c_enabled=?, v2c_api_key=?, v2c_device_id=?, ha_enabled=?, ha_url=?, ha_token=?, ha_entity_id=? WHERE account_id=?')
-      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null, targetAccountId)
+    db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=?, fuel_price=?, v2c_enabled=?, v2c_api_key=?, v2c_device_id=?, ha_enabled=?, ha_url=?, ha_token=?, ha_entity_id=?, mg4_color=?, xpeng_color=? WHERE account_id=?')
+      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null, mg4Color||null, xpengColor||null, targetAccountId)
   } else {
-    db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label, fuel_price, v2c_enabled, v2c_api_key, v2c_device_id, ha_enabled, ha_url, ha_token, ha_entity_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
-      .run(targetAccountId, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null)
+    db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label, fuel_price, v2c_enabled, v2c_api_key, v2c_device_id, ha_enabled, ha_url, ha_token, ha_entity_id, mg4_color, xpeng_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .run(targetAccountId, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null, mg4Color||null, xpengColor||null)
   }
   const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
   res.json(toClientSettings(s))
@@ -328,6 +335,8 @@ function toClientSettings(s) {
     haUrl:      s.ha_url || '',
     haToken:    s.ha_token || '',
     haEntityId: s.ha_entity_id || 'input_select.vehicule_branche',
+    mg4Color:   s.mg4_color   || '',
+    xpengColor: s.xpeng_color || '',
   }
 }
 

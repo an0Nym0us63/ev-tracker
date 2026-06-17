@@ -189,3 +189,11 @@ if (!settingsCols2.includes('ha_enabled'))    db.exec("ALTER TABLE settings ADD 
 if (!settingsCols2.includes('ha_url'))        db.exec("ALTER TABLE settings ADD COLUMN ha_url TEXT")
 if (!settingsCols2.includes('ha_token'))      db.exec("ALTER TABLE settings ADD COLUMN ha_token TEXT")
 if (!settingsCols2.includes('ha_entity_id'))  db.exec("ALTER TABLE settings ADD COLUMN ha_entity_id TEXT")
+
+// ─── Vehicle colors (shared) + profile color (per-account) migrations ────────
+const settingsCols3 = db.pragma('table_info(settings)').map(c => c.name)
+if (!settingsCols3.includes('mg4_color'))   db.exec("ALTER TABLE settings ADD COLUMN mg4_color TEXT")
+if (!settingsCols3.includes('xpeng_color')) db.exec("ALTER TABLE settings ADD COLUMN xpeng_color TEXT")
+
+const accountsCols = db.pragma('table_info(accounts)').map(c => c.name)
+if (!accountsCols.includes('profile_color')) db.exec("ALTER TABLE accounts ADD COLUMN profile_color TEXT")

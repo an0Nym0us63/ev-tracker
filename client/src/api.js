@@ -51,6 +51,7 @@ export async function apiGetLists() { return req('GET', '/api/lists') }
 // ─── Settings ─────────────────────────────────────────────────────────────────
 export async function apiGetSettings()    { return req('GET', '/api/settings') }
 export async function apiSaveSettings(s)  { return req('PUT', '/api/settings', s) }
+export async function apiSetProfileColor(profileColor) { return req('PUT', '/api/auth/profile-color', { profileColor }) }
 
 // ─── OCM + Geocode ────────────────────────────────────────────────────────────
 export async function apiOcmSearch({ q, lat, lng, radius }) {

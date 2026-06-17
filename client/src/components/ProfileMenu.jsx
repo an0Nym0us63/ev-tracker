@@ -37,7 +37,7 @@ export default function ProfileMenu({ account, onNavigate, onLogout, theme, onTo
     <>
       <button ref={btnRef} onClick={() => setOpen(o => !o)} style={{
         width:36, height:36, borderRadius:'50%',
-        background:'linear-gradient(135deg,var(--accent),var(--accent2))',
+        background: account?.profileColor || 'linear-gradient(135deg,var(--accent),var(--accent2))',
         border: open ? '2.5px solid white' : '2.5px solid transparent',
         display:'flex', alignItems:'center', justifyContent:'center',
         color:'white', fontSize:15, fontWeight:700, cursor:'pointer',

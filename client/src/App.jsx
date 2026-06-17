@@ -63,6 +63,20 @@ export default function App() {
   const [toast,      setToast]      = useState(null)
   const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
 
+  // Inject custom vehicle colors (shared, set in Réglages) as CSS variable overrides.
+  // Falls back to the theme's default colors when not customized.
+  useEffect(() => {
+    const mg4 = settings?.mg4Color
+    const xpeng = settings?.xpengColor
+    if (!mg4 && !xpeng) {
+      document.documentElement.style.removeProperty('--mg4')
+      document.documentElement.style.removeProperty('--xpeng')
+      return
+    }
+    if (mg4)   document.documentElement.style.setProperty('--mg4', mg4)
+    if (xpeng) document.documentElement.style.setProperty('--xpeng', xpeng)
+  }, [settings?.mg4Color, settings?.xpengColor])
+
   const providerOptions = React.useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
   const cardOptions = React.useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
@@ -164,7 +178,7 @@ export default function App() {
       {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} onToggleTheme={toggleTheme} onNavigate={navigate} />}
       {page === 'live'     && <Live account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
       {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}
-      {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
+      {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onAccountUpdate={setAccount} onBack={()=>setPage('home')} />}
 
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} onOpenFilters={()=>setShowFilters(true)} filterCount={activeCount} />}
       {toast && <Toast {...toast} />}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { VEHICLES } from '../utils.js'
-import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
+import { apiGetSettings, apiSaveSettings, apiGeocode, apiSetProfileColor } from '../api.js'
 import { VERSION } from '../version.js'
 import ImportCSV from '../components/ImportCSV.jsx'
 import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck, apiWallboxRecomputeSolar } from '../api.js'
@@ -26,7 +26,7 @@ function TextInput({ value, onChange, placeholder, type='text' }) {
   )
 }
 
-export default function Settings({ account, theme, onToggleTheme, onLogout, onSettingsSaved, onBack }) {
+export default function Settings({ account, theme, onToggleTheme, onLogout, onSettingsSaved, onAccountUpdate, onBack }) {
   const vehicle = VEHICLES[account.vehicleId]
   const [ocmKey,     setOcmKey]     = useState('')
   const [homeLabel,  setHomeLabel]  = useState('')
@@ -51,6 +51,10 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   const [haMsg,       setHaMsg]       = useState(null)
   const [wallboxRecomputing, setWallboxRecomputing] = useState(false)
   const [wallboxMsg,         setWallboxMsg]         = useState(null)
+  const [mg4Color,    setMg4Color]    = useState('')
+  const [xpengColor,  setXpengColor]  = useState('')
+  const [profileColor, setProfileColor] = useState(account.profileColor || '')
+  const [colorSaving, setColorSaving] = useState(false)
 
   useEffect(() => {
     apiGetSettings().then(s => {
@@ -66,6 +70,8 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
       setHaUrl(s.haUrl || '')
       setHaToken(s.haToken || '')
       setHaEntityId(s.haEntityId || 'input_select.vehicule_branche')
+      setMg4Color(s.mg4Color || '')
+      setXpengColor(s.xpengColor || '')
     }).catch(() => {})
   }, [])
 
@@ -87,10 +93,19 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   async function handleSave() {
     setSaving(true)
     try {
-      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng, fuelPrice: parseFloat(fuelPrice)||1.85, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId })
+      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng, fuelPrice: parseFloat(fuelPrice)||1.85, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId, mg4Color, xpengColor })
       onSettingsSaved?.(result)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch {} finally { setSaving(false) }
+  }
+
+  async function saveProfileColor(color) {
+    setProfileColor(color)
+    setColorSaving(true)
+    try {
+      const updated = await apiSetProfileColor(color)
+      onAccountUpdate?.(updated)
+    } catch {} finally { setColorSaving(false) }
   }
 
   async function testOcm() {
@@ -323,6 +338,56 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
         <button onClick={onLogout} style={{ background:'none', color:'var(--red)', fontSize:14, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'14px 16px', cursor:'pointer' }}>
           Se déconnecter
         </button>
+
+        {/* Apparence */}
+        <div>
+          <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:8 }}>Apparence</div>
+          <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:14 }}>
+
+            <div>
+              <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>🎨 Couleurs véhicules</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
+                Partagées pour tout le foyer — utilisées dans les graphiques, sessions et statistiques
+              </div>
+              <div style={{ display:'flex', gap:10 }}>
+                <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--r-sm)', border:'1.5px solid var(--border)' }}>
+                  <input type="color" value={mg4Color || '#4f8ef7'} onChange={e=>setMg4Color(e.target.value)}
+                    style={{ width:30, height:30, border:'none', borderRadius:6, padding:0, cursor:'pointer', background:'none' }} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:600 }}>MG4</div>
+                    {mg4Color && <button onClick={()=>setMg4Color('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0 }}>Réinitialiser</button>}
+                  </div>
+                </div>
+                <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--r-sm)', border:'1.5px solid var(--border)' }}>
+                  <input type="color" value={xpengColor || '#7c5cfc'} onChange={e=>setXpengColor(e.target.value)}
+                    style={{ width:30, height:30, border:'none', borderRadius:6, padding:0, cursor:'pointer', background:'none' }} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:600 }}>Xpeng G6</div>
+                    {xpengColor && <button onClick={()=>setXpengColor('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0 }}>Réinitialiser</button>}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize:10, color:'var(--muted)', marginTop:8 }}>Sauvegardé avec le bouton "Enregistrer" en haut de page</div>
+            </div>
+
+            <div style={{ height:1, background:'var(--border)' }} />
+
+            <div>
+              <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>🔵 Couleur de mon profil</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
+                Propre à ton compte — couleur du rond dans le menu profil
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--r-sm)', border:'1.5px solid var(--border)' }}>
+                <input type="color" value={profileColor || '#4f8ef7'} onChange={e=>saveProfileColor(e.target.value)}
+                  style={{ width:30, height:30, border:'none', borderRadius:6, padding:0, cursor:'pointer', background:'none' }} />
+                <div style={{ flex:1, fontSize:12, fontWeight:600 }}>{account.name}</div>
+                {colorSaving && <span style={{ fontSize:10, color:'var(--muted)' }}>…</span>}
+                {profileColor && !colorSaving && <button onClick={()=>saveProfileColor('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer' }}>Réinitialiser</button>}
+              </div>
+            </div>
+
+          </div>
+        </div>
 
         {/* Import */}
         <div>
