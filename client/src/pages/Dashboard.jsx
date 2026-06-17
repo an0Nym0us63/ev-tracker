@@ -246,6 +246,27 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
     return totalHours > 0 ? (totalKwhD/totalHours).toFixed(1) : null
   }, [filtered])
 
+  const avgPowerAC = useMemo(() => {
+    const withDur = acCharges.filter(c => c.durationMin > 0)
+    if (!withDur.length) return null
+    const totalKwhD = withDur.reduce((s,c) => s+c.kwh, 0)
+    const totalHours = withDur.reduce((s,c) => s+c.durationMin/60, 0)
+    return totalHours > 0 ? (totalKwhD/totalHours).toFixed(1) : null
+  }, [acCharges])
+
+  const avgPowerDC = useMemo(() => {
+    const withDur = dcCharges.filter(c => c.durationMin > 0)
+    if (!withDur.length) return null
+    const totalKwhD = withDur.reduce((s,c) => s+c.kwh, 0)
+    const totalHours = withDur.reduce((s,c) => s+c.durationMin/60, 0)
+    return totalHours > 0 ? (totalKwhD/totalHours).toFixed(1) : null
+  }, [dcCharges])
+
+  const avgPriceAC = acCharges.reduce((s,c)=>s+(c.kwh||0),0) > 0
+    ? (acCharges.reduce((s,c)=>s+(c.totalCost||0),0) / acCharges.reduce((s,c)=>s+(c.kwh||0),0)).toFixed(3) : '—'
+  const avgPriceDC = dcCharges.reduce((s,c)=>s+(c.kwh||0),0) > 0
+    ? (dcCharges.reduce((s,c)=>s+(c.totalCost||0),0) / dcCharges.reduce((s,c)=>s+(c.kwh||0),0)).toFixed(3) : '—'
+
   // Top provider
   const topProvider = useMemo(() => {
     const map = {}
@@ -258,6 +279,8 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
 
   // Most expensive session
   const maxCost = filtered.length ? Math.max(...filtered.map(c=>c.totalCost||0)).toFixed(2) : '—'
+  const maxCostAC = acCharges.length ? Math.max(...acCharges.map(c=>c.totalCost||0)).toFixed(2) : '—'
+  const maxCostDC = dcCharges.length ? Math.max(...dcCharges.map(c=>c.totalCost||0)).toFixed(2) : '—'
 
   const kpis = [
     {
@@ -271,9 +294,9 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
     { type:'acdc', valAC:avgCostAC, valDC:avgCostDC, suffix:'€', label:'Coût/session moy.', color:'var(--xpeng)' },
     { type:'streak', daysAC, daysDC, label:'Dernière charge' },
     { type:'savings', savings, solarSavings, solarKwh, label:'Économies' },
-    { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
-    { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy.', color:'var(--accent)', mono:true },
-    { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },
+    { type:'acdc', valAC:avgPriceAC, valDC:avgPriceDC, suffix:'€/kWh', label:'€/kWh moyen', color:'var(--text)' },
+    { type:'acdc', valAC: avgPowerAC||'—', valDC: avgPowerDC||'—', suffix:'kW', label:'Puissance moy.', color:'var(--accent)' },
+    { type:'acdc', valAC:maxCostAC, valDC:maxCostDC, suffix:'€', label:'Session la + chère', color:'var(--amber)' },
     { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
   ]
 
@@ -367,17 +390,15 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
             ) : k.type === 'acdc' ? (
               <>
                 <div style={{ fontSize:9, color:'var(--muted)', marginBottom:6, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
-                <div style={{ display:'flex', gap:10 }}>
-                  <div style={{ flex:1, display:'flex', alignItems:'baseline', gap:5 }}>
-                    <span style={{ fontSize:10 }}>🏠</span>
-                    <span className="mono" style={{ fontSize:15, fontWeight:700, color:k.color }}>{k.valAC}{k.valAC!=='—'?` ${k.suffix}`:''}</span>
-                    <span style={{ fontSize:8, color:'var(--green)' }}>AC</span>
+                <div style={{ display:'flex', gap:8 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div className="mono" style={{ fontSize:15, fontWeight:700, color:k.color, whiteSpace:'nowrap' }}>{k.valAC}{k.valAC!=='—'?` ${k.suffix}`:''}</div>
+                    <div style={{ fontSize:8, color:'var(--green)', marginTop:2 }}>🏠 AC</div>
                   </div>
-                  <div style={{ width:1, background:'var(--border)' }} />
-                  <div style={{ flex:1, display:'flex', alignItems:'baseline', gap:5 }}>
-                    <span style={{ fontSize:10 }}>⚡</span>
-                    <span className="mono" style={{ fontSize:15, fontWeight:700, color:k.color }}>{k.valDC}{k.valDC!=='—'?` ${k.suffix}`:''}</span>
-                    <span style={{ fontSize:8, color:'var(--amber)' }}>DC</span>
+                  <div style={{ width:1, background:'var(--border)', flexShrink:0 }} />
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div className="mono" style={{ fontSize:15, fontWeight:700, color:k.color, whiteSpace:'nowrap' }}>{k.valDC}{k.valDC!=='—'?` ${k.suffix}`:''}</div>
+                    <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>⚡ DC</div>
                   </div>
                 </div>
               </>
