@@ -29,12 +29,12 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
       <div style={{ fontSize:8, color:'var(--muted)', marginBottom:5, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
       <div style={{ display:'flex', gap:8 }}>
         <div style={{ flex:1, minWidth:0 }}>
-          <div className="mono" style={{ fontSize:13, fontWeight:700, color, whiteSpace:'nowrap' }}>{valAC}{valAC!=='—'?` ${suffix}`:''}</div>
+          <div className="mono" style={{ fontSize:12, fontWeight:700, color, lineHeight:1.25, overflowWrap:'break-word' }}>{valAC}{valAC!=='—'?` ${suffix}`:''}</div>
           <div style={{ fontSize:8, color:'var(--green)', marginTop:2 }}>🏠 AC</div>
         </div>
         <div style={{ width:1, background:'var(--border)', flexShrink:0 }} />
         <div style={{ flex:1, minWidth:0 }}>
-          <div className="mono" style={{ fontSize:13, fontWeight:700, color, whiteSpace:'nowrap' }}>{valDC}{valDC!=='—'?` ${suffix}`:''}</div>
+          <div className="mono" style={{ fontSize:12, fontWeight:700, color, lineHeight:1.25, overflowWrap:'break-word' }}>{valDC}{valDC!=='—'?` ${suffix}`:''}</div>
           <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>⚡ DC</div>
         </div>
       </div>
