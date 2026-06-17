@@ -500,6 +500,30 @@ app.post('/api/v2c/sync/date', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }) }
 })
 
+// ─── One-time: recompute solar savings for Wallbox charges ───────────────────
+// If price/kWh < grid reference price (0.13€), the difference must come from solar
+app.post('/api/wallbox/recompute-solar', requireAuth, (req, res) => {
+  const GRID_PRICE = 0.13
+  const charges = db.prepare(
+    "SELECT id, kwh, total_cost FROM charges WHERE account_id=? AND provider LIKE 'Wallbox%' AND kwh > 0"
+  ).all(req.user.id)
+
+  let updated = 0, skipped = 0
+  for (const c of charges) {
+    const pricePerKwh = c.total_cost / c.kwh
+    let solarSavings = 0
+    if (pricePerKwh < GRID_PRICE) {
+      solarSavings = parseFloat(((c.kwh * GRID_PRICE) - c.total_cost).toFixed(4))
+    }
+    db.prepare('UPDATE charges SET solar_savings=? WHERE id=?').run(solarSavings, c.id)
+    addLog(req.user.id, 'info', `Wallbox id=${c.id} | ${c.kwh}kWh @ ${pricePerKwh.toFixed(3)}€/kWh → solar_savings=${solarSavings}€`)
+    if (solarSavings > 0) updated++; else skipped++
+  }
+
+  addLog(req.user.id, 'info', `=== Recalcul solaire Wallbox terminé: ${updated} mise(s) à jour, ${skipped} sans gain ===`)
+  res.json({ total: charges.length, updated, skipped })
+})
+
 app.post('/api/ha/check', requireAuth, async (req, res) => {
   try {
     const result = await checkHA30Days(req.user.id)

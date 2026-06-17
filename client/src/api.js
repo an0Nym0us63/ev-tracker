@@ -86,3 +86,4 @@ export async function apiClearLogs()         { return req('DELETE', '/api/logs')
 export async function apiGetAlerts() { return req('GET', '/api/alerts') }
 export async function apiV2CSyncDate(date) { return req('POST', `/api/v2c/sync/date?date=${date}`) }
 export async function apiHACheck() { return req('POST', '/api/ha/check') }
+export async function apiWallboxRecomputeSolar() { return req('POST', '/api/wallbox/recompute-solar') }
