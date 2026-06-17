@@ -178,7 +178,11 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const chartData = useMemo(() => getChartData(filtered, activePeriod || 'all'), [filtered, activePeriod])
   const isDailyChart = activePeriod === 'month' || activePeriod === '30d'
 
-  const sorted = useMemo(() => [...charges].sort((a,b)=>b.date.localeCompare(a.date)), [charges])
+  const sorted = useMemo(() => [...charges].sort((a,b) => {
+    const dateCmp = b.date.localeCompare(a.date)
+    if (dateCmp !== 0) return dateCmp
+    return (b.startTime||'').localeCompare(a.startTime||'')
+  }), [charges])
   const recentFiltered = useMemo(() => {
     let c = sorted
     if (activePeriod) c = c.filter(x => filterByPeriod([x], activePeriod).length > 0)

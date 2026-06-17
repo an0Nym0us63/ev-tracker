@@ -34,7 +34,11 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
     })
     return Object.entries(g)
       .sort((a,b) => b[0].localeCompare(a[0]))
-      .map(([k, items]) => [k, items.sort((a,b) => b.date.localeCompare(a.date))])
+      .map(([k, items]) => [k, items.sort((a,b) => {
+        const dateCmp = b.date.localeCompare(a.date)
+        if (dateCmp !== 0) return dateCmp
+        return (b.startTime||'').localeCompare(a.startTime||'')
+      })])
   }, [filtered])
 
 
