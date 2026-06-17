@@ -44,6 +44,7 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
 
 export default function Stats({ charges }) {
   const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
+  const [habitsBreakdown, setHabitsBreakdown] = React.useState('none') // 'none' | 'location' | 'vehicle'
 
   const providerOptions = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
   const cardOptions = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
@@ -458,6 +459,80 @@ export default function Stats({ charges }) {
           </div>
         )}
 
+        {/* Weekday distribution */}
+        {weekdayData.some(d => d.sessions > 0) && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <SectionLabel>Habitudes — jour de la semaine</SectionLabel>
+              <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+                {[{id:'none',label:'Total'},{id:'location',label:'Lieu'},{id:'vehicle',label:'Véhicule'}].map(o => (
+                  <button key={o.id} onClick={()=>setHabitsBreakdown(o.id)} style={{ padding:'3px 9px', borderRadius:12, border:`1px solid ${habitsBreakdown===o.id?'var(--accent)':'var(--border)'}`, background:habitsBreakdown===o.id?'rgba(79,142,247,0.1)':'transparent', color:habitsBreakdown===o.id?'var(--accent)':'var(--muted)', fontSize:9, fontWeight:600, cursor:'pointer' }}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="card" style={{ padding:'14px 16px' }}>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={weekdayData}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v)=>`${v.toFixed(0)} kWh`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                  {habitsBreakdown === 'none' && <Bar dataKey="kwh" radius={[4,4,0,0]} fill="var(--accent)" />}
+                  {habitsBreakdown === 'location' && <>
+                    <Bar dataKey="homeKwh" name="Maison" stackId="a" fill="var(--green)" radius={[0,0,0,0]} />
+                    <Bar dataKey="extKwh" name="Externe" stackId="a" fill="var(--amber)" radius={[4,4,0,0]} />
+                  </>}
+                  {habitsBreakdown === 'vehicle' && <>
+                    <Bar dataKey="mg4Kwh" name="MG4" stackId="a" fill="var(--mg4)" radius={[0,0,0,0]} />
+                    <Bar dataKey="xpengKwh" name="Xpeng G6" stackId="a" fill="var(--xpeng)" radius={[4,4,0,0]} />
+                  </>}
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>kWh chargés par jour de la semaine</div>
+            </div>
+          </div>
+        )}
+
+        {/* Power histogram */}
+        {powerHisto.length > 0 && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Répartition par puissance</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px' }}>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={powerHisto}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v)=>`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                  {habitsBreakdown === 'none' && <Bar dataKey="count" radius={[4,4,0,0]} fill="var(--xpeng)" />}
+                  {habitsBreakdown === 'location' && <>
+                    <Bar dataKey="homeCount" name="Maison" stackId="a" fill="var(--green)" radius={[0,0,0,0]} />
+                    <Bar dataKey="extCount" name="Externe" stackId="a" fill="var(--amber)" radius={[4,4,0,0]} />
+                  </>}
+                  {habitsBreakdown === 'vehicle' && <>
+                    <Bar dataKey="mg4Count" name="MG4" stackId="a" fill="var(--mg4)" radius={[0,0,0,0]} />
+                    <Bar dataKey="xpengCount" name="Xpeng G6" stackId="a" fill="var(--xpeng)" radius={[4,4,0,0]} />
+                  </>}
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>nombre de sessions par tranche de puissance (kW)</div>
+            </div>
+          </div>
+        )}
+
+        {/* Solar & Savings section */}
+        {/* Monthly cost cumulative trend */}
+        {period === 'all' && costData.length > 1 && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Coût cumulé</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px' }}>
+              <ResponsiveContainer width="100%" height={90}>
+                <AreaChart data={costData}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<Tip />} />
+                  <Area dataKey="cumCost" name="Cumul" unit=" €" stroke="var(--accent)" fill="rgba(79,142,247,0.15)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {/* Provider bars */}
         {providers.length > 0 && (
           <div style={{ padding:'12px 16px 0' }}>
@@ -563,61 +638,6 @@ export default function Stats({ charges }) {
             </div>
           )
         })()}
-
-        {/* Weekday distribution */}
-        {weekdayData.some(d => d.sessions > 0) && (
-          <div style={{ padding:'12px 16px 0' }}>
-            <SectionLabel>Habitudes — jour de la semaine</SectionLabel>
-            <div className="card" style={{ padding:'14px 16px' }}>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={weekdayData}>
-                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v,n)=>n==='kwh'?`${v.toFixed(0)} kWh`:`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
-                  <Bar dataKey="kwh" radius={[4,4,0,0]}>
-                    {weekdayData.map((d,i) => <Cell key={i} fill="var(--accent)" />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>kWh chargés par jour de la semaine</div>
-            </div>
-          </div>
-        )}
-
-        {/* Power histogram */}
-        {powerHisto.length > 0 && (
-          <div style={{ padding:'12px 16px 0' }}>
-            <SectionLabel>Répartition par puissance</SectionLabel>
-            <div className="card" style={{ padding:'14px 16px' }}>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={powerHisto}>
-                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v)=>`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
-                  <Bar dataKey="count" radius={[4,4,0,0]}>
-                    {powerHisto.map((d,i) => <Cell key={i} fill="var(--xpeng)" />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>nombre de sessions par tranche de puissance (kW)</div>
-            </div>
-          </div>
-        )}
-
-        {/* Solar & Savings section */}
-        {/* Monthly cost cumulative trend */}
-        {period === 'all' && costData.length > 1 && (
-          <div style={{ padding:'12px 16px 0' }}>
-            <SectionLabel>Coût cumulé</SectionLabel>
-            <div className="card" style={{ padding:'14px 16px' }}>
-              <ResponsiveContainer width="100%" height={90}>
-                <AreaChart data={costData}>
-                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<Tip />} />
-                  <Area dataKey="cumCost" name="Cumul" unit=" €" stroke="var(--accent)" fill="rgba(79,142,247,0.15)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
 
       </>)}
     {showFilters && (

@@ -173,35 +173,45 @@ export function getMonthlyAvgByVehicle(charges) {
   return result
 }
 
-// ─── Distribution by day of week (Mon-Sun), session count + kWh ───────────────
+// ─── Distribution by day of week (Mon-Sun), session count + kWh, split by location & vehicle ──
 export function getWeekdayDistribution(charges) {
   const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
-  const buckets = days.map(d => ({ label: d, sessions: 0, kwh: 0 }))
+  const buckets = days.map(d => ({ label: d, sessions: 0, kwh: 0, homeKwh: 0, extKwh: 0, mg4Kwh: 0, xpengKwh: 0 }))
   charges.forEach(c => {
     const d = new Date(c.date + 'T00:00:00')
     const jsDay = d.getDay() // 0=Sun..6=Sat
     const idx = jsDay === 0 ? 6 : jsDay - 1 // convert to Mon=0..Sun=6
-    buckets[idx].sessions += 1
-    buckets[idx].kwh += c.kwh || 0
+    const b = buckets[idx]
+    b.sessions += 1
+    b.kwh += c.kwh || 0
+    if (c.locationId === 'home') b.homeKwh += c.kwh || 0
+    else b.extKwh += c.kwh || 0
+    if (c.vehicleId === 'mg4') b.mg4Kwh += c.kwh || 0
+    else if (c.vehicleId === 'xpeng') b.xpengKwh += c.kwh || 0
   })
   return buckets
 }
 
-// ─── Power distribution histogram (kW buckets) ─────────────────────────────────
+// ─── Power distribution histogram (kW buckets), split by location & vehicle ────
 export function getPowerHistogram(charges) {
   const buckets = [
-    { label:'<3.7', min:0,    max:3.7,  count:0 },
-    { label:'3.7-7', min:3.7, max:7,    count:0 },
-    { label:'7-11',  min:7,   max:11,   count:0 },
-    { label:'11-22', min:11,  max:22,   count:0 },
-    { label:'22-50', min:22,  max:50,   count:0 },
-    { label:'50+',   min:50,  max:Infinity, count:0 },
+    { label:'<3.7', min:0,    max:3.7,  count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
+    { label:'3.7-7', min:3.7, max:7,    count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
+    { label:'7-11',  min:7,   max:11,   count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
+    { label:'11-22', min:11,  max:22,   count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
+    { label:'22-50', min:22,  max:50,   count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
+    { label:'50+',   min:50,  max:Infinity, count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
   ]
   charges.forEach(c => {
     if (!c.durationMin || c.durationMin <= 0) return
     const kw = c.kwh / (c.durationMin/60)
     const b = buckets.find(b => kw >= b.min && kw < b.max)
-    if (b) b.count += 1
+    if (!b) return
+    b.count += 1
+    if (c.locationId === 'home') b.homeCount += 1
+    else b.extCount += 1
+    if (c.vehicleId === 'mg4') b.mg4Count += 1
+    else if (c.vehicleId === 'xpeng') b.xpengCount += 1
   })
   return buckets.filter(b => b.count > 0)
 }
