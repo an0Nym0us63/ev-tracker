@@ -23,6 +23,25 @@ function SectionLabel({ children }) {
   return <div className="section-label">{children}</div>
 }
 
+function AcDcTile({ label, valAC, valDC, suffix, color }) {
+  return (
+    <div className="card" style={{ padding:'9px 10px', gridColumn:'span 2' }}>
+      <div style={{ fontSize:8, color:'var(--muted)', marginBottom:5, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
+      <div style={{ display:'flex', gap:8 }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div className="mono" style={{ fontSize:13, fontWeight:700, color, whiteSpace:'nowrap' }}>{valAC}{valAC!=='—'?` ${suffix}`:''}</div>
+          <div style={{ fontSize:8, color:'var(--green)', marginTop:2 }}>🏠 AC</div>
+        </div>
+        <div style={{ width:1, background:'var(--border)', flexShrink:0 }} />
+        <div style={{ flex:1, minWidth:0 }}>
+          <div className="mono" style={{ fontSize:13, fontWeight:700, color, whiteSpace:'nowrap' }}>{valDC}{valDC!=='—'?` ${suffix}`:''}</div>
+          <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>⚡ DC</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Stats({ charges }) {
   const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
 
@@ -59,6 +78,19 @@ export default function Stats({ charges }) {
   const savings    = filtered.reduce((s,c)=>s+(c.fuelSavings||0),0)
   const avgSession = stats.count > 0 ? (stats.totalKwh/stats.count).toFixed(1) : '—'
   const avgCost    = stats.count > 0 ? (stats.totalCost/stats.count).toFixed(2) : '—'
+
+  const acCharges = filtered.filter(c => c.locationId === 'home')
+  const dcCharges = filtered.filter(c => c.locationId !== 'home')
+
+  const avgSessionAC = acCharges.length ? (acCharges.reduce((s,c)=>s+(c.kwh||0),0)/acCharges.length).toFixed(1) : '—'
+  const avgSessionDC = dcCharges.length ? (dcCharges.reduce((s,c)=>s+(c.kwh||0),0)/dcCharges.length).toFixed(1) : '—'
+  const avgCostAC = acCharges.length ? (acCharges.reduce((s,c)=>s+(c.totalCost||0),0)/acCharges.length).toFixed(2) : '—'
+  const avgCostDC = dcCharges.length ? (dcCharges.reduce((s,c)=>s+(c.totalCost||0),0)/dcCharges.length).toFixed(2) : '—'
+  const avgPriceAC = acCharges.reduce((s,c)=>s+(c.kwh||0),0) > 0
+    ? (acCharges.reduce((s,c)=>s+(c.totalCost||0),0) / acCharges.reduce((s,c)=>s+(c.kwh||0),0)).toFixed(3) : '—'
+  const avgPriceDC = dcCharges.reduce((s,c)=>s+(c.kwh||0),0) > 0
+    ? (dcCharges.reduce((s,c)=>s+(c.totalCost||0),0) / dcCharges.reduce((s,c)=>s+(c.kwh||0),0)).toFixed(3) : '—'
+
   const avgPwr     = useMemo(() => {
     const w = filtered.filter(c=>c.durationMin>0)
     if (!w.length) return null
@@ -78,6 +110,10 @@ export default function Stats({ charges }) {
 
   const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
   const maxCost    = filtered.length ? Math.max(...filtered.map(c=>c.totalCost||0)).toFixed(2) : '—'
+  const maxSessionAC = acCharges.length ? Math.max(...acCharges.map(c=>c.kwh||0)).toFixed(1) : '—'
+  const maxSessionDC = dcCharges.length ? Math.max(...dcCharges.map(c=>c.kwh||0)).toFixed(1) : '—'
+  const maxCostAC = acCharges.length ? Math.max(...acCharges.map(c=>c.totalCost||0)).toFixed(2) : '—'
+  const maxCostDC = dcCharges.length ? Math.max(...dcCharges.map(c=>c.totalCost||0)).toFixed(2) : '—'
   const topProvider = useMemo(() => {
     const map = {}
     filtered.filter(c=>c.locationId!=='home'&&c.provider).forEach(c=>{map[c.provider]=(map[c.provider]||0)+1})
@@ -159,13 +195,12 @@ export default function Stats({ charges }) {
 
         {/* Grid KPIs */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'8px 16px 0' }}>
+          <AcDcTile label="kWh/session" valAC={avgSessionAC} valDC={avgSessionDC} suffix="kWh" color="var(--mg4)" />
+          <AcDcTile label="€/session"   valAC={avgCostAC}    valDC={avgCostDC}    suffix="€"   color="var(--xpeng)" />
+          <AcDcTile label="Puissance moy." valAC={avgPwrHome||'—'} valDC={avgPwrDC||'—'} suffix="kW" color="var(--accent)" />
+          <AcDcTile label="Session la + chère" valAC={maxCostAC} valDC={maxCostDC} suffix="€" color="var(--amber)" />
           {[
-            { val:`${avgSession}`, label:'kWh/session', color:'var(--mg4)', mono:true },
-            { val:`${avgCost} €`,  label:'€/session',   color:'var(--xpeng)', mono:true },
             { val:`${maxSession}`, label:'Max kWh',      color:'var(--accent)', mono:true },
-            { val:`${maxCost} €`,  label:'Session chère',color:'var(--amber)', mono:true },
-            { val: avgPwrHome ? `${avgPwrHome} kW` : '—', label:'Moy. AC 🏠', color:'var(--green)', mono:true },
-            { val: avgPwrDC   ? `${avgPwrDC} kW`   : '—', label:'Moy. DC 📍', color:'var(--amber)', mono:true },
             { val:`${homePct}%`,   label:'Maison',       color:'var(--green)' },
             { val:`${extPct}%`,    label:'Externe',      color:'var(--amber)' },
           ].map(k => (
