@@ -99,6 +99,67 @@ async function getEntityState(haUrl, token, entityId) {
   return haFetch(haUrl, token, path)
 }
 
+// ─── Get all states in one call (cheaper than N individual GETs) ─────────────
+async function getAllStates(haUrl, token) {
+  return haFetch(haUrl, token, '/api/states')
+}
+
+// ─── Borne V2C Trydan: entity_ids exposés par l'intégration HA ───────────────
+// Hardcodé pour l'instant (une seule borne) — pourra devenir configurable plus tard
+const CHARGER_ENTITY_IDS = {
+  plugged:       'binary_sensor.v2c_trydan_branche',
+  charging:      'binary_sensor.v2c_trydan_charge_en_cours',
+  sessionActive: 'binary_sensor.v2c_trydan_session_en_cours',
+  status:        'sensor.v2c_trydan_etat_de_charge',
+  powerW:        'sensor.v2c_trydan_puissance_de_charge_2',
+  energyKwh:     'sensor.v2c_trydan_energie_de_charge_2',
+  duration:      'sensor.v2c_trydan_temps_de_charge_2',
+  currentA:      'sensor.v2c_trydan_intensite_de_charge',
+  homePowerW:    'sensor.v2c_trydan_puissance_maison',
+  solarPowerW:   'sensor.v2c_trydan_puissance_photovoltaique',
+  chargeKm:      'sensor.v2c_trydan_v2c_trydan_sensor_chargekm',
+}
+
+// ─── Live: état temps réel complet de la borne V2C ────────────────────────────
+async function getLiveCharger() {
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  if (!s?.ha_enabled || !s?.ha_url || !s?.ha_token) {
+    return { available: false, reason: 'HA non configuré ou désactivé' }
+  }
+  try {
+    const all = await getAllStates(s.ha_url, s.ha_token)
+    const map = {}
+    for (const e of all) map[e.entity_id] = e
+
+    const raw = (key) => {
+      const ent = map[CHARGER_ENTITY_IDS[key]]
+      return ent ? ent.state : null
+    }
+    const num = (key) => {
+      const v = raw(key)
+      const n = parseFloat(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    return {
+      available:     true,
+      plugged:       raw('plugged') === 'on',
+      charging:      raw('charging') === 'on',
+      sessionActive: raw('sessionActive') === 'on',
+      status:        raw('status'),
+      powerW:        num('powerW'),
+      energyKwh:     num('energyKwh'),
+      duration:      raw('duration'),
+      currentA:      num('currentA'),
+      homePowerW:    num('homePowerW'),
+      solarPowerW:   num('solarPowerW'),
+      chargeKm:      num('chargeKm'),
+    }
+  } catch(e) {
+    return { available: false, reason: `Erreur HA: ${e.message}` }
+  }
+}
+
 // ─── Live: current vehicle plugged in, from the same entity used for detection ─
 async function getLiveVehicle() {
   const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
@@ -120,4 +181,4 @@ async function getLiveVehicle() {
   }
 }
 
-module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle }
+module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle, getLiveCharger }
