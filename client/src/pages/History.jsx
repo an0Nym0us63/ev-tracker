@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
+import CardLogo from '../components/CardLogo.jsx'
 import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
 export default function History({ charges, onEdit, alertFilter, onClearAlertFilter }) {
@@ -135,10 +136,11 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
                           )}
                         </div>
                         {/* Row 2: details */}
-                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', flexWrap:'wrap', gap:'0 6px' }}>
+                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', flexWrap:'wrap', alignItems:'center', gap:'0 6px' }}>
                           {c.durationMin ? <span>{formatDuration(c.durationMin)}</span> : null}
                           {c.powerKw ? <span>{c.powerKw} kW</span> : null}
                           {(c.connectorTypes||[]).length > 0 ? <span>{c.connectorTypes.join(', ')}</span> : null}
+                          {c.card ? <CardLogo name={c.card} size={12} style={{ marginRight:-2 }} /> : null}
                           {c.card ? <span>{c.card}</span> : null}
                         </div>
                       </div>

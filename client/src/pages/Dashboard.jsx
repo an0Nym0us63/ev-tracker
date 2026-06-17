@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie
 import { computeStats, filterByPeriod, getChartData, getProviderStats, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
 import { apiGetAlerts } from '../api.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
+import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
 
@@ -476,8 +477,9 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                       color: isHome?'var(--green)':'var(--accent)',
                       border:`1px solid ${isHome?'rgba(34,197,94,0.2)':'rgba(79,142,247,0.2)'}` }}>{c.provider}</span>}
                   </div>
-                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
-                    {formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}
+                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', alignItems:'center', gap:5 }}>
+                    <span>{formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}</span>
+                    {c.card ? <CardLogo name={c.card} size={11} /> : null}
                   </div>
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:2 }}>

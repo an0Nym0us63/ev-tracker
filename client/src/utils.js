@@ -109,6 +109,18 @@ export function getProviderStats(charges) {
   return Object.values(map).sort((a,b)=>b.kwh-a.kwh)
 }
 
+export function getCardStats(charges) {
+  const map = {}
+  charges.filter(c => c.card).forEach(c => {
+    const name = c.card
+    if (!map[name]) map[name] = { name, kwh:0, sessions:0, cost:0 }
+    map[name].kwh      += c.kwh
+    map[name].sessions += 1
+    map[name].cost     += c.totalCost||0
+  })
+  return Object.values(map).sort((a,b)=>b.kwh-a.kwh)
+}
+
 export function getWeeklyData(charges, weeks = 6) {
   const now = new Date()
   return Array.from({ length: weeks }, (_, i) => {

@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react'
 import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area } from 'recharts'
-import { computeStats, filterByPeriod, getChartData, getProviderStats, VEHICLES, formatCost } from '../utils.js'
+import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
+import CardLogo from '../components/CardLogo.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
@@ -39,6 +40,7 @@ export default function Stats({ charges }) {
 
   const chartData  = useMemo(() => getChartData(filtered, filters.period === 'all' ? 'all' : period), [filtered, period])
   const providers  = useMemo(() => getProviderStats(filtered), [filtered])
+  const cards      = useMemo(() => getCardStats(filtered), [filtered])
 
   // Fuel savings & thermal comparison — all charges
   const totalFuel    = filtered.reduce((s,c)=>s+(c.fuelSavings||0),0)
@@ -337,6 +339,32 @@ export default function Stats({ charges }) {
                   <div key={d.name}>
                     <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
                       <OperatorLogo name={d.name} size={16} />
+                      <span style={{ fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
+                      <span style={{ fontSize:10, color:'var(--muted)', flexShrink:0 }}>{d.sessions} sess.</span>
+                      <span className="mono" style={{ fontSize:10, color:'var(--muted)', flexShrink:0 }}>{d.kwh.toFixed(0)} kWh</span>
+                      <span className="mono" style={{ fontSize:10, fontWeight:700, color:PROVIDER_COLORS[i%PROVIDER_COLORS.length], flexShrink:0, minWidth:28, textAlign:'right' }}>{pct}%</span>
+                    </div>
+                    <div style={{ height:5, borderRadius:3, background:'var(--surface2)', overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${pct}%`, borderRadius:3, background:PROVIDER_COLORS[i%PROVIDER_COLORS.length], transition:'width 0.4s ease' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Cards used */}
+        {cards.length > 0 && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Cartes utilisées</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:9 }}>
+              {cards.slice(0,15).map((d,i) => {
+                const pct = Math.round(d.kwh/cards.reduce((s,x)=>s+x.kwh,0)*100)
+                return (
+                  <div key={d.name}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                      <CardLogo name={d.name} size={16} />
                       <span style={{ fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
                       <span style={{ fontSize:10, color:'var(--muted)', flexShrink:0 }}>{d.sessions} sess.</span>
                       <span className="mono" style={{ fontSize:10, color:'var(--muted)', flexShrink:0 }}>{d.kwh.toFixed(0)} kWh</span>
