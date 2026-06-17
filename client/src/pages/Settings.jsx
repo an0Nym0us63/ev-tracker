@@ -176,7 +176,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
               <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
                 Partagées pour tout le foyer — utilisées dans les graphiques, sessions et statistiques
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <div style={{ display:'flex', gap:20 }}>
                 <div>
                   <div style={{ fontSize:12, fontWeight:600, marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
                     🚗 MG4 {mg4Color && <button onClick={()=>setMg4Color('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0, fontWeight:400 }}>· réinitialiser</button>}
