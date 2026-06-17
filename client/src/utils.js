@@ -154,6 +154,58 @@ export function getMonthlyData(charges, months = 6) {
   })
 }
 
+// ─── Monthly average per vehicle, over full history ───────────────────────────
+export function getMonthlyAvgByVehicle(charges) {
+  const result = {}
+  Object.keys(VEHICLES).forEach(vid => {
+    const vc = charges.filter(c => c.vehicleId === vid)
+    if (!vc.length) { result[vid] = { kwh: 0, cost: 0, months: 0 }; return }
+    const dates = vc.map(c => new Date(c.date))
+    const minD = new Date(Math.min(...dates))
+    const maxD = new Date(Math.max(...dates))
+    const months = Math.max(1, (maxD.getFullYear()-minD.getFullYear())*12 + (maxD.getMonth()-minD.getMonth()) + 1)
+    result[vid] = {
+      kwh:   vc.reduce((s,c)=>s+(c.kwh||0),0) / months,
+      cost:  vc.reduce((s,c)=>s+(c.totalCost||0),0) / months,
+      months,
+    }
+  })
+  return result
+}
+
+// ─── Distribution by day of week (Mon-Sun), session count + kWh ───────────────
+export function getWeekdayDistribution(charges) {
+  const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+  const buckets = days.map(d => ({ label: d, sessions: 0, kwh: 0 }))
+  charges.forEach(c => {
+    const d = new Date(c.date + 'T00:00:00')
+    const jsDay = d.getDay() // 0=Sun..6=Sat
+    const idx = jsDay === 0 ? 6 : jsDay - 1 // convert to Mon=0..Sun=6
+    buckets[idx].sessions += 1
+    buckets[idx].kwh += c.kwh || 0
+  })
+  return buckets
+}
+
+// ─── Power distribution histogram (kW buckets) ─────────────────────────────────
+export function getPowerHistogram(charges) {
+  const buckets = [
+    { label:'<3.7', min:0,    max:3.7,  count:0 },
+    { label:'3.7-7', min:3.7, max:7,    count:0 },
+    { label:'7-11',  min:7,   max:11,   count:0 },
+    { label:'11-22', min:11,  max:22,   count:0 },
+    { label:'22-50', min:22,  max:50,   count:0 },
+    { label:'50+',   min:50,  max:Infinity, count:0 },
+  ]
+  charges.forEach(c => {
+    if (!c.durationMin || c.durationMin <= 0) return
+    const kw = c.kwh / (c.durationMin/60)
+    const b = buckets.find(b => kw >= b.min && kw < b.max)
+    if (b) b.count += 1
+  })
+  return buckets.filter(b => b.count > 0)
+}
+
 // ─── Formatters ───────────────────────────────────────────────────────────────
 export function formatDate(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })

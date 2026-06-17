@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
-import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area } from 'recharts'
-import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, VEHICLES, formatCost } from '../utils.js'
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts'
+import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogram, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 
@@ -58,6 +58,12 @@ export default function Stats({ charges }) {
   const statsAll   = stats
 
   const chartData  = useMemo(() => getChartData(filtered, filters.period === 'all' ? 'all' : period), [filtered, period])
+
+  // New: monthly average per vehicle (full history, not period-filtered)
+  const monthlyAvg = useMemo(() => getMonthlyAvgByVehicle(charges), [charges])
+  // New: weekday distribution, power histogram (respect active period filter)
+  const weekdayData = useMemo(() => getWeekdayDistribution(filtered), [filtered])
+  const powerHisto   = useMemo(() => getPowerHistogram(filtered), [filtered])
   const providers  = useMemo(() => getProviderStats(filtered), [filtered])
   const cards      = useMemo(() => getCardStats(filtered), [filtered])
 
@@ -248,6 +254,95 @@ export default function Stats({ charges }) {
             ))}
           </div>
         </div>
+
+        {/* Répartition camemberts: véhicule + lieu */}
+        {statsAll.totalKwh > 0 && (
+          <div style={{ padding:'12px 16px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            {(() => {
+              const vehiclePieData = [
+                { name:'MG4', value: statsMg4.totalKwh, color:'var(--mg4)' },
+                { name:'Xpeng G6', value: statsXpeng.totalKwh, color:'var(--xpeng)' },
+              ].filter(d => d.value > 0)
+              const locPieData = [
+                { name:'Maison', value: statsAll.homeKwh, color:'var(--green)' },
+                { name:'Externe', value: statsAll.extKwh, color:'var(--amber)' },
+              ].filter(d => d.value > 0)
+              return (
+                <>
+                  <div className="card" style={{ padding:'10px' }}>
+                    <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:2, textAlign:'center' }}>Par véhicule</div>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <PieChart>
+                        <Pie data={vehiclePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={28} outerRadius={48} paddingAngle={2}>
+                          {vehiclePieData.map((d,i) => <Cell key={i} fill={d.color} />)}
+                        </Pie>
+                        <Tooltip formatter={(v)=>`${v.toFixed(0)} kWh`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ display:'flex', justifyContent:'center', gap:10, marginTop:2 }}>
+                      {vehiclePieData.map((d,i) => (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:3, fontSize:9, color:'var(--muted)' }}>
+                          <div style={{ width:7, height:7, borderRadius:'50%', background:d.color }} />{d.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="card" style={{ padding:'10px' }}>
+                    <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:2, textAlign:'center' }}>Maison / Externe</div>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <PieChart>
+                        <Pie data={locPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={28} outerRadius={48} paddingAngle={2}>
+                          {locPieData.map((d,i) => <Cell key={i} fill={d.color} />)}
+                        </Pie>
+                        <Tooltip formatter={(v)=>`${v.toFixed(0)} kWh`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ display:'flex', justifyContent:'center', gap:10, marginTop:2 }}>
+                      {locPieData.map((d,i) => (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:3, fontSize:9, color:'var(--muted)' }}>
+                          <div style={{ width:7, height:7, borderRadius:'50%', background:d.color }} />{d.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* Monthly average per vehicle (full history) */}
+        {(monthlyAvg.mg4.months > 0 || monthlyAvg.xpeng.months > 0) && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Moyenne mensuelle par véhicule</SectionLabel>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              {Object.entries(VEHICLES).map(([vid, v]) => {
+                const m = monthlyAvg[vid]
+                if (!m || m.months === 0) return null
+                return (
+                  <div key={vid} className="card" style={{ padding:'12px 14px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                      <span style={{ fontSize:14 }}>{v.emoji}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
+                    </div>
+                    <div style={{ display:'flex', gap:10 }}>
+                      <div style={{ flex:1 }}>
+                        <div className="mono" style={{ fontSize:16, fontWeight:700, color:v.color }}>{m.kwh.toFixed(0)} kWh</div>
+                        <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>par mois</div>
+                      </div>
+                      <div style={{ width:1, background:'var(--border)' }} />
+                      <div style={{ flex:1 }}>
+                        <div className="mono" style={{ fontSize:16, fontWeight:700, color:v.color }}>{m.cost.toFixed(0)} €</div>
+                        <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>par mois</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:8, color:'var(--muted)', marginTop:8 }}>sur {m.months} mois d'historique</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {(totalSolar > 0 || totalFuel !== 0) && (
           <div style={{ padding:'12px 16px 0' }}>
@@ -468,6 +563,44 @@ export default function Stats({ charges }) {
             </div>
           )
         })()}
+
+        {/* Weekday distribution */}
+        {weekdayData.some(d => d.sessions > 0) && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Habitudes — jour de la semaine</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px' }}>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={weekdayData}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v,n)=>n==='kwh'?`${v.toFixed(0)} kWh`:`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                  <Bar dataKey="kwh" radius={[4,4,0,0]}>
+                    {weekdayData.map((d,i) => <Cell key={i} fill="var(--accent)" />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>kWh chargés par jour de la semaine</div>
+            </div>
+          </div>
+        )}
+
+        {/* Power histogram */}
+        {powerHisto.length > 0 && (
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Répartition par puissance</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px' }}>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={powerHisto}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v)=>`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                  <Bar dataKey="count" radius={[4,4,0,0]}>
+                    {powerHisto.map((d,i) => <Cell key={i} fill="var(--xpeng)" />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>nombre de sessions par tranche de puissance (kW)</div>
+            </div>
+          </div>
+        )}
 
         {/* Solar & Savings section */}
         {/* Monthly cost cumulative trend */}
