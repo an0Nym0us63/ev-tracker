@@ -453,6 +453,23 @@ function getAlerts(accountId) {
     })
   }
 
+  // Règle 3 : prix/kWh anormal — maison > 0.30€/kWh, externe > 1€/kWh
+  const abnormalPriceRows = db.prepare(`
+    SELECT id FROM charges
+    WHERE account_id=? AND kwh > 0 AND (
+      (location_id='home' AND (total_cost / kwh) > 0.30)
+      OR (location_id!='home' AND (total_cost / kwh) > 1)
+    )
+  `).all(accountId)
+  if (abnormalPriceRows.length > 0) {
+    alerts.push({
+      type: 'abnormal_price',
+      count: abnormalPriceRows.length,
+      label: 'Prix/kWh anormal',
+      ids: abnormalPriceRows.map(r => r.id)
+    })
+  }
+
   // Ajouter d'autres règles ici au fur et à mesure
 
   return alerts
