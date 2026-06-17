@@ -373,6 +373,47 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         </div>
       </div>
 
+      {/* Monthly average per vehicle */}
+      {(monthlyAvg.mg4.months > 0 || monthlyAvg.xpeng.months > 0) && (
+        <div style={{ margin:'10px 16px 0' }}>
+          <div className="section-label">Moyenne mensuelle par véhicule</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            {Object.entries(VEHICLES).map(([vid, v]) => {
+              const m = monthlyAvg[vid]
+              if (!m || m.months === 0) return (
+                <div key={vid} className="card" style={{ padding:'12px 14px', opacity:0.5 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                    <span style={{ fontSize:14 }}>{v.emoji}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:'var(--muted)' }}>Aucune donnée</div>
+                </div>
+              )
+              return (
+                <div key={vid} className="card" style={{ padding:'12px 14px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                    <span style={{ fontSize:14 }}>{v.emoji}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:10 }}>
+                    <div style={{ flex:1 }}>
+                      <div className="mono" style={{ fontSize:16, fontWeight:700, color:v.color }}>{m.kwh.toFixed(0)} kWh</div>
+                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>par mois</div>
+                    </div>
+                    <div style={{ width:1, background:'var(--border)' }} />
+                    <div style={{ flex:1 }}>
+                      <div className="mono" style={{ fontSize:16, fontWeight:700, color:v.color }}>{m.cost.toFixed(0)} €</div>
+                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>par mois</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize:8, color:'var(--muted)', marginTop:8 }}>sur {m.months} mois d'historique</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* KPIs grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'10px 16px 0' }}>
         {kpis.map((k,i) => (
@@ -445,47 +486,6 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
           </div>
         ))}
       </div>
-
-      {/* Monthly average per vehicle */}
-      {(monthlyAvg.mg4.months > 0 || monthlyAvg.xpeng.months > 0) && (
-        <div style={{ margin:'10px 16px 0' }}>
-          <div className="section-label">Moyenne mensuelle par véhicule</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            {Object.entries(VEHICLES).map(([vid, v]) => {
-              const m = monthlyAvg[vid]
-              if (!m || m.months === 0) return (
-                <div key={vid} className="card" style={{ padding:'12px 14px', opacity:0.5 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                    <span style={{ fontSize:14 }}>{v.emoji}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--muted)' }}>Aucune donnée</div>
-                </div>
-              )
-              return (
-                <div key={vid} className="card" style={{ padding:'12px 14px' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-                    <span style={{ fontSize:14 }}>{v.emoji}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:v.color }}>{v.name}</span>
-                  </div>
-                  <div style={{ display:'flex', gap:10 }}>
-                    <div style={{ flex:1 }}>
-                      <div className="mono" style={{ fontSize:16, fontWeight:700, color:v.color }}>{m.kwh.toFixed(0)} kWh</div>
-                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>par mois</div>
-                    </div>
-                    <div style={{ width:1, background:'var(--border)' }} />
-                    <div style={{ flex:1 }}>
-                      <div className="mono" style={{ fontSize:16, fontWeight:700, color:v.color }}>{m.cost.toFixed(0)} €</div>
-                      <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>par mois</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize:8, color:'var(--muted)', marginTop:8 }}>sur {m.months} mois d'historique</div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Adaptive chart */}
       {chartData.length > 0 && (
