@@ -269,12 +269,12 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
     },
     { type:'acdc', valAC:avgSessionAC, valDC:avgSessionDC, suffix:'kWh', label:'kWh/session moy.', color:'var(--mg4)' },
     { type:'acdc', valAC:avgCostAC, valDC:avgCostDC, suffix:'€', label:'Coût/session moy.', color:'var(--xpeng)' },
-    { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
     { type:'streak', daysAC, daysDC, label:'Dernière charge' },
     { type:'savings', savings, solarSavings, solarKwh, label:'Économies' },
-    { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
-    { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy. (kWh/h)', color:'var(--accent)', mono:true },
+    { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
+    { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy.', color:'var(--accent)', mono:true },
     { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },
+    { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
   ]
 
   return (
@@ -350,7 +350,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
       {/* KPIs grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:7, margin:'10px 16px 0' }}>
         {kpis.map((k,i) => (
-          <div key={k.label} className="card" style={{ padding:'10px 10px', gridColumn: k.type==='bar' ? 'span 2' : undefined }}>
+          <div key={k.label} className="card" style={{ padding:'10px 10px', gridColumn: (k.type==='bar' || k.type==='acdc') ? 'span 2' : undefined }}>
             {k.type === 'savings' ? (
               <>
                 <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
@@ -366,16 +366,18 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
               </>
             ) : k.type === 'acdc' ? (
               <>
-                <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
-                <div style={{ display:'flex', gap:6 }}>
-                  <div style={{ flex:1 }}>
-                    <div className="mono" style={{ fontSize:13, fontWeight:700, color:k.color }}>{k.valAC}{k.valAC!=='—'?` ${k.suffix}`:''}</div>
-                    <div style={{ fontSize:8, color:'var(--green)', marginTop:2 }}>🏠 AC</div>
+                <div style={{ fontSize:9, color:'var(--muted)', marginBottom:6, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <div style={{ flex:1, display:'flex', alignItems:'baseline', gap:5 }}>
+                    <span style={{ fontSize:10 }}>🏠</span>
+                    <span className="mono" style={{ fontSize:15, fontWeight:700, color:k.color }}>{k.valAC}{k.valAC!=='—'?` ${k.suffix}`:''}</span>
+                    <span style={{ fontSize:8, color:'var(--green)' }}>AC</span>
                   </div>
                   <div style={{ width:1, background:'var(--border)' }} />
-                  <div style={{ flex:1 }}>
-                    <div className="mono" style={{ fontSize:13, fontWeight:700, color:k.color }}>{k.valDC}{k.valDC!=='—'?` ${k.suffix}`:''}</div>
-                    <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>⚡ DC</div>
+                  <div style={{ flex:1, display:'flex', alignItems:'baseline', gap:5 }}>
+                    <span style={{ fontSize:10 }}>⚡</span>
+                    <span className="mono" style={{ fontSize:15, fontWeight:700, color:k.color }}>{k.valDC}{k.valDC!=='—'?` ${k.suffix}`:''}</span>
+                    <span style={{ fontSize:8, color:'var(--amber)' }}>DC</span>
                   </div>
                 </div>
               </>
