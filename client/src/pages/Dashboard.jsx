@@ -477,10 +477,15 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                       color: isHome?'var(--green)':'var(--accent)',
                       border:`1px solid ${isHome?'rgba(34,197,94,0.2)':'rgba(79,142,247,0.2)'}` }}>{c.provider}</span>}
                   </div>
-                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', alignItems:'center', gap:5 }}>
-                    <span>{formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}</span>
-                    {c.card ? <CardLogo name={c.card} size={11} /> : null}
+                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
+                    {formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}
                   </div>
+                  {c.card ? (
+                    <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', alignItems:'center', gap:5 }}>
+                      <CardLogo name={c.card} size={11} />
+                      <span>{c.card}</span>
+                    </div>
+                  ) : null}
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:2 }}>
                   <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh} kWh</div>

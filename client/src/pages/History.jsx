@@ -140,9 +140,14 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
                           {c.durationMin ? <span>{formatDuration(c.durationMin)}</span> : null}
                           {c.powerKw ? <span>{c.powerKw} kW</span> : null}
                           {(c.connectorTypes||[]).length > 0 ? <span>{c.connectorTypes.join(', ')}</span> : null}
-                          {c.card ? <CardLogo name={c.card} size={12} style={{ marginRight:-2 }} /> : null}
-                          {c.card ? <span>{c.card}</span> : null}
                         </div>
+                        {/* Row 3: card */}
+                        {c.card ? (
+                          <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', alignItems:'center', gap:5 }}>
+                            <CardLogo name={c.card} size={12} />
+                            <span>{c.card}</span>
+                          </div>
+                        ) : null}
                       </div>
 
                       {/* Right: date + kWh + cost */}
