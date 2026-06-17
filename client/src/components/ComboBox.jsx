@@ -4,6 +4,7 @@ export default function ComboBox({ value, onChange, options = [], placeholder, l
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(value || '')
   const ref = useRef()
+  const inputRef = useRef()
 
   // Sync if parent changes value
   useEffect(() => { setQuery(value || '') }, [value])
@@ -32,6 +33,15 @@ export default function ComboBox({ value, onChange, options = [], placeholder, l
     setOpen(true)
   }
 
+  function handleFocus() {
+    setOpen(true)
+    // Wait for the on-screen keyboard to finish animating in, then scroll
+    // the field near the top of the viewport so the dropdown isn't hidden behind it.
+    setTimeout(() => {
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div style={{
@@ -41,9 +51,10 @@ export default function ComboBox({ value, onChange, options = [], placeholder, l
         transition: 'border-color 0.15s',
       }}>
         <input
+          ref={inputRef}
           value={query}
           onChange={handleChange}
-          onFocus={() => setOpen(true)}
+          onFocus={handleFocus}
           placeholder={placeholder}
           style={{
             flex: 1, background: 'none', border: 'none', outline: 'none',
