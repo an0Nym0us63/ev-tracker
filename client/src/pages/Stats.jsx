@@ -14,7 +14,7 @@ const Tip = ({ active, payload, label }) => {
     <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:11 }}>
       <div style={{ color:'var(--muted)', marginBottom:4 }}>{label}</div>
       {payload.map(p => p.value > 0 && <div key={p.dataKey} style={{ color:p.fill||p.stroke||'var(--text)', fontWeight:600 }}>{p.name}: {p.value.toFixed(1)} {p.unit||'kWh'}</div>)}
-      {payload.length > 1 && total > 0 && <div style={{ color:'var(--text)', fontWeight:700, marginTop:3, borderTop:'1px solid var(--border)', paddingTop:3 }}>Total: {total.toFixed(1)} kWh</div>}
+      {payload.length > 1 && total > 0 && <div style={{ color:'var(--text)', fontWeight:700, marginTop:3, borderTop:'1px solid var(--border)', paddingTop:3 }}>Total: {total.toFixed(1)}{payload[0]?.unit||' kWh'}</div>}
     </div>
   )
 }
