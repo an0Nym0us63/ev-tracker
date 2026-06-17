@@ -90,7 +90,7 @@ export default function NearbyStations({ onPick, settings }) {
   }
 
   const filtered = filter.trim()
-    ? stations.filter(s => s.AddressInfo.Title.toLowerCase().includes(filter.toLowerCase()) || (s.OperatorInfo?.Title||'').toLowerCase().includes(filter.toLowerCase()))
+    ? stations.filter(s => (s._name||'').toLowerCase().includes(filter.toLowerCase()) || (s._operator||'').toLowerCase().includes(filter.toLowerCase()))
     : stations
 
   const sheet = state !== 'idle' && createPortal(
