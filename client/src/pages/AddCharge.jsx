@@ -229,6 +229,9 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
                   if (loc.id === 'home' && !isEdit) {
                     if (!manualProvider) setManualProvider('V2C')
                     if (!card) setCard('V2C')
+                  } else if (loc.id === 'ext' && !isEdit) {
+                    if (manualProvider === 'V2C') setManualProvider('')
+                    if (card === 'V2C') setCard('')
                   }
                 }} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
                   <span style={{ fontSize:20 }}>{loc.emoji}</span>{loc.label}
