@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { VEHICLES, getProviderStats } from '../utils.js'
+import ProfileMenu from '../components/ProfileMenu.jsx'
 
 const TILE_LAYERS = {
   dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -107,7 +108,7 @@ function loadLeaflet() {
   })
 }
 
-export default function MapView({ charges, settings, theme, filters, applyFilters }) {
+export default function MapView({ charges, settings, theme, filters, applyFilters, account, onLogout, onToggleTheme, onNavigate }) {
   const mapRef  = useRef(null)
   const mapInst = useRef(null)
   const tileRef = useRef(null)
@@ -174,8 +175,9 @@ export default function MapView({ charges, settings, theme, filters, applyFilter
     <div className="page fade-up" style={{ paddingBottom:80 }}>
 
       {/* Header */}
-      <div style={{ padding:'16px 20px 10px' }}>
+      <div style={{ padding:'16px 20px 10px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Carte</div>
+        <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
       {/* Map — full width, no margin */}

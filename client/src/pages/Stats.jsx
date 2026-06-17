@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineCh
 import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogram, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
+import ProfileMenu from '../components/ProfileMenu.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
@@ -41,7 +42,7 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
   )
 }
 
-export default function Stats({ charges, filters, applyFilters }) {
+export default function Stats({ charges, filters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
   const [habitsBreakdown, setHabitsBreakdown] = React.useState('none') // 'none' | 'location' | 'vehicle'
 
   const period  = filters.period === 'all' ? 'all' : filters.period
@@ -153,8 +154,9 @@ export default function Stats({ charges, filters, applyFilters }) {
 
   return (
     <div className="page fade-up" style={{ paddingBottom:100 }}>
-      <div style={{ padding:'16px 20px 8px' }}>
+      <div style={{ padding:'16px 20px 8px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Statistiques</div>
+        <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
       {filtered.length === 0 ? (

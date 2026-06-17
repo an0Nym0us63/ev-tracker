@@ -2,8 +2,9 @@ import React, { useMemo } from 'react'
 import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
+import ProfileMenu from '../components/ProfileMenu.jsx'
 
-export default function History({ charges, onEdit, alertFilter, onClearAlertFilter, filters, applyFilters }) {
+export default function History({ charges, onEdit, alertFilter, onClearAlertFilter, filters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
 
   // Apply alertFilter (from dashboard notification) or normal filters
   const alertIds = useMemo(() => {
@@ -47,8 +48,9 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
 
   return (
     <div className="page fade-up">
-      <div style={{ padding:'16px 20px 0' }}>
+      <div style={{ padding:'16px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Historique</div>
+        <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
       {/* Alert filter banner */}

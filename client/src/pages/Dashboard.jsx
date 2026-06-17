@@ -5,6 +5,7 @@ import { apiGetAlerts } from '../api.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
+import ProfileMenu from '../components/ProfileMenu.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
@@ -308,9 +309,12 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   return (
     <div className="page fade-up" style={{ paddingBottom:100 }}>
       {/* Header */}
-      <div style={{ padding:'16px 20px 0' }}>
-        <div style={{ fontSize:20, fontWeight:700 }}>Tableau de bord</div>
-        <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, textTransform:'capitalize' }}>{dateStr}</div>
+      <div style={{ padding:'16px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:700 }}>Tableau de bord</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, textTransform:'capitalize' }}>{dateStr}</div>
+        </div>
+        <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
       {/* Alertes dynamiques depuis le serveur */}
