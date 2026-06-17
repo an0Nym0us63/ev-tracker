@@ -32,6 +32,14 @@ export default function LocationPicker({ value, onChange }) {
   const [selectedPlace, setSelectedPlace] = useState(null)
   const [loading,       setLoading]       = useState(false)
   const debounce = useRef(null)
+  const cityInputRef = useRef(null)
+  const stationFilterRef = useRef(null)
+
+  function scrollFieldIntoView(ref) {
+    // Wait for the on-screen keyboard to finish animating in, then scroll
+    // the field near the center of the viewport so results aren't hidden behind it.
+    setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
+  }
 
   // Sync if parent resets value (e.g. form reset)
   useEffect(() => {
@@ -168,7 +176,8 @@ export default function LocationPicker({ value, onChange }) {
       <div style={{ position:'relative' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--surface)', border:`1.5px solid ${step==='geo'||step==='stations'?'var(--accent)':'var(--border)'}`, borderRadius:'var(--r-sm)', padding:'12px 14px', transition:'border-color 0.15s' }}>
           <span style={{ fontSize:16, flexShrink:0 }}>🏙️</span>
-          <input value={query} onChange={handleQueryChange}
+          <input ref={cityInputRef} value={query} onChange={handleQueryChange}
+            onFocus={()=>scrollFieldIntoView(cityInputRef)}
             placeholder="Ville, commune, quartier…"
             style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:14, color:'var(--text)', fontFamily:'inherit' }}
           />
@@ -197,7 +206,8 @@ export default function LocationPicker({ value, onChange }) {
         <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', overflow:'hidden' }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', borderBottom:'1px solid var(--border)' }}>
             <span style={{ fontSize:14, flexShrink:0 }}>🔍</span>
-            <input value={stationFilter} onChange={e=>setStationFilter(e.target.value)}
+            <input ref={stationFilterRef} value={stationFilter} onChange={e=>setStationFilter(e.target.value)}
+              onFocus={()=>scrollFieldIntoView(stationFilterRef)}
               placeholder="Filtrer par nom, opérateur…"
               style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:13, color:'var(--text)', fontFamily:'inherit' }}
               autoFocus

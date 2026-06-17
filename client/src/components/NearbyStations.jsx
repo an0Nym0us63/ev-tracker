@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { apiOcmSearch } from '../api.js'
 import OperatorLogo from './OperatorLogo.jsx'
@@ -17,6 +17,7 @@ export default function NearbyStations({ onPick, settings }) {
   const [stations, setStations] = useState([])
   const [userPos,  setUserPos]  = useState(null)
   const [filter,   setFilter]   = useState('')
+  const filterRef = useRef(null)
   const [geoError, setGeoError] = useState(null)
 
   async function fetchStations(lat, lng) {
@@ -124,7 +125,8 @@ export default function NearbyStations({ onPick, settings }) {
         {state === 'results' && (
           <>
             <div style={{ padding:'0 16px 10px', flexShrink:0 }}>
-              <input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Filtrer par nom ou opérateur…"
+              <input ref={filterRef} value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Filtrer par nom ou opérateur…"
+                onFocus={()=>setTimeout(()=>filterRef.current?.scrollIntoView({ behavior:'smooth', block:'center' }), 300)}
                 style={{ width:'100%', background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:'9px 14px', fontSize:13, color:'var(--text)', outline:'none', boxSizing:'border-box' }} />
             </div>
             <div style={{ overflowY:'auto', flex:1, paddingBottom:32 }}>
