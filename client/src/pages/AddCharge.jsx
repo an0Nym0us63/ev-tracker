@@ -71,7 +71,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
 
   const [vehicleId,    setVehicleId]    = useState(editCharge?.vehicleId    || account.vehicleId)
   const [locationId,   setLocationId]   = useState(editCharge?.locationId   || 'home')
-  const [card,         setCard]         = useState(editCharge?.card         || '')
+  const [card,         setCard]         = useState(editCharge?.card         || (locationId === 'home' && !isEdit ? 'V2C' : ''))
   const [date,         setDate]         = useState(editCharge?.date         || today)
   const [kwh,          setKwh]          = useState(editCharge?.kwh?.toString()       || '')
   const [totalCost,    setTotalCost]    = useState(editCharge?.totalCost?.toString() || '')
@@ -86,7 +86,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
   const [errors,       setErrors]       = useState({})
 
   // Manual provider — only shown when approx location or home
-  const [manualProvider, setManualProvider] = useState(editCharge?.provider || '')
+  const [manualProvider, setManualProvider] = useState(editCharge?.provider || (locationId === 'home' && !isEdit ? 'V2C' : ''))
 
   // GPS location
   const [gpsLocation, setGpsLocation] = useState(
@@ -223,7 +223,14 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
             {Object.values(LOCATIONS).map(loc => {
               const active = locationId === loc.id
               return (
-                <button key={loc.id} onClick={()=>{ setLocationId(loc.id); setGpsLocation(null) }} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
+                <button key={loc.id} onClick={()=>{
+                  setLocationId(loc.id)
+                  setGpsLocation(null)
+                  if (loc.id === 'home' && !isEdit) {
+                    if (!manualProvider) setManualProvider('V2C')
+                    if (!card) setCard('V2C')
+                  }
+                }} style={{ flex:1, padding:'11px 8px', borderRadius:'var(--r-sm)', border:`1.5px solid ${active?'var(--green)':'var(--border)'}`, background:active?'rgba(34,197,94,0.07)':'var(--surface)', color:active?'var(--green)':'var(--muted)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontSize:12, fontWeight:600 }}>
                   <span style={{ fontSize:20 }}>{loc.emoji}</span>{loc.label}
                 </button>
               )
