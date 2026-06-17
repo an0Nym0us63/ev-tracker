@@ -55,21 +55,22 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 app.get('/api/settings', requireAuth, (req, res) => {
-  const s = db.prepare('SELECT * FROM settings WHERE account_id = ?').get(req.user.id)
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
   res.json(s ? toClientSettings(s) : {})
 })
 
 app.put('/api/settings', requireAuth, (req, res) => {
   const { ocmApiKey, homeLat, homeLng, homeLabel, fuelPrice, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId } = req.body
-  const existing = db.prepare('SELECT id FROM settings WHERE account_id = ?').get(req.user.id)
+  const existing = db.prepare('SELECT account_id FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  const targetAccountId = existing ? existing.account_id : req.user.id
   if (existing) {
     db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=?, fuel_price=?, v2c_enabled=?, v2c_api_key=?, v2c_device_id=?, ha_enabled=?, ha_url=?, ha_token=?, ha_entity_id=? WHERE account_id=?')
-      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null, req.user.id)
+      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null, targetAccountId)
   } else {
     db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label, fuel_price, v2c_enabled, v2c_api_key, v2c_device_id, ha_enabled, ha_url, ha_token, ha_entity_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
-      .run(req.user.id, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null)
+      .run(targetAccountId, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null)
   }
-  const s = db.prepare('SELECT * FROM settings WHERE account_id = ?').get(req.user.id)
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
   res.json(toClientSettings(s))
 })
 
@@ -77,7 +78,7 @@ app.put('/api/settings', requireAuth, (req, res) => {
 
 // Search charging stations by name/location
 app.get('/api/ocm/search', requireAuth, (req, res) => {
-  const s = db.prepare('SELECT ocm_api_key FROM settings WHERE account_id = ?').get(req.user.id)
+  const s = db.prepare('SELECT ocm_api_key FROM settings ORDER BY account_id ASC LIMIT 1').get()
   const apiKey = s?.ocm_api_key || ''
   const { q, lat, lng, radius } = req.query
   const dist = parseInt(radius) || 50
@@ -187,8 +188,9 @@ app.get('/api/geocode', requireAuth, (req, res) => {
 
 function recalcFavorites(accountId) {
   // Runs in a transaction — atomic, logged on error, never blocks the HTTP response
+  // Favorites are now shared across all accounts (household), aggregated from ALL charges
   const run = db.transaction(() => {
-    db.prepare('DELETE FROM favorite_locations WHERE account_id = ?').run(accountId)
+    db.prepare('DELETE FROM favorite_locations').run()
 
     const groups = db.prepare(`
       SELECT
@@ -200,13 +202,12 @@ function recalcFavorites(accountId) {
         COUNT(*) as use_count,
         MAX(date) as last_used
       FROM charges
-      WHERE account_id = ?
-        AND location_id != 'home'
+      WHERE location_id != 'home'
         AND COALESCE(location_name, provider) IS NOT NULL
         AND COALESCE(location_name, provider) != ''
       GROUP BY COALESCE(location_name, provider)
       ORDER BY use_count DESC, last_used DESC
-    `).all(accountId)
+    `).all()
 
     const insert = db.prepare(`
       INSERT INTO favorite_locations
@@ -236,7 +237,7 @@ function recalcFavorites(accountId) {
 // ─── Charges ──────────────────────────────────────────────────────────────────
 
 app.get('/api/charges', requireAuth, (req, res) => {
-  const charges = db.prepare('SELECT * FROM charges WHERE account_id = ? ORDER BY date DESC, created_at DESC').all(req.user.id)
+  const charges = db.prepare('SELECT * FROM charges ORDER BY date DESC, created_at DESC').all()
   res.json(charges.map(toClient))
 })
 
@@ -249,7 +250,7 @@ app.post('/api/charges', requireAuth, (req, res) => {
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   // Compute fuel savings
-  const settings201 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)
+  const settings201 = db.prepare('SELECT fuel_price FROM settings ORDER BY account_id ASC LIMIT 1').get()
   const fuelPrice201 = settings201?.fuel_price || 1.85
   const savings201 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice201)
   if (savings201 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings201, result.lastInsertRowid)
@@ -258,16 +259,16 @@ app.post('/api/charges', requireAuth, (req, res) => {
 })
 
 app.put('/api/charges/:id', requireAuth, (req, res) => {
-  const existing = db.prepare('SELECT id FROM charges WHERE id = ? AND account_id = ?').get(req.params.id, req.user.id)
+  const existing = db.prepare('SELECT id FROM charges WHERE id = ?').get(req.params.id)
   if (!existing) return res.status(404).json({ error: 'Session introuvable' })
   const c = req.body
   db.prepare(`
     UPDATE charges SET vehicle_id=?, location_id=?, location_name=?, provider=?, card=?, date=?, kwh=?, total_cost=?, duration_min=?, odometer=?, notes=?, lat=?, lng=?, location_approximate=?, ocm_id=?, power_kw=?, connector_types=?, start_time=?
-    WHERE id=? AND account_id=?
-  `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null, req.params.id, req.user.id)
+    WHERE id=?
+  `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null, req.params.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
-  const settings204 = db.prepare('SELECT fuel_price FROM settings WHERE account_id = ?').get(req.user.id)
+  const settings204 = db.prepare('SELECT fuel_price FROM settings ORDER BY account_id ASC LIMIT 1').get()
   const fuelPrice204 = settings204?.fuel_price || 1.85
   const savings204 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice204)
   if (savings204 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings204, req.params.id)
@@ -276,7 +277,7 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
 })
 
 app.delete('/api/charges/:id', requireAuth, (req, res) => {
-  const result = db.prepare('DELETE FROM charges WHERE id = ? AND account_id = ?').run(req.params.id, req.user.id)
+  const result = db.prepare('DELETE FROM charges WHERE id = ?').run(req.params.id)
   if (!result.changes) return res.status(404).json({ error: 'Session introuvable' })
   recalcFavorites(req.user.id)
   res.json({ ok: true })
@@ -285,10 +286,10 @@ app.delete('/api/charges/:id', requireAuth, (req, res) => {
 // ─── Lists ────────────────────────────────────────────────────────────────────
 
 app.get('/api/lists', requireAuth, (req, res) => {
-  const rows = db.prepare('SELECT type, value FROM lists WHERE account_id = ? ORDER BY id DESC').all(req.user.id)
+  const rows = db.prepare('SELECT type, value FROM lists ORDER BY id DESC').all()
   res.json({
-    providers: rows.filter(r => r.type === 'providers').map(r => r.value),
-    cards:     rows.filter(r => r.type === 'cards').map(r => r.value),
+    providers: [...new Set(rows.filter(r => r.type === 'providers').map(r => r.value))],
+    cards:     [...new Set(rows.filter(r => r.type === 'cards').map(r => r.value))],
   })
 })
 
@@ -334,9 +335,9 @@ function toClientSettings(s) {
 
 app.get('/api/favorites', requireAuth, (req, res) => {
   const favs = db.prepare(`
-    SELECT * FROM favorite_locations WHERE account_id = ?
+    SELECT * FROM favorite_locations
     ORDER BY use_count DESC, last_used DESC LIMIT 20
-  `).all(req.user.id)
+  `).all()
   res.json(favs.map(f => ({
     id: f.id, label: f.label, provider: f.provider,
     locationId: f.location_id, lat: f.lat, lng: f.lng,
@@ -350,7 +351,7 @@ app.get('/api/favorites', requireAuth, (req, res) => {
 app.post('/api/favorites/bump', requireAuth, (req, res) => {
   const { label, provider, locationId, lat, lng, ocmId, operator, powerKw, connectorTypes } = req.body
   if (!label) return res.status(400).json({ error: 'label required' })
-  const existing = db.prepare('SELECT id FROM favorite_locations WHERE account_id = ? AND label = ?').get(req.user.id, label)
+  const existing = db.prepare('SELECT id FROM favorite_locations WHERE label = ?').get(label)
   if (existing) {
     db.prepare(`UPDATE favorite_locations SET use_count = use_count + 1, last_used = datetime('now'), provider=?, operator=?, power_kw=?, connector_types=? WHERE id=?`)
       .run(provider||null, operator||null, powerKw||null, connectorTypes?.length ? JSON.stringify(connectorTypes) : null, existing.id)
@@ -363,7 +364,7 @@ app.post('/api/favorites/bump', requireAuth, (req, res) => {
 })
 
 app.delete('/api/favorites/:id', requireAuth, (req, res) => {
-  db.prepare('DELETE FROM favorite_locations WHERE id = ? AND account_id = ?').run(req.params.id, req.user.id)
+  db.prepare('DELETE FROM favorite_locations WHERE id = ?').run(req.params.id)
   res.json({ ok: true })
 })
 
@@ -427,10 +428,10 @@ app.post('/api/import/charges', requireAuth, (req, res) => {
 function getAlerts(accountId) {
   const alerts = []
 
-  // Règle 1 : véhicule non identifié
+  // Règle 1 : véhicule non identifié (toutes charges, partagées entre comptes)
   const unknownVehicleRows = db.prepare(
-    "SELECT id FROM charges WHERE account_id=? AND vehicle_id='unknown'"
-  ).all(accountId)
+    "SELECT id FROM charges WHERE vehicle_id='unknown'"
+  ).all()
   if (unknownVehicleRows.length > 0) {
     alerts.push({
       type: 'unknown_vehicle',
@@ -442,8 +443,8 @@ function getAlerts(accountId) {
 
   // Règle 2 : carte manquante (hors maison)
   const noCardRows = db.prepare(
-    "SELECT id FROM charges WHERE account_id=? AND location_id!='home' AND (card IS NULL OR card='')"
-  ).all(accountId)
+    "SELECT id FROM charges WHERE location_id!='home' AND (card IS NULL OR card='')"
+  ).all()
   if (noCardRows.length > 0) {
     alerts.push({
       type: 'no_card',
@@ -456,11 +457,11 @@ function getAlerts(accountId) {
   // Règle 3 : prix/kWh anormal — maison > 0.30€/kWh, externe > 1€/kWh
   const abnormalPriceRows = db.prepare(`
     SELECT id FROM charges
-    WHERE account_id=? AND kwh > 0 AND (
+    WHERE kwh > 0 AND (
       (location_id='home' AND (total_cost / kwh) > 0.30)
       OR (location_id!='home' AND (total_cost / kwh) > 1)
     )
-  `).all(accountId)
+  `).all()
   if (abnormalPriceRows.length > 0) {
     alerts.push({
       type: 'abnormal_price',
@@ -505,8 +506,8 @@ app.post('/api/v2c/sync/date', requireAuth, async (req, res) => {
 app.post('/api/wallbox/recompute-solar', requireAuth, (req, res) => {
   const GRID_PRICE = 0.12
   const charges = db.prepare(
-    "SELECT id, kwh, total_cost FROM charges WHERE account_id=? AND provider LIKE 'Wallbox%' AND kwh > 0"
-  ).all(req.user.id)
+    "SELECT id, kwh, total_cost FROM charges WHERE provider LIKE 'Wallbox%' AND kwh > 0"
+  ).all()
 
   let updated = 0, skipped = 0
   for (const c of charges) {
@@ -542,12 +543,12 @@ app.post('/api/v2c/sync/history', requireAuth, async (req, res) => {
 
 app.get('/api/logs', requireAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 500)
-  const logs = db.prepare('SELECT * FROM sync_log WHERE account_id=? ORDER BY id DESC LIMIT ?').all(req.user.id, limit)
+  const logs = db.prepare('SELECT * FROM sync_log ORDER BY id DESC LIMIT ?').all(limit)
   res.json(logs)
 })
 
 app.delete('/api/logs', requireAuth, (req, res) => {
-  db.prepare('DELETE FROM sync_log WHERE account_id=?').run(req.user.id)
+  db.prepare('DELETE FROM sync_log').run()
   res.json({ ok: true })
 })
 

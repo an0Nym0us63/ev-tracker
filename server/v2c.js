@@ -79,7 +79,7 @@ try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_charges_v2c_id ON charges(a
 
 // ─── Core sync function ───────────────────────────────────────────────────────
 async function syncV2C(accountId, { startDate, endDate } = {}) {
-  const settings = db.prepare('SELECT * FROM settings WHERE account_id = ?').get(accountId)
+  const settings = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
   if (!settings?.v2c_enabled || !settings?.v2c_api_key || !settings?.v2c_device_id) {
     addLog(accountId, 'warn', 'V2C non configuré ou désactivé')
     return { created: 0, skipped: 0, errors: 0 }
@@ -120,7 +120,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     }
 
     // Check already imported by v2c_id
-    const exists = db.prepare('SELECT id FROM charges WHERE account_id=? AND v2c_id=?').get(accountId, s.id)
+    const exists = db.prepare('SELECT id FROM charges WHERE v2c_id=?').get(s.id)
     if (exists) {
       if (isManual) addLog(accountId, 'info', `Ignorée v2c_id=${s.id} — déjà importée le ${s.startChargeDate} (charge id=${exists.id})`)
       skipped++
@@ -133,12 +133,12 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     // Check if a manual charge matches this session (same date, and start_time if available)
     const manual = db.prepare(`
       SELECT id FROM charges
-      WHERE account_id=? AND date=?
+      WHERE date=?
         AND source='manual' AND v2c_id IS NULL
         ${row.start_time ? "AND (start_time=? OR start_time IS NULL)" : ""}
       ORDER BY id DESC
       LIMIT 1
-    `).get(accountId, row.date, ...(row.start_time ? [row.start_time] : []))
+    `).get(row.date, ...(row.start_time ? [row.start_time] : []))
 
     if (manual) {
       // Enrich manual charge with V2C data
@@ -152,7 +152,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       `).run({ ...row, id: manual.id })
       addLog(accountId, 'info', `✓ Enrichie charge manuelle id=${manual.id} avec v2c_id=${s.id} | ${s.energy} kWh | ${row.date} ${row.start_time}`)
       if (!settings.v2c_last_id || s.id > settings.v2c_last_id) {
-        db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, accountId)
+        db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, settings.account_id)
       }
       created++
       continue
@@ -171,7 +171,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     if (result.changes > 0) {
       addLog(accountId, 'info', `✓ Créée v2c_id=${s.id} | ${s.energy} kWh | ${row.date} ${row.start_time||''} | vehicleId=${row.vehicle_id}`)
       if (!settings.v2c_last_id || s.id > settings.v2c_last_id) {
-        db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, accountId)
+        db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, settings.account_id)
       }
       created++
     } else {
@@ -223,9 +223,9 @@ async function checkHA30Days(accountId) {
 
   const charges = db.prepare(`
     SELECT * FROM charges
-    WHERE account_id=? AND source='v2c' AND date >= ?
+    WHERE source='v2c' AND date >= ?
     ORDER BY date DESC
-  `).all(accountId, cutoffStr)
+  `).all(cutoffStr)
 
   if (!charges.length) {
     addLog(accountId, 'warn', 'Aucune charge V2C trouvée sur les 30 derniers jours')

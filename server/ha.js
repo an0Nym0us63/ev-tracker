@@ -81,7 +81,7 @@ function computeMajorityVehicle(history, startIso, endIso) {
 
 // ─── Main: detect vehicle for a charge session ────────────────────────────────
 async function detectVehicleFromHA(accountId, startIso, endIso) {
-  const s = db.prepare('SELECT * FROM settings WHERE account_id=?').get(accountId)
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
   if (!s?.ha_enabled || !s?.ha_url || !s?.ha_token || !s?.ha_entity_id) {
     return { vehicleId: null, detail: 'HA non configuré ou désactivé' }
   }
