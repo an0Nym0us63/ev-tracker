@@ -19,9 +19,9 @@ function Field({ label, children, hint }) {
 
 function NumInput({ value, onChange, placeholder, unit, error }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', background:'var(--surface)', border:`1.5px solid ${error?'var(--red)':'var(--border)'}`, borderRadius:'var(--r-sm)', padding:'13px 14px' }}>
+    <div style={{ display:'flex', alignItems:'center', background:'var(--surface)', border:`1.5px solid ${error?'var(--red)':'var(--border)'}`, borderRadius:'var(--r-sm)', padding:'13px 14px', minWidth:0, width:'100%', boxSizing:'border-box' }}>
       <input type="number" inputMode="decimal" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-        style={{ flex:1, background:'none', border:'none', outline:'none', fontSize:16, fontWeight:600, fontFamily:"'JetBrains Mono',monospace", color:value?'var(--text)':'var(--muted)' }} />
+        style={{ flex:1, minWidth:0, width:'100%', background:'none', border:'none', outline:'none', fontSize:16, fontWeight:600, fontFamily:"'JetBrains Mono',monospace", color:value?'var(--text)':'var(--muted)' }} />
       {unit && <span style={{ fontSize:12, color:'var(--muted)', marginLeft:8, flexShrink:0 }}>{unit}</span>}
     </div>
   )
@@ -324,9 +324,9 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         </Field>
 
         <Field label="Énergie & durée" hint={errors.kwh?'⚠ Énergie requise':undefined}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:8 }}>
             <NumInput value={kwh} onChange={v=>{setKwh(v);setErrors(e=>({...e,kwh:false}))}} placeholder="42" unit="kWh" error={errors.kwh} />
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:6 }}>
               <NumInput value={hours} onChange={setHours} placeholder="2" unit="h" />
               <NumInput value={minutes} onChange={setMinutes} placeholder="30" unit="min" />
             </div>
