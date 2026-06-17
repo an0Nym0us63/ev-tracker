@@ -6,6 +6,7 @@ const https = require('https')
 const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
 const { syncV2C, syncV2CHistory, addLog, checkHA30Days } = require('./v2c')
+const { getLiveVehicle } = require('./ha')
 
 function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
   const config = {
@@ -539,6 +540,14 @@ app.post('/api/ha/check', requireAuth, async (req, res) => {
     const result = await checkHA30Days(req.user.id)
     res.json(result)
   } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+// ─── Live page: current vehicle plugged in (polled every few seconds) ────────
+app.get('/api/live/vehicle', requireAuth, async (req, res) => {
+  try {
+    const result = await getLiveVehicle()
+    res.json(result)
+  } catch(e) { res.status(500).json({ available: false, reason: e.message }) }
 })
 
 app.post('/api/v2c/sync/history', requireAuth, async (req, res) => {

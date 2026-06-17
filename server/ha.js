@@ -93,4 +93,31 @@ async function detectVehicleFromHA(accountId, startIso, endIso) {
   }
 }
 
-module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle }
+// ─── Get current state of a single entity (for Live page polling) ────────────
+async function getEntityState(haUrl, token, entityId) {
+  const path = `/api/states/${encodeURIComponent(entityId)}`
+  return haFetch(haUrl, token, path)
+}
+
+// ─── Live: current vehicle plugged in, from the same entity used for detection ─
+async function getLiveVehicle() {
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  if (!s?.ha_enabled || !s?.ha_url || !s?.ha_token || !s?.ha_entity_id) {
+    return { available: false, reason: 'HA non configuré ou désactivé' }
+  }
+  try {
+    const state = await getEntityState(s.ha_url, s.ha_token, s.ha_entity_id)
+    const vehicleId = mapStateToVehicle(state.state)
+    return {
+      available: true,
+      rawState: state.state,
+      vehicleId,
+      lastChanged: state.last_changed,
+      lastUpdated: state.last_updated,
+    }
+  } catch(e) {
+    return { available: false, reason: `Erreur HA: ${e.message}` }
+  }
+}
+
+module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle }
