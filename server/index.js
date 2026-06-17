@@ -503,7 +503,7 @@ app.post('/api/v2c/sync/date', requireAuth, async (req, res) => {
 // ─── One-time: recompute solar savings for Wallbox charges ───────────────────
 // If price/kWh < grid reference price (0.13€), the difference must come from solar
 app.post('/api/wallbox/recompute-solar', requireAuth, (req, res) => {
-  const GRID_PRICE = 0.13
+  const GRID_PRICE = 0.12
   const charges = db.prepare(
     "SELECT id, kwh, total_cost FROM charges WHERE account_id=? AND provider LIKE 'Wallbox%' AND kwh > 0"
   ).all(req.user.id)

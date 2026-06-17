@@ -214,11 +214,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const homeCharges  = filtered.filter(c => c.locationId === 'home')
   const solarCharges = homeCharges.filter(c => (c.solarSavings||0) > 0.05)
   const solarPct     = homeCharges.length > 0 ? Math.round(solarCharges.length / homeCharges.length * 100) : null
-  // Estimate kWh from solar: solarSavings / avgPrice
-  const avgPriceHome = homeCharges.length > 0 && homeCharges.reduce((s,c)=>s+(c.totalCost||0),0) > 0
-    ? homeCharges.reduce((s,c)=>s+(c.totalCost||0),0) / homeCharges.reduce((s,c)=>s+(c.kwh||0),0)
-    : 0.15
-  const solarKwh = avgPriceHome > 0 ? solarSavings / avgPriceHome : 0
+  const solarKwh = solarSavings / 0.14
 
   const periodLabel  = activePeriod ? PERIODS.find(p=>p.id===activePeriod)?.label : 'Tout'
   const vehicleLabel = activeVehicle ? VEHICLES[activeVehicle]?.name : 'Tous véhicules'
@@ -267,6 +263,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
     { val:`${avgPrice}`,    label:'€/kWh moyen',          color:'var(--muted)',  mono:true },
     { type:'streak', daysAC, daysDC, label:'Dernière charge' },
     { type:'savings', savings, solarSavings, label:'Économies' },
+    { val: solarKwh > 0.5 ? `${solarKwh.toFixed(0)} kWh` : '—', label:'☀️ Énergie solaire', color:'var(--amber)', mono:true },
     { val: topProvider,     label:'Top fournisseur',       color:'var(--accent)', small:true },
     { val: avgPower ? `${avgPower} kW` : '—', label:'Puissance moy. (kWh/h)', color:'var(--accent)', mono:true },
     { val: maxCost !== '—' ? `${maxCost} €` : '—', label:'Session la + chère', color:'var(--amber)', mono:true },

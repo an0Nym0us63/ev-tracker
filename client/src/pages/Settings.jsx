@@ -336,7 +336,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
           <div className="card" style={{ padding:'14px 16px' }}>
             <div style={{ fontWeight:600, fontSize:13 }}>☀️ Recalcul solaire Wallbox</div>
             <div style={{ fontSize:11, color:'var(--muted)', marginTop:2, marginBottom:10 }}>
-              Estime le gain solaire pour les charges Wallbox (sans données V2C) en comparant au tarif réseau de 0.13€/kWh
+              Estime le gain solaire pour les charges Wallbox (sans données V2C) en comparant au tarif réseau de 0.12€/kWh
             </div>
             <button onClick={async()=>{
                 if (!confirm('Recalculer le gain solaire pour toutes les charges Wallbox ?')) return
