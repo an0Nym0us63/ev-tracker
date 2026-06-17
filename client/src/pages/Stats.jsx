@@ -423,7 +423,7 @@ export default function Stats({ charges }) {
               <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:8 }}>
                 {cards.map(d => (
                   <div key={d.name} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <div style={{ width:18, height:18, borderRadius:4, background:'var(--surface2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, flexShrink:0 }}>💳</div>
+                    <CardLogo name={d.name} size={16} />
                     <span style={{ fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
                     <span style={{ fontSize:10, color:'var(--muted)', marginRight:4 }}>{d.sessions} sess.</span>
                     <span className="mono" style={{ fontSize:13, fontWeight:700, color: d.avgPrice < 0.25 ? 'var(--green)' : d.avgPrice < 0.45 ? 'var(--accent)' : 'var(--amber)' }}>{d.avgPrice.toFixed(3)} €/kWh</span>
