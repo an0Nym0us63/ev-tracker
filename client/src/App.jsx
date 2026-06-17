@@ -12,8 +12,10 @@ import AddCharge from './pages/AddCharge.jsx'
 import History from './pages/History.jsx'
 import Stats from './pages/Stats.jsx'
 import MapView from './pages/MapView.jsx'
+import Live from './pages/Live.jsx'
 import Settings from './pages/Settings.jsx'
 import FilterSheet, { useFilters } from './components/FilterSheet.jsx'
+import ProfileMenu from './components/ProfileMenu.jsx'
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -160,8 +162,15 @@ export default function App() {
       {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
       {page === 'stats'    && <Stats     charges={charges} filters={filters} applyFilters={applyFilters} />}
       {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} />}
+      {page === 'live'     && <Live />}
       {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}
       {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
+
+      {!isAddPage && page !== 'settings' && page !== 'logs' && (
+        <div style={{ position:'fixed', top:16, right:20, zIndex:90 }}>
+          <ProfileMenu account={account} onNavigate={navigate} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />
+        </div>
+      )}
 
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} onOpenFilters={()=>setShowFilters(true)} filterCount={activeCount} />}
       {toast && <Toast {...toast} />}
