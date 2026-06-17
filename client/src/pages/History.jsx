@@ -2,13 +2,8 @@ import React, { useMemo } from 'react'
 import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
-import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
-export default function History({ charges, onEdit, alertFilter, onClearAlertFilter }) {
-  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
-
-  const providers = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
-  const cards = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+export default function History({ charges, onEdit, alertFilter, onClearAlertFilter, filters, applyFilters }) {
 
   // Apply alertFilter (from dashboard notification) or normal filters
   const alertIds = useMemo(() => {
@@ -64,13 +59,9 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
         </div>
       )}
 
-      {/* Filter button */}
-      <div style={{ padding:'10px 16px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      {/* Session count */}
+      <div style={{ padding:'10px 16px 0' }}>
         <div style={{ fontSize:12, color:'var(--muted)' }}>{filtered.length} session{filtered.length!==1?'s':''}</div>
-        <button onClick={()=>setShowFilters(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`, background:activeCount>0?'rgba(79,142,247,0.1)':'var(--surface)', color:activeCount>0?'var(--accent)':'var(--muted)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-          Filtres{activeCount>0?` (${activeCount})`:''}
-        </button>
       </div>
 
       {/* Summary */}
@@ -171,13 +162,6 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
           )
         })}
       </div>
-    {showFilters && (
-        <FilterSheet
-          onClose={()=>setShowFilters(false)}
-          filters={filters} setFilters={setFilters}
-          config={{ showLocation:true, providers, cards }}
-        />
-      )}
     </div>
   )
 }

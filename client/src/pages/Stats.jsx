@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react'
-import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts'
 import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogram, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
@@ -42,12 +41,8 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
   )
 }
 
-export default function Stats({ charges }) {
-  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
+export default function Stats({ charges, filters, applyFilters }) {
   const [habitsBreakdown, setHabitsBreakdown] = React.useState('none') // 'none' | 'location' | 'vehicle'
-
-  const providerOptions = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
-  const cardOptions = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
   const period  = filters.period === 'all' ? 'all' : filters.period
 
@@ -160,14 +155,6 @@ export default function Stats({ charges }) {
     <div className="page fade-up" style={{ paddingBottom:100 }}>
       <div style={{ padding:'16px 20px 8px' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Statistiques</div>
-      </div>
-
-      {/* Filter button */}
-      <div style={{ padding:'0 16px 0', display:'flex', justifyContent:'flex-end' }}>
-        <button onClick={()=>setShowFilters(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`, background:activeCount>0?'rgba(79,142,247,0.1)':'var(--surface)', color:activeCount>0?'var(--accent)':'var(--muted)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-          Filtres{activeCount>0?` (${activeCount})`:''}
-        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -640,13 +627,6 @@ export default function Stats({ charges }) {
         })()}
 
       </>)}
-    {showFilters && (
-        <FilterSheet
-          onClose={()=>setShowFilters(false)}
-          filters={filters} setFilters={setFilters}
-          config={{ providers: providerOptions, cards: cardOptions }}
-        />
-      )}
     </div>
   )
 }

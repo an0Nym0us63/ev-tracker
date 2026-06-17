@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { VEHICLES, getProviderStats } from '../utils.js'
-import FilterSheet, { useFilters } from '../components/FilterSheet.jsx'
 
 const TILE_LAYERS = {
   dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -108,16 +107,13 @@ function loadLeaflet() {
   })
 }
 
-export default function MapView({ charges, settings, theme }) {
+export default function MapView({ charges, settings, theme, filters, applyFilters }) {
   const mapRef  = useRef(null)
   const mapInst = useRef(null)
   const tileRef = useRef(null)
   const [ready, setReady] = useState(false)
-  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
   const mapStyle = theme === 'light' ? 'light' : 'dark'
   const today = new Date().toISOString().slice(0,10)
-  const providers = useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
-  const cards = useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
   useEffect(() => { loadLeaflet().then(() => setReady(true)) }, [])
 
@@ -178,20 +174,8 @@ export default function MapView({ charges, settings, theme }) {
     <div className="page fade-up" style={{ paddingBottom:80 }}>
 
       {/* Header */}
-      <div style={{ padding:'16px 20px 10px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ padding:'16px 20px 10px' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Carte</div>
-        <button onClick={()=>setShowFilters(true)} style={{
-          display:'flex', alignItems:'center', gap:6, padding:'7px 14px',
-          borderRadius:20, border:`1.5px solid ${activeCount>0?'var(--accent)':'var(--border)'}`,
-          background: activeCount>0 ? 'rgba(79,142,247,0.1)' : 'var(--surface)',
-          color: activeCount>0 ? 'var(--accent)' : 'var(--muted)',
-          fontSize:13, fontWeight:600, cursor:'pointer'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
-          </svg>
-          Filtres{activeCount>0 ? ` (${activeCount})` : ''}
-        </button>
       </div>
 
       {/* Map — full width, no margin */}
@@ -239,10 +223,6 @@ export default function MapView({ charges, settings, theme }) {
         )
       })()}
 
-      {showFilters && (
-        <FilterSheet onClose={()=>setShowFilters(false)} filters={filters} setFilters={setFilters}
-          config={{ showLocation:true, providers, cards }} />
-      )}
     </div>
   )
 }

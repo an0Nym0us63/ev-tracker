@@ -13,6 +13,7 @@ import History from './pages/History.jsx'
 import Stats from './pages/Stats.jsx'
 import MapView from './pages/MapView.jsx'
 import Settings from './pages/Settings.jsx'
+import FilterSheet, { useFilters } from './components/FilterSheet.jsx'
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -58,6 +59,10 @@ export default function App() {
   const [alertFilter, setAlertFilter] = useState(null)
   const [editCharge, setEditCharge] = useState(null)
   const [toast,      setToast]      = useState(null)
+  const { filters, setFilters, showFilters, setShowFilters, applyFilters, activeCount } = useFilters()
+
+  const providerOptions = React.useMemo(() => [...new Set(charges.filter(c=>c.provider).map(c=>c.provider))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
+  const cardOptions = React.useMemo(() => [...new Set(charges.filter(c=>c.card).map(c=>c.card))].sort((a,b)=>a.localeCompare(b,'fr')), [charges])
 
   const reload = useCallback(async () => {
     try {
@@ -150,16 +155,23 @@ export default function App() {
   return (
     <ErrorBoundary>
     <>
-      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />}
-      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} />}
+      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} />}
+      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} filters={filters} applyFilters={applyFilters} />}
       {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
-      {page === 'stats'    && <Stats     charges={charges} />}
-      {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} />}
+      {page === 'stats'    && <Stats     charges={charges} filters={filters} applyFilters={applyFilters} />}
+      {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} />}
       {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}
       {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onBack={()=>setPage('home')} />}
 
-      {!isAddPage && <BottomNav active={page} onNavigate={navigate} />}
+      {!isAddPage && <BottomNav active={page} onNavigate={navigate} onOpenFilters={()=>setShowFilters(true)} filterCount={activeCount} />}
       {toast && <Toast {...toast} />}
+      {showFilters && (
+        <FilterSheet
+          onClose={()=>setShowFilters(false)}
+          filters={filters} setFilters={setFilters}
+          config={{ providers: providerOptions, cards: cardOptions }}
+        />
+      )}
     </>
     </ErrorBoundary>
   )

@@ -1,5 +1,7 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
+import OperatorLogo from './OperatorLogo.jsx'
+import CardLogo from './CardLogo.jsx'
 
 function Chip({ active, label, onClick, color='var(--accent)' }) {
   return (
@@ -10,6 +12,22 @@ function Chip({ active, label, onClick, color='var(--accent)' }) {
       color: active ? color : 'var(--muted)',
       cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.12s',
     }}>{label}</button>
+  )
+}
+
+function LogoChip({ active, label, onClick, logo, color='var(--accent)' }) {
+  return (
+    <button onClick={onClick} style={{
+      display:'flex', alignItems:'center', gap:6,
+      padding:'5px 12px 5px 6px', borderRadius:20, fontSize:11.5, fontWeight:active?600:500, flexShrink:0,
+      border:`1.5px solid ${active ? color : 'var(--border)'}`,
+      background: active ? `${color}18` : 'var(--surface)',
+      color: active ? color : 'var(--muted)',
+      cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.12s',
+    }}>
+      {logo}
+      <span style={{ opacity: active ? 1 : 0.8 }}>{label}</span>
+    </button>
   )
 }
 
@@ -29,6 +47,31 @@ function MultiSelect({ label, options, selected, onChange, color='var(--accent)'
         <Chip active={allSelected} label="Tous" onClick={()=>onChange([])} color={color} />
         {options.map(o => (
           <Chip key={o} active={selected.includes(o)} label={o} onClick={()=>toggle(o)} color={color} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LogoMultiSelect({ label, options, selected, onChange, type='provider', color='var(--accent)' }) {
+  const allSelected = selected.length === 0
+  function toggle(val) {
+    if (selected.includes(val)) {
+      onChange(selected.filter(v => v !== val))
+    } else {
+      onChange([...selected, val])
+    }
+  }
+  const LogoComp = type === 'card' ? CardLogo : OperatorLogo
+  return (
+    <div>
+      <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>{label}</div>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+        <Chip active={allSelected} label="Tous" onClick={()=>onChange([])} color={color} />
+        {options.map(o => (
+          <LogoChip key={o} active={selected.includes(o)} label={o} color={color}
+            logo={<LogoComp name={o} size={14} />}
+            onClick={()=>toggle(o)} />
         ))}
       </div>
     </div>
@@ -107,28 +150,26 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
           </div>
 
           {/* Location */}
-          {config?.showLocation && (
-            <div>
-              <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Lieu</div>
-              <div style={{ display:'flex', gap:6 }}>
-                <Chip active={locations.length===0} label="Tous" onClick={()=>setFilters(f=>({...f,locations:[]}))} />
-                {[{id:'home',label:'🏠 Maison',color:'var(--green)'},{id:'ext',label:'📍 Externe',color:'var(--amber)'}].map(l => (
-                  <Chip key={l.id} active={locations.includes(l.id)} label={l.label} color={l.color}
-                    onClick={()=>setFilters(f=>({...f,locations:f.locations.includes(l.id)?f.locations.filter(x=>x!==l.id):[...f.locations,l.id]}))} />
-                ))}
-              </div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>Lieu</div>
+            <div style={{ display:'flex', gap:6 }}>
+              <Chip active={locations.length===0} label="Tous" onClick={()=>setFilters(f=>({...f,locations:[]}))} />
+              {[{id:'home',label:'🏠 Maison',color:'var(--green)'},{id:'ext',label:'📍 Externe',color:'var(--amber)'}].map(l => (
+                <Chip key={l.id} active={locations.includes(l.id)} label={l.label} color={l.color}
+                  onClick={()=>setFilters(f=>({...f,locations:f.locations.includes(l.id)?f.locations.filter(x=>x!==l.id):[...f.locations,l.id]}))} />
+              ))}
             </div>
-          )}
+          </div>
 
           {/* Providers — multi */}
           {config?.providers?.length > 0 && (
-            <MultiSelect label="Fournisseur" options={config.providers} selected={providers}
+            <LogoMultiSelect label="Fournisseur" options={config.providers} selected={providers} type="provider"
               onChange={v=>setFilters(f=>({...f,providers:v}))} />
           )}
 
           {/* Cards — multi */}
           {config?.cards?.length > 0 && (
-            <MultiSelect label="Carte utilisée" options={config.cards} selected={cards}
+            <LogoMultiSelect label="Carte utilisée" options={config.cards} selected={cards} type="card"
               onChange={v=>setFilters(f=>({...f,cards:v}))} color="var(--xpeng)" />
           )}
 

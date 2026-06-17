@@ -22,9 +22,14 @@ const TABS = [
       <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M7 9h10M7 13h7"/>
     </svg>
   )},
+  { id:'filter',  label:'Filtres',    icon: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={a?2.2:1.7} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16M7 12h10M10 18h4"/>
+    </svg>
+  )},
 ]
 
-export default function BottomNav({ active, onNavigate }) {
+export default function BottomNav({ active, onNavigate, onOpenFilters, filterCount=0 }) {
   return (
     <nav style={{ position:'fixed', bottom:0, left:0, right:0, height:'var(--nav-h)', paddingBottom:'var(--safe-bottom)', background:'var(--nav-bg)', backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)', borderTop:'1px solid var(--border)', display:'flex', alignItems:'stretch', zIndex:100 }}>
       {TABS.map(tab => {
@@ -41,6 +46,17 @@ export default function BottomNav({ active, onNavigate }) {
               </svg>
             </button>
           </div>
+        )
+        if (tab.id === 'filter') return (
+          <button key={tab.id} onClick={onOpenFilters} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3, background:'none', border:'none', color:filterCount>0?'var(--accent)':'var(--muted)', fontSize:10, fontWeight:filterCount>0?600:400, cursor:'pointer', position:'relative', opacity:filterCount>0?1:0.7 }}>
+            <div style={{ position:'relative' }}>
+              {tab.icon(filterCount>0)}
+              {filterCount > 0 && (
+                <div style={{ position:'absolute', top:-4, right:-7, minWidth:14, height:14, borderRadius:7, background:'var(--accent)', color:'white', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 3px' }}>{filterCount}</div>
+              )}
+            </div>
+            <span>{tab.label}</span>
+          </button>
         )
         const isActive = active === tab.id
         return (

@@ -145,7 +145,7 @@ function ProviderChart({ charges }) {
   )
 }
 
-export default function Dashboard({ charges, account, onNavigate, onNavigateAlert, onLogout, theme, onToggleTheme }) {
+export default function Dashboard({ charges, account, onNavigate, onNavigateAlert, onLogout, theme, onToggleTheme, filters, applyFilters }) {
   const [activePeriod,  setActivePeriod]  = useState(null)
   const [activeVehicle, setActiveVehicle] = useState(null)
   const [alerts, setAlerts] = useState([])
@@ -155,22 +155,25 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
 
-  // Banner stats — always global
+  // Global filters (date/provider/card/vehicle/location) applied first
+  const globallyFiltered = useMemo(() => applyFilters ? applyFilters(charges) : charges, [charges, filters, applyFilters])
+
+  // Banner stats — always global (within the globally-filtered set)
   const periodStats = useMemo(() => PERIODS.map(p => ({
-    ...p, stats: computeStats(filterByPeriod(charges, p.id))
-  })), [charges])
+    ...p, stats: computeStats(filterByPeriod(globallyFiltered, p.id))
+  })), [globallyFiltered])
 
   // Main filtered
   const filtered = useMemo(() => {
-    let c = activePeriod ? filterByPeriod(charges, activePeriod) : charges
+    let c = activePeriod ? filterByPeriod(globallyFiltered, activePeriod) : globallyFiltered
     if (activeVehicle) c = c.filter(x => x.vehicleId === activeVehicle)
     return c
-  }, [charges, activePeriod, activeVehicle])
+  }, [globallyFiltered, activePeriod, activeVehicle])
 
   // Period-only (for vehicle cards comparison)
   const periodFiltered = useMemo(() => {
-    return activePeriod ? filterByPeriod(charges, activePeriod) : charges
-  }, [charges, activePeriod])
+    return activePeriod ? filterByPeriod(globallyFiltered, activePeriod) : globallyFiltered
+  }, [globallyFiltered, activePeriod])
 
   const stats      = useMemo(() => computeStats(filtered),          [filtered])
   const statsAll   = useMemo(() => computeStats(periodFiltered),          [periodFiltered])
