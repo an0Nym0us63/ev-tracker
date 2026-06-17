@@ -324,14 +324,10 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         </Field>
 
         <Field label="Énergie & durée" hint={errors.kwh?'⚠ Énergie requise':undefined}>
-          <div style={{ display:'flex', gap:8 }}>
-            <div style={{ flex:2 }}>
-              <NumInput value={kwh} onChange={v=>{setKwh(v);setErrors(e=>({...e,kwh:false}))}} placeholder="42" unit="kWh" error={errors.kwh} />
-            </div>
-            <div style={{ flex:1 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <NumInput value={kwh} onChange={v=>{setKwh(v);setErrors(e=>({...e,kwh:false}))}} placeholder="42" unit="kWh" error={errors.kwh} />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
               <NumInput value={hours} onChange={setHours} placeholder="2" unit="h" />
-            </div>
-            <div style={{ flex:1 }}>
               <NumInput value={minutes} onChange={setMinutes} placeholder="30" unit="min" />
             </div>
           </div>
