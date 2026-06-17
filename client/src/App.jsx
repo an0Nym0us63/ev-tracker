@@ -170,6 +170,8 @@ export default function App() {
 
   const isAddPage = page === 'add'
 
+  const pullOffset = refreshing ? 54 : Math.round(progress * 54)
+
   return (
     <ErrorBoundary>
     <>
@@ -177,9 +179,9 @@ export default function App() {
         <div style={{
           position:'fixed', top:0, left:0, right:0, zIndex:150,
           display:'flex', justifyContent:'center', alignItems:'flex-end',
-          height: refreshing ? 54 : Math.round(progress * 54),
+          height: pullOffset,
           overflow:'hidden', pointerEvents:'none',
-          transition: refreshing ? 'height 0.2s ease' : 'none',
+          transition: pulling ? 'none' : 'height 0.2s ease',
         }}>
           <div style={{
             marginBottom:10, width:26, height:26, borderRadius:'50%',
@@ -190,14 +192,21 @@ export default function App() {
           }} />
         </div>
       )}
-      {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} />}
-      {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
-      {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
-      {page === 'stats'    && <Stats     charges={charges} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
-      {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} onToggleTheme={toggleTheme} onNavigate={navigate} />}
-      {page === 'live'     && <Live account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
-      {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}
-      {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onAccountUpdate={setAccount} onBack={()=>setPage('home')} />}
+      <div style={{
+        flex:1, minHeight:0, display:'flex', flexDirection:'column',
+        transform: `translateY(${pullOffset}px)`,
+        transition: pulling ? 'none' : 'transform 0.2s ease',
+        willChange:'transform',
+      }}>
+        {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} />}
+        {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
+        {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
+        {page === 'stats'    && <Stats     charges={charges} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
+        {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} onToggleTheme={toggleTheme} onNavigate={navigate} />}
+        {page === 'live'     && <Live account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
+        {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}
+        {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onAccountUpdate={setAccount} onBack={()=>setPage('home')} />}
+      </div>
 
       {!isAddPage && <BottomNav active={page} onNavigate={navigate} onOpenFilters={()=>setShowFilters(true)} filterCount={activeCount} />}
       {toast && <Toast {...toast} />}
