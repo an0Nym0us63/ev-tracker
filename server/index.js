@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs')
 const https = require('https')
 const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
-const { syncV2C, syncV2CHistory, addLog } = require('./v2c')
+const { syncV2C, syncV2CHistory, addLog, checkHA30Days } = require('./v2c')
 
 function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
   const config = {
@@ -60,14 +60,14 @@ app.get('/api/settings', requireAuth, (req, res) => {
 })
 
 app.put('/api/settings', requireAuth, (req, res) => {
-  const { ocmApiKey, homeLat, homeLng, homeLabel, fuelPrice, v2cEnabled, v2cApiKey, v2cDeviceId } = req.body
+  const { ocmApiKey, homeLat, homeLng, homeLabel, fuelPrice, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId } = req.body
   const existing = db.prepare('SELECT id FROM settings WHERE account_id = ?').get(req.user.id)
   if (existing) {
-    db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=?, fuel_price=?, v2c_enabled=?, v2c_api_key=?, v2c_device_id=? WHERE account_id=?')
-      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, req.user.id)
+    db.prepare('UPDATE settings SET ocm_api_key=?, home_lat=?, home_lng=?, home_label=?, fuel_price=?, v2c_enabled=?, v2c_api_key=?, v2c_device_id=?, ha_enabled=?, ha_url=?, ha_token=?, ha_entity_id=? WHERE account_id=?')
+      .run(ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null, req.user.id)
   } else {
-    db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label, fuel_price, v2c_enabled, v2c_api_key, v2c_device_id) VALUES (?,?,?,?,?,?,?,?,?)')
-      .run(req.user.id, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null)
+    db.prepare('INSERT INTO settings (account_id, ocm_api_key, home_lat, home_lng, home_label, fuel_price, v2c_enabled, v2c_api_key, v2c_device_id, ha_enabled, ha_url, ha_token, ha_entity_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .run(req.user.id, ocmApiKey||null, homeLat||null, homeLng||null, homeLabel||null, fuelPrice||1.85, v2cEnabled?1:0, v2cApiKey||null, v2cDeviceId||null, haEnabled?1:0, haUrl||null, haToken||null, haEntityId||null)
   }
   const s = db.prepare('SELECT * FROM settings WHERE account_id = ?').get(req.user.id)
   res.json(toClientSettings(s))
@@ -323,6 +323,10 @@ function toClientSettings(s) {
     v2cEnabled: !!s.v2c_enabled,
     v2cApiKey:  s.v2c_api_key  || '',
     v2cDeviceId:s.v2c_device_id|| '',
+    haEnabled:  !!s.ha_enabled,
+    haUrl:      s.ha_url || '',
+    haToken:    s.ha_token || '',
+    haEntityId: s.ha_entity_id || 'input_select.vehicule_branche',
   }
 }
 
@@ -475,6 +479,13 @@ app.post('/api/v2c/sync/date', requireAuth, async (req, res) => {
     nextDay.setDate(nextDay.getDate() + 1)
     const endDate = nextDay.toISOString().slice(0, 10)
     const result = await syncV2C(req.user.id, { startDate: date, endDate })
+    res.json(result)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.post('/api/ha/check', requireAuth, async (req, res) => {
+  try {
+    const result = await checkHA30Days(req.user.id)
     res.json(result)
   } catch(e) { res.status(500).json({ error: e.message }) }
 })

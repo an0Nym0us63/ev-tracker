@@ -1,5 +1,6 @@
 const https = require('https')
 const db    = require('./db')
+const { detectVehicleFromHA } = require('./ha')
 
 // ─── Helper: addLog ────────────────────────────────────────────────────────────
 function addLog(accountId, level, message, source = 'v2c') {
@@ -126,8 +127,8 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       continue
     }
 
-    // Parse session data first
-    const row = parseSession(s, accountId, null, fuelPrice)
+    // Parse session data first (vehicle unknown by default)
+    let row = parseSession(s, accountId, null, fuelPrice)
 
     // Check if a manual charge matches this session (same date, and start_time if available)
     const manual = db.prepare(`
@@ -157,7 +158,14 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       continue
     }
 
-    // Determine vehicle — for now unknown, HA will set it later
+    // Try to detect vehicle via Home Assistant history
+    const haResult = await detectVehicleFromHA(accountId, s.startChargeDate, s.endChargeDate)
+    if (haResult.vehicleId) {
+      row.vehicle_id = haResult.vehicleId
+      row.fuel_savings = calcSavings(haResult.vehicleId, s.energy, row.total_cost, fuelPrice)
+      addLog(accountId, 'info', `🏠 HA a détecté ${haResult.vehicleId} pour v2c_id=${s.id} | ${haResult.detail}`)
+    }
+
     const result = insertCharge.run(row)
 
     if (result.changes > 0) {
@@ -205,4 +213,48 @@ async function syncV2CHistory(accountId) {
   return { created: totalCreated, skipped: totalSkipped }
 }
 
-module.exports = { syncV2C, syncV2CHistory, addLog }
+// ─── Test: analyse HA sur les 30 derniers jours sans rien modifier ────────────
+async function checkHA30Days(accountId) {
+  addLog(accountId, 'info', '=== Test HA — analyse des 30 derniers jours (lecture seule) ===')
+
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 30)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+
+  const charges = db.prepare(`
+    SELECT * FROM charges
+    WHERE account_id=? AND source='v2c' AND date >= ?
+    ORDER BY date DESC
+  `).all(accountId, cutoffStr)
+
+  if (!charges.length) {
+    addLog(accountId, 'warn', 'Aucune charge V2C trouvée sur les 30 derniers jours')
+    return { checked: 0 }
+  }
+
+  addLog(accountId, 'info', `${charges.length} charge(s) V2C à analyser`)
+
+  for (const c of charges) {
+    if (!c.start_time || !c.duration_min) {
+      addLog(accountId, 'warn', `id=${c.id} (${c.date}) — pas d'heure/durée, impossible de définir la fenêtre`)
+      continue
+    }
+    const startIso = `${c.date}T${c.start_time}:00`
+    const endDate = new Date(startIso)
+    endDate.setMinutes(endDate.getMinutes() + c.duration_min)
+    const endIso = endDate.toISOString().slice(0, 19)
+
+    const haResult = await detectVehicleFromHA(accountId, startIso, endIso)
+    const currentVehicle = c.vehicle_id
+    const wouldChange = haResult.vehicleId && haResult.vehicleId !== currentVehicle
+
+    addLog(accountId, 'info',
+      `id=${c.id} (${c.date} ${c.start_time}, ${c.duration_min}min) | actuel=${currentVehicle} | HA→${haResult.vehicleId||'?'} | ${haResult.detail}${wouldChange ? ' ⚡ changerait' : ''}`
+    )
+  }
+
+  addLog(accountId, 'info', '=== Test HA terminé ===')
+  return { checked: charges.length }
+}
+
+module.exports = { syncV2C, syncV2CHistory, addLog, checkHA30Days }

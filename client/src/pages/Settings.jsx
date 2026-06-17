@@ -3,7 +3,7 @@ import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode } from '../api.js'
 import { VERSION } from '../version.js'
 import ImportCSV from '../components/ImportCSV.jsx'
-import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate } from '../api.js'
+import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
 
 function Field({ label, children, hint }) {
@@ -43,6 +43,12 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   const [v2cDeviceId, setV2cDeviceId] = useState('')
   const [v2cSyncing,  setV2cSyncing]  = useState(false)
   const [v2cMsg,      setV2cMsg]      = useState(null)
+  const [haEnabled,   setHaEnabled]   = useState(false)
+  const [haUrl,       setHaUrl]       = useState('')
+  const [haToken,     setHaToken]     = useState('')
+  const [haEntityId,  setHaEntityId]  = useState('input_select.vehicule_branche')
+  const [haChecking,  setHaChecking]  = useState(false)
+  const [haMsg,       setHaMsg]       = useState(null)
 
   useEffect(() => {
     apiGetSettings().then(s => {
@@ -54,6 +60,10 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
       setV2cEnabled(!!s.v2cEnabled)
       setV2cApiKey(s.v2cApiKey || '')
       setV2cDeviceId(s.v2cDeviceId || '')
+      setHaEnabled(!!s.haEnabled)
+      setHaUrl(s.haUrl || '')
+      setHaToken(s.haToken || '')
+      setHaEntityId(s.haEntityId || 'input_select.vehicule_branche')
     }).catch(() => {})
   }, [])
 
@@ -75,7 +85,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   async function handleSave() {
     setSaving(true)
     try {
-      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng, fuelPrice: parseFloat(fuelPrice)||1.85, v2cEnabled, v2cApiKey, v2cDeviceId })
+      const result = await apiSaveSettings({ ocmApiKey: ocmKey, homeLabel, homeLat, homeLng, fuelPrice: parseFloat(fuelPrice)||1.85, v2cEnabled, v2cApiKey, v2cDeviceId, haEnabled, haUrl, haToken, haEntityId })
       onSettingsSaved?.(result)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch {} finally { setSaving(false) }
@@ -212,7 +222,6 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
           <div className="section-label">Intégrations à venir</div>
           <div className="card" style={{ padding:0 }}>
             {[
-              { icon:'🏠', name:'Home Assistant', detail:'Import automatique depuis HA' },
               { icon:'⛽', name:'Prix carburant',  detail:'SP95/Diesel France (data.gouv.fr)' },
             ].map((item,i,arr) => (
               <div key={item.name} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderBottom:'1px solid var(--border)', opacity:0.6 }}>
@@ -263,6 +272,42 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
                     </button>
                   </div>
                   {v2cMsg && <div style={{ padding:'7px 12px', borderRadius:'var(--r-sm)', background:v2cMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:v2cMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:11, fontWeight:600 }}>{v2cMsg.text}</div>}
+                </div>
+              )}
+            </div>
+
+            {/* Home Assistant — identification véhicule */}
+            <div style={{ borderTop:'1px solid var(--border)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' }}>
+                <div style={{ fontSize:22, width:36, textAlign:'center' }}>🏠</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:600 }}>Home Assistant</div>
+                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>Identification auto du véhicule</div>
+                </div>
+                <button onClick={()=>setHaEnabled(v=>!v)} style={{ width:44, height:26, borderRadius:13, background:haEnabled?'var(--accent)':'var(--surface2)', border:`2px solid ${haEnabled?'var(--accent)':'var(--border)'}`, cursor:'pointer', position:'relative', transition:'all 0.2s', flexShrink:0 }}>
+                  <div style={{ width:18, height:18, borderRadius:'50%', background:'white', position:'absolute', top:2, left:haEnabled?22:2, transition:'left 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.3)' }} />
+                </button>
+              </div>
+              {haEnabled && (
+                <div style={{ padding:'0 16px 14px', display:'flex', flexDirection:'column', gap:8 }}>
+                  <input value={haUrl} onChange={e=>setHaUrl(e.target.value)} placeholder="URL HA (ex: http://192.168.1.10:8123)"
+                    style={{ background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'9px 14px', fontSize:12, color:'var(--text)', fontFamily:"'JetBrains Mono',monospace", outline:'none' }} />
+                  <input value={haToken} onChange={e=>setHaToken(e.target.value)} placeholder="Token longue durée"
+                    style={{ background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'9px 14px', fontSize:12, color:'var(--text)', fontFamily:"'JetBrains Mono',monospace", outline:'none' }} />
+                  <input value={haEntityId} onChange={e=>setHaEntityId(e.target.value)} placeholder="Entité (ex: input_select.vehicule_branche)"
+                    style={{ background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)', padding:'9px 14px', fontSize:12, color:'var(--text)', fontFamily:"'JetBrains Mono',monospace", outline:'none' }} />
+                  <button onClick={async()=>{
+                      setHaChecking(true); setHaMsg(null)
+                      try {
+                        const r = await apiHACheck()
+                        setHaMsg({ type:'ok', text:`✓ ${r.checked} session(s) analysée(s) — voir le Journal` })
+                      } catch(e) { setHaMsg({ type:'err', text:'Erreur: '+e.message }) }
+                      setHaChecking(false)
+                    }}
+                    disabled={haChecking} style={{ padding:'9px', borderRadius:'var(--r-sm)', background:'rgba(79,142,247,0.1)', border:'1.5px solid var(--accent)', color:'var(--accent)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    {haChecking ? '…' : '🔍 Vérifier 30 derniers jours'}
+                  </button>
+                  {haMsg && <div style={{ padding:'7px 12px', borderRadius:'var(--r-sm)', background:haMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:haMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:11, fontWeight:600 }}>{haMsg.text}</div>}
                 </div>
               )}
             </div>
