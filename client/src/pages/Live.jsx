@@ -1,10 +1,12 @@
 import React from 'react'
+import ProfileMenu from '../components/ProfileMenu.jsx'
 
-export default function Live() {
+export default function Live({ account, onLogout, theme, onToggleTheme, onNavigate }) {
   return (
     <div className="page fade-up" style={{ paddingBottom:100, minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ padding:'16px 20px 0' }}>
+      <div style={{ padding:'16px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div style={{ fontSize:20, fontWeight:700 }}>Live</div>
+        <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:14, padding:'0 40px', textAlign:'center' }}>
