@@ -5,6 +5,7 @@ import { VERSION } from '../version.js'
 import ImportCSV from '../components/ImportCSV.jsx'
 import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck, apiWallboxRecomputeSolar } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
+import ColorPicker from '../components/ColorPicker.jsx'
 
 function Field({ label, children, hint }) {
   return (
@@ -137,7 +138,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
         <div>
           <div className="section-label">Mon compte</div>
           <div className="card" style={{ display:'flex', alignItems:'center', gap:14 }}>
-            <div style={{ width:46, height:46, borderRadius:'50%', background:'linear-gradient(135deg,var(--accent),var(--accent2))', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:18, color:'white' }}>
+            <div style={{ width:46, height:46, borderRadius:'50%', background: profileColor || 'linear-gradient(135deg,var(--accent),var(--accent2))', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:18, color:'white' }}>
               {account.name.charAt(0).toUpperCase()}
             </div>
             <div style={{ flex:1 }}>
@@ -167,6 +168,44 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
             }}>
               {theme === 'dark' ? '☀️ Passer au clair' : '🌙 Passer au sombre'}
             </button>
+          </div>
+
+          <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:14, marginTop:8 }}>
+            <div>
+              <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>🎨 Couleurs véhicules</div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
+                Partagées pour tout le foyer — utilisées dans les graphiques, sessions et statistiques
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:600, marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
+                    🚗 MG4 {mg4Color && <button onClick={()=>setMg4Color('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0, fontWeight:400 }}>· réinitialiser</button>}
+                  </div>
+                  <ColorPicker value={mg4Color} defaultColor="#4f8ef7" onChange={setMg4Color} />
+                </div>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:600, marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
+                    🚙 Xpeng G6 {xpengColor && <button onClick={()=>setXpengColor('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0, fontWeight:400 }}>· réinitialiser</button>}
+                  </div>
+                  <ColorPicker value={xpengColor} defaultColor="#7c5cfc" onChange={setXpengColor} />
+                </div>
+              </div>
+              <div style={{ fontSize:10, color:'var(--muted)', marginTop:10 }}>Sauvegardé avec le bouton "Enregistrer" en haut de page</div>
+            </div>
+
+            <div style={{ height:1, background:'var(--border)' }} />
+
+            <div>
+              <div style={{ fontWeight:600, fontSize:13, marginBottom:2, display:'flex', alignItems:'center', gap:6 }}>
+                🔵 Couleur de mon profil
+                {colorSaving && <span style={{ fontSize:10, color:'var(--muted)', fontWeight:400 }}>enregistrement…</span>}
+                {profileColor && !colorSaving && <button onClick={()=>saveProfileColor('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', fontWeight:400 }}>· réinitialiser</button>}
+              </div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
+                Propre à ton compte — couleur du rond dans le menu profil
+              </div>
+              <ColorPicker value={profileColor} defaultColor="#4f8ef7" onChange={saveProfileColor} />
+            </div>
           </div>
         </div>
 
@@ -338,56 +377,6 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
         <button onClick={onLogout} style={{ background:'none', color:'var(--red)', fontSize:14, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'14px 16px', cursor:'pointer' }}>
           Se déconnecter
         </button>
-
-        {/* Apparence */}
-        <div>
-          <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:8 }}>Apparence</div>
-          <div className="card" style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:14 }}>
-
-            <div>
-              <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>🎨 Couleurs véhicules</div>
-              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
-                Partagées pour tout le foyer — utilisées dans les graphiques, sessions et statistiques
-              </div>
-              <div style={{ display:'flex', gap:10 }}>
-                <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--r-sm)', border:'1.5px solid var(--border)' }}>
-                  <input type="color" value={mg4Color || '#4f8ef7'} onChange={e=>setMg4Color(e.target.value)}
-                    style={{ width:30, height:30, border:'none', borderRadius:6, padding:0, cursor:'pointer', background:'none' }} />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:600 }}>MG4</div>
-                    {mg4Color && <button onClick={()=>setMg4Color('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0 }}>Réinitialiser</button>}
-                  </div>
-                </div>
-                <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--r-sm)', border:'1.5px solid var(--border)' }}>
-                  <input type="color" value={xpengColor || '#7c5cfc'} onChange={e=>setXpengColor(e.target.value)}
-                    style={{ width:30, height:30, border:'none', borderRadius:6, padding:0, cursor:'pointer', background:'none' }} />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:600 }}>Xpeng G6</div>
-                    {xpengColor && <button onClick={()=>setXpengColor('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:0 }}>Réinitialiser</button>}
-                  </div>
-                </div>
-              </div>
-              <div style={{ fontSize:10, color:'var(--muted)', marginTop:8 }}>Sauvegardé avec le bouton "Enregistrer" en haut de page</div>
-            </div>
-
-            <div style={{ height:1, background:'var(--border)' }} />
-
-            <div>
-              <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>🔵 Couleur de mon profil</div>
-              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:10 }}>
-                Propre à ton compte — couleur du rond dans le menu profil
-              </div>
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--r-sm)', border:'1.5px solid var(--border)' }}>
-                <input type="color" value={profileColor || '#4f8ef7'} onChange={e=>saveProfileColor(e.target.value)}
-                  style={{ width:30, height:30, border:'none', borderRadius:6, padding:0, cursor:'pointer', background:'none' }} />
-                <div style={{ flex:1, fontSize:12, fontWeight:600 }}>{account.name}</div>
-                {colorSaving && <span style={{ fontSize:10, color:'var(--muted)' }}>…</span>}
-                {profileColor && !colorSaving && <button onClick={()=>saveProfileColor('')} style={{ fontSize:10, color:'var(--muted)', background:'none', border:'none', cursor:'pointer' }}>Réinitialiser</button>}
-              </div>
-            </div>
-
-          </div>
-        </div>
 
         {/* Import */}
         <div>
