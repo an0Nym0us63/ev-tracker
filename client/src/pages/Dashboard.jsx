@@ -349,15 +349,15 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
             {k.type === 'savings' ? (
               <>
                 <div style={{ fontSize:9, color:'var(--muted)', marginBottom:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{k.label}</div>
-                {k.savings > 0 && <div style={{ display:'flex', alignItems:'center', gap:3, marginBottom:2 }}>
+                {k.savings !== 0 && <div style={{ display:'flex', alignItems:'center', gap:3, marginBottom:2 }}>
                   <span style={{ fontSize:9 }}>🚗</span>
-                  <span className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--green)' }}>+{k.savings.toFixed(0)}€</span>
+                  <span className="mono" style={{ fontSize:12, fontWeight:700, color: k.savings >= 0 ? 'var(--green)' : 'var(--red)' }}>{k.savings >= 0 ? '+' : ''}{k.savings.toFixed(0)}€</span>
                 </div>}
                 {k.solarSavings > 0.05 && <div style={{ display:'flex', alignItems:'center', gap:3 }}>
                   <span style={{ fontSize:9 }}>☀️</span>
                   <span className="mono" style={{ fontSize:12, fontWeight:700, color:'var(--amber)' }}>{k.solarSavings.toFixed(1)}€</span>
                 </div>}
-                {k.savings <= 0 && k.solarSavings <= 0.05 && <div className="mono" style={{ fontSize:14, fontWeight:700, color:'var(--muted)' }}>—</div>}
+                {k.savings === 0 && k.solarSavings <= 0.05 && <div className="mono" style={{ fontSize:14, fontWeight:700, color:'var(--muted)' }}>—</div>}
               </>
             ) : k.type === 'streak' ? (
               <>
@@ -487,7 +487,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                   <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh} kWh</div>
                   <span className="mono" style={{ fontSize:12, fontWeight:700, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</span>
                   <div style={{ display:'flex', gap:3, flexWrap:'wrap', justifyContent:'flex-end', marginTop:2 }}>
-                    {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(34,197,94,0.12)', color:'var(--green)' }}>🚗 +{c.fuelSavings.toFixed(0)}€</span>}
+                    {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background: c.fuelSavings >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)' }}>🚗 {c.fuelSavings >= 0 ? '+' : ''}{c.fuelSavings.toFixed(0)}€</span>}
                     {c.solarSavings >= 0.01 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(251,191,36,0.12)', color:'var(--amber)' }}>☀️ {c.solarSavings.toFixed(2)}€</span>}
                   </div>
                 </div>

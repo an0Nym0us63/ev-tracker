@@ -152,7 +152,7 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
                         <div className="mono" style={{ fontSize:15, fontWeight:700 }}>{c.kwh} kWh</div>
                         <span className="mono" style={{ fontSize:13, fontWeight:700, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{(c.totalCost||0).toFixed(2)} €</span>
                         <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'flex-end', marginTop:2 }}>
-                          {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(34,197,94,0.12)', color:'var(--green)' }}>🚗 +{c.fuelSavings.toFixed(0)}€</span>}
+                          {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background: c.fuelSavings >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)' }}>🚗 {c.fuelSavings >= 0 ? '+' : ''}{c.fuelSavings.toFixed(0)}€</span>}
                           {c.solarSavings >= 0.01 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(251,191,36,0.12)', color:'var(--amber)' }}>☀️ {c.solarSavings.toFixed(2)}€</span>}
                         </div>
                       </div>

@@ -146,13 +146,13 @@ export default function Stats({ charges }) {
         </div>
 
         {/* Économies */}
-        {savings > 0 && (
-          <div style={{ margin:'8px 16px 0', background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:'var(--r-sm)', padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        {savings !== 0 && (
+          <div style={{ margin:'8px 16px 0', background: savings >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${savings >= 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`, borderRadius:'var(--r-sm)', padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <div>
               <div style={{ fontSize:12, color:'var(--muted)' }}>Économies vs thermique</div>
               <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>MG4 (206, 6L/100) · Xpeng (Cruze diesel, 7.5L/100)</div>
             </div>
-            <div className="mono" style={{ fontSize:22, fontWeight:700, color:'var(--green)' }}>+{savings.toFixed(0)} €</div>
+            <div className="mono" style={{ fontSize:22, fontWeight:700, color: savings >= 0 ? 'var(--green)' : 'var(--red)' }}>{savings >= 0 ? '+' : ''}{savings.toFixed(0)} €</div>
           </div>
         )}
 
@@ -213,18 +213,18 @@ export default function Stats({ charges }) {
           </div>
         </div>
 
-        {(totalSolar > 0 || totalFuel > 0) && (
+        {(totalSolar > 0 || totalFuel !== 0) && (
           <div style={{ padding:'12px 16px 0' }}>
             <SectionLabel>Économies réalisées</SectionLabel>
             <div className="card" style={{ padding:'16px' }}>
 
               {/* Summary pills */}
               <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
-                {totalFuel > 0 && (
-                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(34,197,94,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(34,197,94,0.2)' }}>
+                {totalFuel !== 0 && (
+                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background: totalFuel >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', borderRadius:'var(--r-sm)', border: `1px solid ${totalFuel >= 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
                     <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🚗 vs thermique</div>
-                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--green)' }}>+{totalFuel.toFixed(0)} €</div>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>soit {((totalFuel/(totalCostAll||1))*100).toFixed(0)}% du coût EV</div>
+                    <div className="mono" style={{ fontSize:18, fontWeight:700, color: totalFuel >= 0 ? 'var(--green)' : 'var(--red)' }}>{totalFuel >= 0 ? '+' : ''}{totalFuel.toFixed(0)} €</div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>soit {((Math.abs(totalFuel)/(totalCostAll||1))*100).toFixed(0)}% du coût EV</div>
                   </div>
                 )}
                 {totalSolar > 0.1 && (
@@ -237,23 +237,30 @@ export default function Stats({ charges }) {
               </div>
 
               {/* Bar: EV cost vs what thermal would have cost */}
-              {totalFuel > 0 && (() => {
-                const evPct   = Math.round(totalCostAll / equivalentFuel * 100)
-                const fuelPct = 100 - evPct
+              {totalFuel !== 0 && (() => {
+                const evCost = totalCostAll
+                const thermalEquivalent = evCost + totalFuel // can be lower than evCost if totalFuel < 0
+                const maxVal = Math.max(evCost, thermalEquivalent, 0.01)
+                const evPct = Math.round(evCost / maxVal * 100)
+                const thPct = Math.round(thermalEquivalent / maxVal * 100)
                 return (
                   <div>
                     <div style={{ fontSize:11, color:'var(--muted)', marginBottom:6 }}>Coût EV vs équivalent thermique</div>
-                    <div style={{ display:'flex', height:20, borderRadius:10, overflow:'hidden', gap:2 }}>
-                      <div style={{ width:`${evPct}%`, background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontSize:9, color:'white', fontWeight:700 }}>{totalCostAll.toFixed(0)}€</span>
+                    <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ fontSize:9, color:'var(--muted)', width:36, flexShrink:0 }}>EV</span>
+                        <div style={{ flex:1, height:14, borderRadius:7, background:'var(--surface2)', overflow:'hidden' }}>
+                          <div style={{ width:`${evPct}%`, height:'100%', background:'var(--accent)', borderRadius:7 }} />
+                        </div>
+                        <span className="mono" style={{ fontSize:10, fontWeight:700, color:'var(--accent)', width:48, textAlign:'right', flexShrink:0 }}>{evCost.toFixed(0)}€</span>
                       </div>
-                      <div style={{ flex:1, background:'rgba(239,68,68,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontSize:9, color:'var(--red)', fontWeight:700 }}>+{totalFuel.toFixed(0)}€ therm.</span>
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ fontSize:9, color:'var(--muted)', width:36, flexShrink:0 }}>Therm.</span>
+                        <div style={{ flex:1, height:14, borderRadius:7, background:'var(--surface2)', overflow:'hidden' }}>
+                          <div style={{ width:`${thPct}%`, height:'100%', background:'rgba(239,68,68,0.6)', borderRadius:7 }} />
+                        </div>
+                        <span className="mono" style={{ fontSize:10, fontWeight:700, color:'var(--red)', width:48, textAlign:'right', flexShrink:0 }}>{thermalEquivalent.toFixed(0)}€</span>
                       </div>
-                    </div>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-                      <span style={{ fontSize:10, color:'var(--muted)' }}>EV : {totalCostAll.toFixed(2)} €</span>
-                      <span style={{ fontSize:10, color:'var(--muted)' }}>Thermique : {equivalentFuel.toFixed(2)} €</span>
                     </div>
                   </div>
                 )
