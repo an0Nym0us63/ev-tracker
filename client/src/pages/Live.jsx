@@ -185,6 +185,7 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
   const [loading, setLoading] = useState(true)
   const intervalRef = useRef(null)
   const wasChargingRef = useRef(false)
+  const pollCountRef = useRef(0)
 
   // Carte de localisation (Domicile + Xpeng pour l'instant, MG4 suivra)
   const [leafletReady, setLeafletReady] = useState(false)
@@ -202,9 +203,14 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
 
       const nowCharging = !!(c?.available && c.charging)
       if (nowCharging) {
-        if (!wasChargingRef.current) {
-          // Nouvelle session (ou page ouverte en cours de charge) : on récupère
-          // l'historique complet depuis HA pour reconstruire le graphe entier.
+        const justStarted = !wasChargingRef.current
+        // On recharge l'historique complet depuis HA :
+        //  - quand la charge vient de démarrer (ou page ouverte en cours de charge)
+        //  - toutes les 12 itérations (~1 min) pour rester calé sur le début réel
+        //    de la session même si la page a été ouverte longtemps après le début.
+        pollCountRef.current = (pollCountRef.current || 0) + 1
+        const shouldRefreshHistory = justStarted || pollCountRef.current % 12 === 0
+        if (shouldRefreshHistory) {
           try {
             const hist = await apiGetSessionPower()
             if (hist?.available) {
@@ -212,12 +218,14 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
             } else {
               setPowerHistory([])
             }
-          } catch { setPowerHistory([]) }
+          } catch { /* garde les points locaux si HA échoue */ }
         } else if (c.powerW != null) {
-          // Session déjà en cours : on ajoute juste le point courant, pas de
-          // nouvel appel d'historique HA à chaque poll.
+          // Entre deux rechargements d'historique : on ajoute le point courant
+          // pour garder le graphe vivant en temps réel.
           setPowerHistory(prev => [...prev, { t: Date.now(), kw: c.powerW / 1000 }])
         }
+      } else {
+        pollCountRef.current = 0
       }
       wasChargingRef.current = nowCharging
     } catch (e) {
