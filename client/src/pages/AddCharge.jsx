@@ -212,6 +212,8 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
             <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>
               {editCharge.fuelPriceSource === 'auto'
                 ? 'Moyenne des stations à proximité au moment de la charge'
+                : editCharge.fuelPriceSource === 'historical_zip'
+                ? 'Moyenne historique des stations à proximité à la date de la charge (archive data.gouv.fr)'
                 : editCharge.fuelPriceSource === 'manual_old'
                 ? 'Tarif de secours (réglages) — session trop ancienne pour le prix temps réel'
                 : 'Tarif de secours (réglages) — aucune station trouvée à proximité'}

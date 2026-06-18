@@ -91,4 +91,3 @@ export async function apiGetLiveVehicle() { return req('GET', '/api/live/vehicle
 export async function apiGetLiveCharger() { return req('GET', '/api/live/charger') }
 export async function apiGetSessionPower() { return req('GET', '/api/live/session-power') }
 export async function apiWallboxRecomputeSolar() { return req('POST', '/api/wallbox/recompute-solar') }
-export async function apiRecomputeFuelSavings() { return req('POST', '/api/admin/recompute-fuel-savings') }

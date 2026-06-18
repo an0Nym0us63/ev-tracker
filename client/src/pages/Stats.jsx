@@ -69,6 +69,12 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
   const totalCostAll = filtered.reduce((s,c)=>s+(c.totalCost||0),0)
   const equivalentFuel = totalFuel + totalCostAll
 
+  // Prix carburant moyen utilisé (SP95/Gazole), selon le filtre actif
+  const sp95Prices   = filtered.filter(c => c.fuelTypeUsed === 'sp95'   && c.fuelPriceUsed != null).map(c => c.fuelPriceUsed)
+  const gazolePrices = filtered.filter(c => c.fuelTypeUsed === 'gazole' && c.fuelPriceUsed != null).map(c => c.fuelPriceUsed)
+  const avgSp95   = sp95Prices.length   ? sp95Prices.reduce((a,b)=>a+b,0)/sp95Prices.length     : null
+  const avgGazole = gazolePrices.length ? gazolePrices.reduce((a,b)=>a+b,0)/gazolePrices.length : null
+
   // Solar savings — includes Wallbox (now has solar_savings from one-time recompute)
   const totalSolar    = filtered.reduce((s,c)=>s+(c.solarSavings||0),0)
   const homeCharges   = filtered.filter(c=>c.locationId==='home')
@@ -334,7 +340,7 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
           </div>
         )}
 
-        {(totalSolar > 0 || totalFuel !== 0) && (
+        {(totalSolar > 0 || totalFuel !== 0 || avgSp95 != null || avgGazole != null) && (
           <div style={{ padding:'12px 16px 0' }}>
             <SectionLabel>Économies réalisées</SectionLabel>
             <div className="card" style={{ padding:'16px' }}>
@@ -354,6 +360,20 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
                     <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--amber)' }}>{totalSolar.toFixed(1)} €</div>
                     <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{solarPct}% charges maison avec PV</div>
                     <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>soit ~{(totalSolar/0.14).toFixed(0)} kWh solaire</div>
+                  </div>
+                )}
+                {avgSp95 != null && (
+                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(79,142,247,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(79,142,247,0.2)' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>⛽ SP95 moyen</div>
+                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--mg4)' }}>{avgSp95.toFixed(3)} €/L</div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{sp95Prices.length} session{sp95Prices.length>1?'s':''}</div>
+                  </div>
+                )}
+                {avgGazole != null && (
+                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(124,92,252,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(124,92,252,0.2)' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🛢️ Gazole moyen</div>
+                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--xpeng)' }}>{avgGazole.toFixed(3)} €/L</div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{gazolePrices.length} session{gazolePrices.length>1?'s':''}</div>
                   </div>
                 )}
               </div>

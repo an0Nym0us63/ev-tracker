@@ -3,7 +3,7 @@ import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode, apiSetProfileColor } from '../api.js'
 import { VERSION } from '../version.js'
 import ImportCSV from '../components/ImportCSV.jsx'
-import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck, apiWallboxRecomputeSolar, apiRecomputeFuelSavings } from '../api.js'
+import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck, apiWallboxRecomputeSolar } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
 import ColorPicker from '../components/ColorPicker.jsx'
 
@@ -52,8 +52,6 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   const [haMsg,       setHaMsg]       = useState(null)
   const [wallboxRecomputing, setWallboxRecomputing] = useState(false)
   const [wallboxMsg,         setWallboxMsg]         = useState(null)
-  const [fuelRecomputing,    setFuelRecomputing]    = useState(false)
-  const [fuelMsg,            setFuelMsg]            = useState(null)
   const [mg4Color,    setMg4Color]    = useState('')
   const [xpengColor,  setXpengColor]  = useState('')
   const [profileColor, setProfileColor] = useState(account.profileColor || '')
@@ -421,29 +419,6 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
               {wallboxRecomputing ? '…' : '☀️ Recalculer maintenant'}
             </button>
             {wallboxMsg && <div style={{ marginTop:8, padding:'8px 12px', borderRadius:'var(--r-sm)', background:wallboxMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:wallboxMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:12, fontWeight:600 }}>{wallboxMsg.text}</div>}
-          </div>
-
-          <div className="card" style={{ padding:'14px 16px', marginTop:10 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <div style={{ fontWeight:600, fontSize:13 }}>⛽ Recalcul gains carburant</div>
-              <span style={{ fontSize:9, fontWeight:700, color:'var(--red)', background:'rgba(239,68,68,0.1)', padding:'2px 6px', borderRadius:20 }}>TEMPORAIRE</span>
-            </div>
-            <div style={{ fontSize:11, color:'var(--muted)', marginTop:2, marginBottom:10 }}>
-              Recalcule fuel_savings pour toutes les sessions : prix temps réel (&lt;30j) ou moyenne historique via l'archive annuelle data.gouv.fr pour les plus anciennes. Peut prendre plusieurs minutes — outil à retirer une fois l'historique aligné.
-            </div>
-            <button onClick={async()=>{
-                if (!confirm("Recalculer le gain carburant pour TOUTES les sessions ? Ça peut prendre plusieurs minutes (téléchargement des archives annuelles).")) return
-                setFuelRecomputing(true); setFuelMsg(null)
-                try {
-                  const r = await apiRecomputeFuelSavings()
-                  setFuelMsg({ type:'ok', text:`✓ ${r.total} session(s) — ${r.auto} temps réel, ${r.historical} historique, ${r.manual} secours${r.errors?`, ${r.errors} erreur(s)`:''}` })
-                } catch(e) { setFuelMsg({ type:'err', text:'Erreur: '+e.message }) }
-                setFuelRecomputing(false)
-              }}
-              disabled={fuelRecomputing} style={{ width:'100%', padding:'10px', borderRadius:'var(--r-sm)', background:'rgba(239,68,68,0.1)', border:'1.5px solid var(--red)', color:'var(--red)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-              {fuelRecomputing ? '… (voir Logs pour la progression)' : '⛽ Recalculer maintenant'}
-            </button>
-            {fuelMsg && <div style={{ marginTop:8, padding:'8px 12px', borderRadius:'var(--r-sm)', background:fuelMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:fuelMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:12, fontWeight:600 }}>{fuelMsg.text}</div>}
           </div>
         </div>
 
