@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { VEHICLES } from '../utils.js'
 import { apiGetSettings, apiSaveSettings, apiGeocode, apiSetProfileColor } from '../api.js'
 import { VERSION } from '../version.js'
-import ImportCSV from '../components/ImportCSV.jsx'
-import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck, apiWallboxRecomputeSolar } from '../api.js'
+import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
 import ColorPicker from '../components/ColorPicker.jsx'
 
@@ -50,8 +49,6 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
   const [haEntityId,  setHaEntityId]  = useState('input_select.vehicule_branche')
   const [haChecking,  setHaChecking]  = useState(false)
   const [haMsg,       setHaMsg]       = useState(null)
-  const [wallboxRecomputing, setWallboxRecomputing] = useState(false)
-  const [wallboxMsg,         setWallboxMsg]         = useState(null)
   const [mg4Color,    setMg4Color]    = useState('')
   const [xpengColor,  setXpengColor]  = useState('')
   const [profileColor, setProfileColor] = useState(account.profileColor || '')
@@ -391,36 +388,6 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
         <button onClick={onLogout} style={{ background:'none', color:'var(--red)', fontSize:14, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'14px 16px', cursor:'pointer' }}>
           Se déconnecter
         </button>
-
-        {/* Import */}
-        <div>
-          <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:8 }}>Import</div>
-          <ImportCSV onDone={() => window.location.reload()} />
-        </div>
-
-        {/* Outils */}
-        <div>
-          <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:8 }}>Outils</div>
-          <div className="card" style={{ padding:'14px 16px' }}>
-            <div style={{ fontWeight:600, fontSize:13 }}>☀️ Recalcul solaire Wallbox</div>
-            <div style={{ fontSize:11, color:'var(--muted)', marginTop:2, marginBottom:10 }}>
-              Estime le gain solaire pour les charges Wallbox (sans données V2C) en comparant au tarif réseau de 0.12€/kWh
-            </div>
-            <button onClick={async()=>{
-                if (!confirm('Recalculer le gain solaire pour toutes les charges Wallbox ?')) return
-                setWallboxRecomputing(true); setWallboxMsg(null)
-                try {
-                  const r = await apiWallboxRecomputeSolar()
-                  setWallboxMsg({ type:'ok', text:`✓ ${r.total} charge(s) — ${r.updated} avec gain solaire détecté` })
-                } catch(e) { setWallboxMsg({ type:'err', text:'Erreur: '+e.message }) }
-                setWallboxRecomputing(false)
-              }}
-              disabled={wallboxRecomputing} style={{ width:'100%', padding:'10px', borderRadius:'var(--r-sm)', background:'rgba(251,191,36,0.1)', border:'1.5px solid var(--amber)', color:'var(--amber)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-              {wallboxRecomputing ? '…' : '☀️ Recalculer maintenant'}
-            </button>
-            {wallboxMsg && <div style={{ marginTop:8, padding:'8px 12px', borderRadius:'var(--r-sm)', background:wallboxMsg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)', color:wallboxMsg.type==='ok'?'var(--green)':'var(--red)', fontSize:12, fontWeight:600 }}>{wallboxMsg.text}</div>}
-          </div>
-        </div>
 
         <div style={{ textAlign:'center', paddingBottom:8, display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
           <AppLogo size={48} style={{ opacity:0.7 }} />
