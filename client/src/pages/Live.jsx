@@ -6,6 +6,22 @@ import { VEHICLES } from '../utils.js'
 
 const POLL_INTERVAL_MS = 5000
 
+const TILE_LAYERS = {
+  dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+}
+function loadLeaflet() {
+  return new Promise(resolve => {
+    if (window.L) { resolve(); return }
+    const link = document.createElement('link')
+    link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    document.head.appendChild(link)
+    const script = document.createElement('script')
+    script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.onload=resolve; document.head.appendChild(script)
+  })
+}
+
 const STATUS_MAP = {
   charging:             { label: 'En charge',           color: 'var(--green)' },
   connected:            { label: 'Branché, prêt',       color: 'var(--accent)' },
@@ -91,7 +107,7 @@ function StatRow({ label, value, unit, color, divider=true }) {
   )
 }
 
-export default function Live({ account, onLogout, theme, onToggleTheme, onNavigate }) {
+export default function Live({ account, settings, onLogout, theme, onToggleTheme, onNavigate }) {
   const [vehicleData, setVehicleData] = useState(null)
   const [chargerData, setChargerData] = useState(null)
   const [xpengStatus, setXpengStatus] = useState(null)
@@ -100,6 +116,13 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
   const [loading, setLoading] = useState(true)
   const intervalRef = useRef(null)
   const wasChargingRef = useRef(false)
+
+  // Carte de localisation (Domicile + Xpeng pour l'instant, MG4 suivra)
+  const [leafletReady, setLeafletReady] = useState(false)
+  const mapRef = useRef(null)
+  const mapInst = useRef(null)
+  const tileRef = useRef(null)
+  useEffect(() => { loadLeaflet().then(() => setLeafletReady(true)) }, [])
 
   const fetchLive = useCallback(async () => {
     try {
@@ -179,6 +202,39 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
   const maxObservedKw = powerHistory.length ? Math.max(...powerHistory.map(p=>p.kw)) : 0
   const gaugeMaxKw = Math.max(7.4, maxObservedKw, currentKw||0)
   const gaugeSublabel = vehicle ? vehicle.name : (chargerData?.plugged ? 'Véhicule branché' : null)
+
+  // Carte : Domicile (réglages) + Xpeng (Enode), MG4 suivra le même schéma
+  const mapStyle = theme === 'light' ? 'light' : 'dark'
+  const homeLat = settings?.homeLat, homeLng = settings?.homeLng
+  const xpengLat = xpengStatus?.lat, xpengLng = xpengStatus?.lng
+  const hasMapData = !!((homeLat && homeLng) || (xpengLat && xpengLng))
+
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || !hasMapData) return
+    if (!mapInst.current) {
+      mapInst.current = window.L.map(mapRef.current, { zoomControl:false, attributionControl:false }).setView([46.8,2.3], 6)
+    }
+    const map = mapInst.current
+    if (tileRef.current) map.removeLayer(tileRef.current)
+    tileRef.current = window.L.tileLayer(TILE_LAYERS[mapStyle]||TILE_LAYERS.dark, { maxZoom:19 }).addTo(map)
+
+    map.eachLayer(l => { if (l instanceof window.L.Marker) map.removeLayer(l) })
+    const bounds = []
+    if (homeLat && homeLng) {
+      const icon = window.L.divIcon({ html:`<div style="width:32px;height:32px;border-radius:50%;background:#22c55e;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🏠</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16] })
+      window.L.marker([homeLat, homeLng], { icon }).addTo(map).bindPopup('<b>Domicile</b>')
+      bounds.push([homeLat, homeLng])
+    }
+    if (xpengLat && xpengLng) {
+      const icon = window.L.divIcon({ html:`<div style="width:32px;height:32px;border-radius:50%;background:#7c5cfc;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🚙</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16] })
+      window.L.marker([xpengLat, xpengLng], { icon }).addTo(map).bindPopup('<b>Xpeng G6</b>')
+      bounds.push([xpengLat, xpengLng])
+    }
+    if (bounds.length === 1) map.setView(bounds[0], 15)
+    else if (bounds.length > 1) map.fitBounds(bounds, { padding:[30,30], maxZoom:15 })
+  }, [leafletReady, mapStyle, homeLat, homeLng, xpengLat, xpengLng, hasMapData])
+
+  useEffect(() => () => { if (mapInst.current) { mapInst.current.remove(); mapInst.current = null } }, [])
 
   return (
     <div className="page fade-up" style={{ paddingBottom:100, minHeight:'100dvh' }}>
@@ -301,6 +357,22 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
                 <StatRow label="📍 Autonomie" value={xpengStatus.rangeKm ?? '—'} unit="km" />
                 <StatRow label="🔌 Branché" value={xpengStatus.pluggedIn ? 'Oui' : 'Non'} />
                 <StatRow label="⚙️ État" value={fmtPowerState(xpengStatus.powerDeliveryState)} divider={false} />
+              </div>
+            )}
+
+            {/* Carte de localisation — Domicile + Xpeng pour l'instant, MG4 suivra */}
+            {hasMapData && (
+              <div className="card" style={{ padding:'14px 14px 12px' }}>
+                <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
+                  Localisation
+                </div>
+                <div style={{ position:'relative', height:180, borderRadius:'var(--r-sm)', overflow:'hidden', border:'1px solid var(--border)' }}>
+                  {!leafletReady ? (
+                    <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface2)', color:'var(--muted)', fontSize:12 }}>Chargement…</div>
+                  ) : (
+                    <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+                  )}
+                </div>
               </div>
             )}
 

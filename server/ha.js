@@ -272,6 +272,10 @@ async function getVehicleStatus(vehicleId) {
 
     const raw = (key) => { const ent = map[ids[key]]; return ent ? ent.state : null }
     const num = (key) => { const n = parseFloat(raw(key)); return Number.isFinite(n) ? n : null }
+    // device_tracker: state = zone ("home"/"not_home"/...), GPS dans attributes
+    const locEnt = map[ids.location]
+    const lat = locEnt?.attributes?.latitude ?? null
+    const lng = locEnt?.attributes?.longitude ?? null
 
     return {
       available:          true,
@@ -279,6 +283,8 @@ async function getVehicleStatus(vehicleId) {
       pluggedIn:           raw('pluggedIn') === 'on',
       powerDeliveryState:  raw('powerState'),
       rangeKm:             num('range'),
+      lat, lng,
+      locationZone:        raw('location'),
     }
   } catch(e) {
     return { available: false, reason: `Erreur HA: ${e.message}` }
