@@ -230,7 +230,19 @@ async function getSessionPowerHistory() {
       return { available: false, reason: 'Aucune charge en cours' }
     }
 
-    const sessionStart = chargingEnt.last_changed
+    // Calcule le vrai début de session depuis le sensor de durée V2C.
+    // last_changed du binary_sensor n'est pas fiable : il se réinitialise si HA
+    // redémarre ou si l'entité connaît une micro-coupure, ce qui fait croire que
+    // la session a démarré récemment alors qu'elle tourne depuis des heures.
+    let sessionStart
+    const durationEnt = map[CHARGER_ENTITY_IDS.duration]
+    const durationSec = durationEnt ? parseFloat(durationEnt.state) : NaN
+    if (Number.isFinite(durationSec) && durationSec > 0) {
+      sessionStart = new Date(Date.now() - durationSec * 1000).toISOString()
+    } else {
+      // Fallback : last_changed du sensor (meilleur que celui du binary_sensor)
+      sessionStart = chargingEnt.last_changed
+    }
     const history = await getEntityHistory(s.ha_url, s.ha_token, CHARGER_ENTITY_IDS.powerW, sessionStart, new Date().toISOString())
     const points = history
       .map(e => ({ t: e.last_changed, w: parseFloat(e.state) }))
