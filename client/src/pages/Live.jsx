@@ -417,7 +417,7 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
                         labelFormatter={(t)=> new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
                         contentStyle={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }}
                       />
-                      <Area type="monotone" dataKey="kw" stroke={st.color} strokeWidth={2} fill="url(#livePowerGrad)" isAnimationActive={false} />
+                      <Area type="stepAfter" dataKey="kw" stroke={st.color} strokeWidth={2} fill="url(#livePowerGrad)" isAnimationActive={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
