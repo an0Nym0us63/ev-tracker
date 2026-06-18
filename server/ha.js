@@ -234,13 +234,26 @@ async function getSessionPowerHistory() {
     // last_changed du binary_sensor n'est pas fiable : il se réinitialise si HA
     // redémarre ou si l'entité connaît une micro-coupure, ce qui fait croire que
     // la session a démarré récemment alors qu'elle tourne depuis des heures.
+    // Le sensor durée peut retourner soit un nombre de secondes, soit "HH:MM:SS".
     let sessionStart
     const durationEnt = map[CHARGER_ENTITY_IDS.duration]
-    const durationSec = durationEnt ? parseFloat(durationEnt.state) : NaN
+    let durationSec = NaN
+    if (durationEnt) {
+      const raw = durationEnt.state
+      if (/^\d+(\.\d+)?$/.test(raw)) {
+        // Valeur numérique brute (secondes)
+        durationSec = parseFloat(raw)
+      } else if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(raw)) {
+        // Format "H:MM:SS" ou "H:MM"
+        const parts = raw.split(':').map(Number)
+        if (parts.length === 3) durationSec = parts[0]*3600 + parts[1]*60 + parts[2]
+        else if (parts.length === 2) durationSec = parts[0]*3600 + parts[1]*60
+      }
+    }
     if (Number.isFinite(durationSec) && durationSec > 0) {
       sessionStart = new Date(Date.now() - durationSec * 1000).toISOString()
     } else {
-      // Fallback : last_changed du sensor (meilleur que celui du binary_sensor)
+      // Fallback : last_changed du binary_sensor
       sessionStart = chargingEnt.last_changed
     }
     const history = await getEntityHistory(s.ha_url, s.ha_token, CHARGER_ENTITY_IDS.powerW, sessionStart, new Date().toISOString())
