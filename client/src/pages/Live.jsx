@@ -115,14 +115,24 @@ function ChargeBadge({ charging, pluggedIn }) {
 }
 
 // Barre de batterie — pourcentage écrit dans (ou juste après, si trop étroit) la barre.
-function BatteryBar({ pct, color }) {
+function BatteryBar({ pct, color, charging, pluggedIn }) {
   if (pct == null) return <div style={{ fontSize:11.5, color:'var(--muted)' }}>Batterie inconnue</div>
   const clamped = Math.min(Math.max(pct, 0), 100)
   const textInside = clamped > 16
   return (
     <div style={{ position:'relative', height:26, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
-      <div style={{ height:'100%', width:`${clamped}%`, background:color, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box' }}>
-        {textInside && <span className="mono" style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
+      <div style={{ position:'relative', height:'100%', width:`${clamped}%`, background:color, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box', overflow:'hidden' }}>
+        {/* En charge : hachures qui défilent, façon batterie qui se remplit */}
+        {charging && (
+          <div style={{ position:'absolute', inset:0,
+            background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 6px, transparent 6px, transparent 16px)',
+            backgroundSize:'32px 100%', animation:'batteryChargeStripes 0.9s linear infinite' }} />
+        )}
+        {/* Branché sans charger : halo qui respire doucement */}
+        {pluggedIn && !charging && (
+          <div style={{ position:'absolute', inset:0, background:'#fff', animation:'batteryPlugGlow 2.4s ease-in-out infinite' }} />
+        )}
+        {textInside && <span className="mono" style={{ position:'relative', fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
       </div>
       {!textInside && (
         <span className="mono" style={{ position:'absolute', left:8, top:0, height:'100%', display:'flex', alignItems:'center', fontSize:12, fontWeight:700, color:'var(--text)' }}>{clamped}%</span>
@@ -145,7 +155,7 @@ function VehicleCard({ vehicle, status, charging }) {
       </div>
       <div style={{ display:'flex', alignItems:'stretch', gap:8 }}>
         <div style={{ flex:1, minWidth:0 }}>
-          <BatteryBar pct={status.batteryLevel} color={vehicle.color} />
+          <BatteryBar pct={status.batteryLevel} color={vehicle.color} charging={charging} pluggedIn={status.pluggedIn} />
         </div>
         {status.rangeKm != null && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'0 10px', borderRadius:8, background:'var(--surface2)', flexShrink:0 }}>
