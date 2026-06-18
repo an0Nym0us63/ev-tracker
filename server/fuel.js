@@ -66,7 +66,7 @@ const FUEL_TYPE_BY_VEHICLE = { mg4: 'sp95', xpeng: 'gazole' }
 // export ZIP annuel brut existe, pas exploitable à la volée). Au-delà de ce
 // délai, utiliser le prix du jour pour une session ancienne serait trompeur :
 // on bascule alors proprement sur le tarif de secours plutôt que de mentir.
-const MAX_RECENT_DAYS = 3
+const MAX_RECENT_DAYS = 30
 
 function isRecentEnough(dateStr) {
   if (!dateStr) return true

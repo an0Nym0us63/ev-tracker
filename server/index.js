@@ -8,6 +8,7 @@ const { signToken, requireAuth } = require('./auth')
 const { syncV2C, syncV2CHistory, addLog, checkHA30Days } = require('./v2c')
 const { getLiveVehicle, getLiveCharger, getSessionPowerHistory } = require('./ha')
 const { resolveFuelPrice } = require('./fuel')
+const { getYearIndex, getHistoricalAverage } = require('./fuel-history')
 
 function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
   const config = {
@@ -545,6 +546,65 @@ app.post('/api/wallbox/recompute-solar', requireAuth, (req, res) => {
 
   addLog(req.user.id, 'info', `=== Recalcul solaire Wallbox terminé: ${updated} mise(s) à jour, ${skipped} sans gain ===`)
   res.json({ total: charges.length, updated, skipped })
+})
+
+// ─── TEMPORAIRE — One-shot: recalcul de tous les gains carburant ─────────────
+// Recalcule fuel_savings/fuel_price_used pour TOUTES les sessions existantes.
+// Sessions récentes (<30j) → prix temps réel data.gouv.fr (comme à la création).
+// Sessions plus anciennes → moyenne historique extraite de l'archive annuelle
+// officielle (donnees.roulez-eco.fr/opendata/annee/{année}), qui contient
+// l'historique des prix de toutes les journées de l'année. Une fois ce
+// rattrapage fait, chaque session future est calculée au moment présent
+// (flux normal) — cet endpoint et fuel-history.js peuvent être retirés après usage.
+async function recomputeAllFuelSavings(accountId) {
+  const settings = db.prepare('SELECT fuel_price, home_lat, home_lng FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  const charges = db.prepare('SELECT * FROM charges').all()
+  addLog(accountId, 'info', `=== Recalcul carburant: ${charges.length} session(s) à traiter ===`)
+
+  let auto = 0, historical = 0, manual = 0, errors = 0
+
+  for (const c of charges) {
+    try {
+      const lat = c.lat || (c.location_id === 'home' ? settings?.home_lat : null)
+      const lng = c.lng || (c.location_id === 'home' ? settings?.home_lng : null)
+
+      let fuelInfo = await resolveFuelPrice(c.vehicle_id, lat, lng, settings?.fuel_price, c.date)
+
+      // Session trop ancienne pour le prix temps réel mais on a des coordonnées
+      // → on tente l'archive annuelle pour un prix historiquement cohérent.
+      if (fuelInfo.source === 'manual_old' && lat && lng) {
+        try {
+          const year = parseInt(c.date.slice(0, 4))
+          const stations = await getYearIndex(year)
+          const hist = await getHistoricalAverage(stations, lat, lng, c.date, fuelInfo.fuelType)
+          if (hist) fuelInfo = { price: hist.price, fuelType: fuelInfo.fuelType, source: 'historical_zip' }
+        } catch(e) {
+          addLog(accountId, 'warn', `Archive annuelle indisponible pour id=${c.id} (${c.date}): ${e.message}`)
+        }
+      }
+
+      const savings = calcSavings(c.vehicle_id, c.kwh, c.total_cost, fuelInfo.price)
+      db.prepare('UPDATE charges SET fuel_savings=?, fuel_price_used=?, fuel_type_used=?, fuel_price_source=? WHERE id=?')
+        .run(savings, fuelInfo.price, fuelInfo.fuelType, fuelInfo.source, c.id)
+
+      if (fuelInfo.source === 'auto') auto++
+      else if (fuelInfo.source === 'historical_zip') historical++
+      else manual++
+    } catch(e) {
+      errors++
+      addLog(accountId, 'error', `Erreur recalcul carburant id=${c.id}: ${e.message}`)
+    }
+  }
+
+  addLog(accountId, 'info', `=== Recalcul carburant terminé: ${auto} temps réel, ${historical} historique (archive), ${manual} tarif de secours, ${errors} erreur(s) ===`)
+  return { total: charges.length, auto, historical, manual, errors }
+}
+
+app.post('/api/admin/recompute-fuel-savings', requireAuth, async (req, res) => {
+  try {
+    const result = await recomputeAllFuelSavings(req.user.id)
+    res.json(result)
+  } catch(e) { res.status(500).json({ error: e.message }) }
 })
 
 app.post('/api/ha/check', requireAuth, async (req, res) => {
