@@ -259,8 +259,10 @@ app.post('/api/charges', requireAuth, async (req, res) => {
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   // Compute fuel savings — prix SP95/Gazole moyen des stations à proximité (data.gouv.fr) si GPS dispo
-  const settings201 = db.prepare('SELECT fuel_price FROM settings ORDER BY account_id ASC LIMIT 1').get()
-  const fuelInfo201 = await resolveFuelPrice(c.vehicleId, c.lat, c.lng, settings201?.fuel_price)
+  const settings201 = db.prepare('SELECT fuel_price, home_lat, home_lng FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  const lat201 = c.lat || (c.locationId === 'home' ? settings201?.home_lat : null)
+  const lng201 = c.lng || (c.locationId === 'home' ? settings201?.home_lng : null)
+  const fuelInfo201 = await resolveFuelPrice(c.vehicleId, lat201, lng201, settings201?.fuel_price, c.date)
   const savings201 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelInfo201.price)
   if (savings201 !== null) {
     db.prepare('UPDATE charges SET fuel_savings=?, fuel_price_used=?, fuel_type_used=?, fuel_price_source=? WHERE id=?')
@@ -280,8 +282,10 @@ app.put('/api/charges/:id', requireAuth, async (req, res) => {
   `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null, req.params.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
-  const settings204 = db.prepare('SELECT fuel_price FROM settings ORDER BY account_id ASC LIMIT 1').get()
-  const fuelInfo204 = await resolveFuelPrice(c.vehicleId, c.lat, c.lng, settings204?.fuel_price)
+  const settings204 = db.prepare('SELECT fuel_price, home_lat, home_lng FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  const lat204 = c.lat || (c.locationId === 'home' ? settings204?.home_lat : null)
+  const lng204 = c.lng || (c.locationId === 'home' ? settings204?.home_lng : null)
+  const fuelInfo204 = await resolveFuelPrice(c.vehicleId, lat204, lng204, settings204?.fuel_price, c.date)
   const savings204 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelInfo204.price)
   if (savings204 !== null) {
     db.prepare('UPDATE charges SET fuel_savings=?, fuel_price_used=?, fuel_type_used=?, fuel_price_source=? WHERE id=?')

@@ -280,7 +280,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontSize:20 }}>⛽</span>
               <div style={{ fontSize:12, color:'var(--text-secondary)', lineHeight:1.5 }}>
-                À chaque session, le prix SP95 (MG4) ou Gazole (Xpeng) est calculé automatiquement à partir de la moyenne des stations à proximité du lieu de charge (<span className="mono">data.gouv.fr</span>). La valeur utilisée est figée sur la session et visible dans sa fiche.
+                À chaque session, le prix SP95 (MG4) ou Gazole (Xpeng) est calculé automatiquement à partir de la moyenne des stations à proximité du lieu de charge (<span className="mono">data.gouv.fr</span>). La valeur utilisée est figée sur la session et visible dans sa fiche. data.gouv.fr ne fournit que le prix du moment : pour une session ancienne (plus de quelques jours), le tarif de secours est utilisé à la place pour éviter d'appliquer le prix d'aujourd'hui à une charge passée.
               </div>
             </div>
             <Field label="Tarif de secours (€/L)" hint="Utilisé seulement si aucune station n'est trouvée à proximité, ou sans GPS">

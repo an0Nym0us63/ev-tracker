@@ -61,12 +61,29 @@ async function getFuelPricesNear(lat, lng) {
 // du segment thermique correspondant.
 const FUEL_TYPE_BY_VEHICLE = { mg4: 'sp95', xpeng: 'gazole' }
 
+// L'API data.gouv.fr n'expose que le prix ACTUEL (flux instantané, ~10 min).
+// Il n'existe pas d'historique requêtable par date+position en direct (seul un
+// export ZIP annuel brut existe, pas exploitable à la volée). Au-delà de ce
+// délai, utiliser le prix du jour pour une session ancienne serait trompeur :
+// on bascule alors proprement sur le tarif de secours plutôt que de mentir.
+const MAX_RECENT_DAYS = 3
+
+function isRecentEnough(dateStr) {
+  if (!dateStr) return true
+  const d = new Date(`${dateStr}T12:00:00`)
+  if (Number.isNaN(d.getTime())) return true
+  const diffMs = Date.now() - d.getTime()
+  return diffMs <= MAX_RECENT_DAYS * 86400000 && diffMs >= -86400000
+}
+
 // Détermine le prix carburant à utiliser pour le calcul du gain thermique d'une
 // session: moyenne des stations data.gouv.fr autour du point de charge si on a
-// des coordonnées GPS, sinon le prix de secours configuré dans les réglages.
-async function resolveFuelPrice(vehicleId, lat, lng, fallbackPrice) {
+// des coordonnées GPS ET que la session est récente, sinon le prix de secours
+// configuré dans les réglages.
+async function resolveFuelPrice(vehicleId, lat, lng, fallbackPrice, dateStr) {
   const fuelType = FUEL_TYPE_BY_VEHICLE[vehicleId] || 'sp95'
-  if (lat && lng) {
+  const recent = isRecentEnough(dateStr)
+  if (lat && lng && recent) {
     try {
       const r = await getFuelPricesNear(lat, lng)
       if (r.available) {
@@ -77,7 +94,7 @@ async function resolveFuelPrice(vehicleId, lat, lng, fallbackPrice) {
       // tout échec retombe sur le prix de secours ci-dessous
     }
   }
-  return { price: fallbackPrice || 1.85, fuelType, source: 'manual' }
+  return { price: fallbackPrice || 1.85, fuelType, source: recent ? 'manual' : 'manual_old' }
 }
 
 module.exports = { getFuelPricesNear, resolveFuelPrice, FUEL_TYPE_BY_VEHICLE }

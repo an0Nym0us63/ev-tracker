@@ -148,7 +148,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
       // Enrich manual charge with V2C data — le véhicule de la charge manuelle est
       // déjà connu, on calcule donc le prix carburant dynamique avec ce véhicule.
       const manualRow = db.prepare('SELECT vehicle_id FROM charges WHERE id=?').get(manual.id)
-      const fuelInfo = await resolveFuelPrice(manualRow?.vehicle_id, homeLat, homeLng, fuelPrice)
+      const fuelInfo = await resolveFuelPrice(manualRow?.vehicle_id, homeLat, homeLng, fuelPrice, row.date)
       row.fuel_savings = calcSavings(manualRow?.vehicle_id, s.energy, row.total_cost, fuelInfo.price)
       db.prepare(`
         UPDATE charges SET
@@ -171,7 +171,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     const haResult = await detectVehicleFromHA(accountId, s.startChargeDate, s.endChargeDate)
     if (haResult.vehicleId) {
       row.vehicle_id = haResult.vehicleId
-      const fuelInfo = await resolveFuelPrice(haResult.vehicleId, homeLat, homeLng, fuelPrice)
+      const fuelInfo = await resolveFuelPrice(haResult.vehicleId, homeLat, homeLng, fuelPrice, row.date)
       row.fuel_savings = calcSavings(haResult.vehicleId, s.energy, row.total_cost, fuelInfo.price)
       row.fuel_price_used = fuelInfo.price
       row.fuel_type_used = fuelInfo.fuelType
