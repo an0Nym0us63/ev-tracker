@@ -291,7 +291,7 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
 
         {/* Intégrations */}
         <div>
-          <div className="section-label">Intégrations à venir</div>
+          <div className="section-label">Intégrations</div>
           <div className="card" style={{ padding:0 }}>
             {[].map((item,i,arr) => (
               <div key={item.name} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderBottom:'1px solid var(--border)', opacity:0.6 }}>
