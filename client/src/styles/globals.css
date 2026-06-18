@@ -101,6 +101,5 @@ button { cursor: pointer; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes livePulse { 0%, 100% { box-shadow: 0 0 0 0 var(--pulse-color, rgba(34,197,94,0.5)); } 50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); } }
 @keyframes batteryChargeStripes { from { background-position: 0 0; } to { background-position: 32px 0; } }
-@keyframes batteryPlugGlow { 0%, 100% { opacity: 0; } 50% { opacity: 0.3; } }
 .fade-up { animation: fadeUp 0.25s ease both; }
 .slide-in { animation: slideIn 0.2s ease both; }

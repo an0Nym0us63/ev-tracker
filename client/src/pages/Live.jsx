@@ -119,24 +119,29 @@ function BatteryBar({ pct, color, charging, pluggedIn }) {
   if (pct == null) return <div style={{ fontSize:11.5, color:'var(--muted)' }}>Batterie inconnue</div>
   const clamped = Math.min(Math.max(pct, 0), 100)
   const textInside = clamped > 16
+  // L'anneau pulsé doit être sur un wrapper SANS overflow:hidden, sinon le
+  // box-shadow est rogné par le conteneur qui sert à arrondir la barre interne.
+  const ringStyle = charging
+    ? { animation:'livePulse 1.4s ease-in-out infinite', '--pulse-color':'rgba(34,197,94,0.55)' }
+    : pluggedIn
+      ? { animation:'livePulse 2.2s ease-in-out infinite', '--pulse-color':'rgba(245,158,11,0.5)' }
+      : {}
   return (
-    <div style={{ position:'relative', height:26, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
-      <div style={{ position:'relative', height:'100%', width:`${clamped}%`, background:color, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box', overflow:'hidden' }}>
-        {/* En charge : hachures qui défilent, façon batterie qui se remplit */}
-        {charging && (
-          <div style={{ position:'absolute', inset:0,
-            background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 6px, transparent 6px, transparent 16px)',
-            backgroundSize:'32px 100%', animation:'batteryChargeStripes 0.9s linear infinite' }} />
+    <div style={{ position:'relative', borderRadius:8, ...ringStyle }}>
+      <div style={{ position:'relative', height:26, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
+        <div style={{ position:'relative', height:'100%', width:`${clamped}%`, background:color, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box', overflow:'hidden' }}>
+          {/* En charge : hachures qui défilent, façon batterie qui se remplit */}
+          {charging && (
+            <div style={{ position:'absolute', inset:0,
+              background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.35) 0px, rgba(255,255,255,0.35) 6px, transparent 6px, transparent 16px)',
+              backgroundSize:'32px 100%', animation:'batteryChargeStripes 0.8s linear infinite' }} />
+          )}
+          {textInside && <span className="mono" style={{ position:'relative', fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
+        </div>
+        {!textInside && (
+          <span className="mono" style={{ position:'absolute', left:8, top:0, height:'100%', display:'flex', alignItems:'center', fontSize:12, fontWeight:700, color:'var(--text)' }}>{clamped}%</span>
         )}
-        {/* Branché sans charger : halo qui respire doucement */}
-        {pluggedIn && !charging && (
-          <div style={{ position:'absolute', inset:0, background:'#fff', animation:'batteryPlugGlow 2.4s ease-in-out infinite' }} />
-        )}
-        {textInside && <span className="mono" style={{ position:'relative', fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
       </div>
-      {!textInside && (
-        <span className="mono" style={{ position:'absolute', left:8, top:0, height:'100%', display:'flex', alignItems:'center', fontSize:12, fontWeight:700, color:'var(--text)' }}>{clamped}%</span>
-      )}
     </div>
   )
 }
