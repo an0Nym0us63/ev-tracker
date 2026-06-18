@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts'
-import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogram, VEHICLES, formatCost } from '../utils.js'
+import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogramSplit, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
@@ -60,7 +60,7 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
   const monthlyAvg = useMemo(() => getMonthlyAvgByVehicle(charges), [charges])
   // New: weekday distribution, power histogram (respect active period filter)
   const weekdayData = useMemo(() => getWeekdayDistribution(filtered), [filtered])
-  const powerHisto   = useMemo(() => getPowerHistogram(filtered), [filtered])
+  const powerHisto   = useMemo(() => getPowerHistogramSplit(filtered), [filtered])
   const providers  = useMemo(() => getProviderStats(filtered), [filtered])
   const cards      = useMemo(() => getCardStats(filtered), [filtered])
 
@@ -576,27 +576,45 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
           </div>
         )}
 
-        {/* Power histogram */}
-        {powerHisto.length > 0 && (
+        {/* Power histogram — séparé Maison (kW AC) / Externe (kW DC), échelles très différentes */}
+        {(powerHisto.home.length > 0 || powerHisto.ext.length > 0) && (
           <div style={{ padding:'12px 16px 0' }}>
             <SectionLabel>Répartition par puissance</SectionLabel>
-            <div className="card" style={{ padding:'14px 16px' }}>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={powerHisto}>
-                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:10 }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v)=>`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
-                  {habitsBreakdown === 'none' && <Bar dataKey="count" radius={[4,4,0,0]} fill="var(--xpeng)" />}
-                  {habitsBreakdown === 'location' && <>
-                    <Bar dataKey="homeCount" name="Maison" stackId="a" fill="var(--green)" radius={[0,0,0,0]} />
-                    <Bar dataKey="extCount" name="Externe" stackId="a" fill="var(--amber)" radius={[4,4,0,0]} />
-                  </>}
-                  {habitsBreakdown === 'vehicle' && <>
-                    <Bar dataKey="mg4Count" name="MG4" stackId="a" fill="var(--mg4)" radius={[0,0,0,0]} />
-                    <Bar dataKey="xpengCount" name="Xpeng G6" stackId="a" fill="var(--xpeng)" radius={[4,4,0,0]} />
-                  </>}
-                </BarChart>
-              </ResponsiveContainer>
-              <div style={{ fontSize:9, color:'var(--muted)', textAlign:'center', marginTop:4 }}>nombre de sessions par tranche de puissance (kW)</div>
+            <div style={{ display:'flex', gap:10 }}>
+              {powerHisto.home.length > 0 && (
+                <div className="card" style={{ padding:'14px 16px', flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:10, color:'var(--green)', fontWeight:600, marginBottom:6 }}>🏠 Maison</div>
+                  <ResponsiveContainer width="100%" height={110}>
+                    <BarChart data={powerHisto.home}>
+                      <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} />
+                      <Tooltip formatter={(v)=>`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                      {habitsBreakdown !== 'vehicle' && <Bar dataKey="count" radius={[4,4,0,0]} fill="var(--green)" />}
+                      {habitsBreakdown === 'vehicle' && <>
+                        <Bar dataKey="mg4Count" name="MG4" stackId="a" fill="var(--mg4)" radius={[0,0,0,0]} />
+                        <Bar dataKey="xpengCount" name="Xpeng G6" stackId="a" fill="var(--xpeng)" radius={[4,4,0,0]} />
+                      </>}
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div style={{ fontSize:8, color:'var(--muted)', textAlign:'center', marginTop:4 }}>kW</div>
+                </div>
+              )}
+              {powerHisto.ext.length > 0 && (
+                <div className="card" style={{ padding:'14px 16px', flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:10, color:'var(--amber)', fontWeight:600, marginBottom:6 }}>⚡ Externe</div>
+                  <ResponsiveContainer width="100%" height={110}>
+                    <BarChart data={powerHisto.ext}>
+                      <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} />
+                      <Tooltip formatter={(v)=>`${v} session(s)`} contentStyle={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }} />
+                      {habitsBreakdown !== 'vehicle' && <Bar dataKey="count" radius={[4,4,0,0]} fill="var(--amber)" />}
+                      {habitsBreakdown === 'vehicle' && <>
+                        <Bar dataKey="mg4Count" name="MG4" stackId="a" fill="var(--mg4)" radius={[0,0,0,0]} />
+                        <Bar dataKey="xpengCount" name="Xpeng G6" stackId="a" fill="var(--xpeng)" radius={[4,4,0,0]} />
+                      </>}
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div style={{ fontSize:8, color:'var(--muted)', textAlign:'center', marginTop:4 }}>kW</div>
+                </div>
+              )}
             </div>
           </div>
         )}

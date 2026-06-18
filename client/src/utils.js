@@ -193,27 +193,30 @@ export function getWeekdayDistribution(charges) {
 }
 
 // ─── Power distribution histogram (kW buckets), split by location & vehicle ────
-export function getPowerHistogram(charges) {
-  const buckets = [
-    { label:'<3.7', min:0,    max:3.7,  count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
-    { label:'3.7-7', min:3.7, max:7,    count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
-    { label:'7-11',  min:7,   max:11,   count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
-    { label:'11-22', min:11,  max:22,   count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
-    { label:'22-50', min:22,  max:50,   count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
-    { label:'50+',   min:50,  max:Infinity, count:0, homeCount:0, extCount:0, mg4Count:0, xpengCount:0 },
+export function getPowerHistogramSplit(charges) {
+  const homeBuckets = [
+    { label:'<2',   min:0, max:2,        count:0, mg4Count:0, xpengCount:0 },
+    { label:'2-4',  min:2, max:4,        count:0, mg4Count:0, xpengCount:0 },
+    { label:'4-6',  min:4, max:6,        count:0, mg4Count:0, xpengCount:0 },
+    { label:'>6',   min:6, max:Infinity, count:0, mg4Count:0, xpengCount:0 },
+  ]
+  const extBuckets = [
+    { label:'<100',     min:0,   max:100,      count:0, mg4Count:0, xpengCount:0 },
+    { label:'100-150',  min:100, max:150,      count:0, mg4Count:0, xpengCount:0 },
+    { label:'150-200',  min:150, max:200,      count:0, mg4Count:0, xpengCount:0 },
+    { label:'>200',     min:200, max:Infinity, count:0, mg4Count:0, xpengCount:0 },
   ]
   charges.forEach(c => {
     if (!c.durationMin || c.durationMin <= 0) return
     const kw = c.kwh / (c.durationMin/60)
+    const buckets = c.locationId === 'home' ? homeBuckets : extBuckets
     const b = buckets.find(b => kw >= b.min && kw < b.max)
     if (!b) return
     b.count += 1
-    if (c.locationId === 'home') b.homeCount += 1
-    else b.extCount += 1
     if (c.vehicleId === 'mg4') b.mg4Count += 1
     else if (c.vehicleId === 'xpeng') b.xpengCount += 1
   })
-  return buckets.filter(b => b.count > 0)
+  return { home: homeBuckets.filter(b=>b.count>0), ext: extBuckets.filter(b=>b.count>0) }
 }
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
