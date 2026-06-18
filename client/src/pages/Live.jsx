@@ -262,8 +262,7 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
                 <StatRow label="Énergie session" value={chargerData.energyKwh != null ? chargerData.energyKwh.toFixed(2) : '—'} unit="kWh" color="var(--green)" />
                 <StatRow label="Durée session" value={chargerData.duration || '—'} />
                 <StatRow label="Intensité" value={chargerData.currentA ?? '—'} unit="A" />
-                <StatRow label="🏠 Puissance maison" value={fmtKw(chargerData.homePowerW)} unit="kW" />
-                <StatRow label="☀️ Puissance solaire" value={fmtKw(chargerData.solarPowerW)} unit="kW" color="var(--amber)" divider={false} />
+                <StatRow label="🏠 Puissance maison" value={fmtKw(chargerData.homePowerW)} unit="kW" divider={false} />
               </div>
             )}
 
