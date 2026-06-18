@@ -262,7 +262,7 @@ const VEHICLE_ENTITY_IDS = {
     charging:   'binary_sensor.lsjwh4098pn226047_battery_charging',
     range:      'sensor.lsjwh4098pn226047_range',
     location:   'device_tracker.lsjwh4098pn226047_vehicle_position',
-    // refresh : à confirmer (service HA "force" plutôt qu'un bouton — voir refreshVehicleData)
+    refreshSelect: { entityId: 'select.lsjwh4098pn226047_gateway_refresh_mode', option: 'force' },
   },
 }
 
