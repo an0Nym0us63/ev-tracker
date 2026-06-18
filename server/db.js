@@ -197,3 +197,11 @@ if (!settingsCols3.includes('xpeng_color')) db.exec("ALTER TABLE settings ADD CO
 
 const accountsCols = db.pragma('table_info(accounts)').map(c => c.name)
 if (!accountsCols.includes('profile_color')) db.exec("ALTER TABLE accounts ADD COLUMN profile_color TEXT")
+
+// ─── Prix carburant dynamique (data.gouv.fr) par session ─────────────────────
+// Stocke le prix réellement utilisé pour le calcul du gain thermique au moment
+// de la création/modification de la session, pour traçabilité et historique.
+const chargeCols3 = db.pragma('table_info(charges)').map(c => c.name)
+if (!chargeCols3.includes('fuel_price_used'))   db.exec("ALTER TABLE charges ADD COLUMN fuel_price_used REAL")
+if (!chargeCols3.includes('fuel_type_used'))    db.exec("ALTER TABLE charges ADD COLUMN fuel_type_used TEXT")
+if (!chargeCols3.includes('fuel_price_source')) db.exec("ALTER TABLE charges ADD COLUMN fuel_price_source TEXT")

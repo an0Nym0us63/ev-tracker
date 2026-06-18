@@ -1,6 +1,7 @@
 const https = require('https')
 const db    = require('./db')
 const { detectVehicleFromHA } = require('./ha')
+const { resolveFuelPrice } = require('./fuel')
 
 // ─── Helper: addLog ────────────────────────────────────────────────────────────
 function addLog(accountId, level, message, source = 'v2c') {
@@ -61,6 +62,7 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
     start_time: startTime,
     solar_savings: solarSavings > 0 ? solarSavings : 0,
     fuel_savings: fuelSavings,
+    fuel_price_used: null, fuel_type_used: null, fuel_price_source: null,
   }
 }
 
@@ -68,10 +70,12 @@ function parseSession(s, accountId, vehicleId, fuelPrice) {
 const insertCharge = db.prepare(`
   INSERT OR IGNORE INTO charges
     (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh,
-     total_cost, duration_min, source, v2c_id, start_time, solar_savings, fuel_savings)
+     total_cost, duration_min, source, v2c_id, start_time, solar_savings, fuel_savings,
+     fuel_price_used, fuel_type_used, fuel_price_source)
   VALUES
     (@account_id, @vehicle_id, @location_id, @location_name, @provider, @card, @date, @kwh,
-     @total_cost, @duration_min, @source, @v2c_id, @start_time, @solar_savings, @fuel_savings)
+     @total_cost, @duration_min, @source, @v2c_id, @start_time, @solar_savings, @fuel_savings,
+     @fuel_price_used, @fuel_type_used, @fuel_price_source)
 `)
 
 // Add unique index for v2c_id dedup
@@ -85,7 +89,7 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     return { created: 0, skipped: 0, errors: 0 }
   }
 
-  const { v2c_api_key: apiKey, v2c_device_id: deviceId, fuel_price: fuelPrice = 1.85 } = settings
+  const { v2c_api_key: apiKey, v2c_device_id: deviceId, fuel_price: fuelPrice = 1.85, home_lat: homeLat, home_lng: homeLng } = settings
 
   let path = `/stadistic/device?deviceId=${deviceId}`
   if (startDate) path += `&chargeDateStart=${startDate}`
@@ -141,15 +145,20 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     `).get(row.date, ...(row.start_time ? [row.start_time] : []))
 
     if (manual) {
-      // Enrich manual charge with V2C data
+      // Enrich manual charge with V2C data — le véhicule de la charge manuelle est
+      // déjà connu, on calcule donc le prix carburant dynamique avec ce véhicule.
+      const manualRow = db.prepare('SELECT vehicle_id FROM charges WHERE id=?').get(manual.id)
+      const fuelInfo = await resolveFuelPrice(manualRow?.vehicle_id, homeLat, homeLng, fuelPrice)
+      row.fuel_savings = calcSavings(manualRow?.vehicle_id, s.energy, row.total_cost, fuelInfo.price)
       db.prepare(`
         UPDATE charges SET
           v2c_id=@v2c_id, start_time=@start_time,
           kwh=@kwh, total_cost=@total_cost, duration_min=@duration_min,
           solar_savings=@solar_savings, fuel_savings=@fuel_savings,
+          fuel_price_used=@fuel_price_used, fuel_type_used=@fuel_type_used, fuel_price_source=@fuel_price_source,
           source='v2c'
         WHERE id=@id
-      `).run({ ...row, id: manual.id })
+      `).run({ ...row, fuel_price_used: fuelInfo.price, fuel_type_used: fuelInfo.fuelType, fuel_price_source: fuelInfo.source, id: manual.id })
       addLog(accountId, 'info', `✓ Enrichie charge manuelle id=${manual.id} avec v2c_id=${s.id} | ${s.energy} kWh | ${row.date} ${row.start_time}`)
       if (!settings.v2c_last_id || s.id > settings.v2c_last_id) {
         db.prepare('UPDATE settings SET v2c_last_id=? WHERE account_id=?').run(s.id, settings.account_id)
@@ -162,7 +171,11 @@ async function syncV2C(accountId, { startDate, endDate } = {}) {
     const haResult = await detectVehicleFromHA(accountId, s.startChargeDate, s.endChargeDate)
     if (haResult.vehicleId) {
       row.vehicle_id = haResult.vehicleId
-      row.fuel_savings = calcSavings(haResult.vehicleId, s.energy, row.total_cost, fuelPrice)
+      const fuelInfo = await resolveFuelPrice(haResult.vehicleId, homeLat, homeLng, fuelPrice)
+      row.fuel_savings = calcSavings(haResult.vehicleId, s.energy, row.total_cost, fuelInfo.price)
+      row.fuel_price_used = fuelInfo.price
+      row.fuel_type_used = fuelInfo.fuelType
+      row.fuel_price_source = fuelInfo.source
       addLog(accountId, 'info', `🏠 HA a détecté ${haResult.vehicleId} pour v2c_id=${s.id} | ${haResult.detail}`)
     }
 

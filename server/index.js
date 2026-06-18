@@ -7,6 +7,7 @@ const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
 const { syncV2C, syncV2CHistory, addLog, checkHA30Days } = require('./v2c')
 const { getLiveVehicle, getLiveCharger, getSessionPowerHistory } = require('./ha')
+const { resolveFuelPrice } = require('./fuel')
 
 function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
   const config = {
@@ -249,7 +250,7 @@ app.get('/api/charges', requireAuth, (req, res) => {
   res.json(charges.map(toClient))
 })
 
-app.post('/api/charges', requireAuth, (req, res) => {
+app.post('/api/charges', requireAuth, async (req, res) => {
   const c = req.body
   const result = db.prepare(`
     INSERT INTO charges (account_id, vehicle_id, location_id, location_name, provider, card, date, kwh, total_cost, duration_min, odometer, notes, source, lat, lng, location_approximate, ocm_id, power_kw, connector_types, start_time)
@@ -257,16 +258,19 @@ app.post('/api/charges', requireAuth, (req, res) => {
   `).run(req.user.id, c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.source||'manual', c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
-  // Compute fuel savings
+  // Compute fuel savings — prix SP95/Gazole moyen des stations à proximité (data.gouv.fr) si GPS dispo
   const settings201 = db.prepare('SELECT fuel_price FROM settings ORDER BY account_id ASC LIMIT 1').get()
-  const fuelPrice201 = settings201?.fuel_price || 1.85
-  const savings201 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice201)
-  if (savings201 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings201, result.lastInsertRowid)
+  const fuelInfo201 = await resolveFuelPrice(c.vehicleId, c.lat, c.lng, settings201?.fuel_price)
+  const savings201 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelInfo201.price)
+  if (savings201 !== null) {
+    db.prepare('UPDATE charges SET fuel_savings=?, fuel_price_used=?, fuel_type_used=?, fuel_price_source=? WHERE id=?')
+      .run(savings201, fuelInfo201.price, fuelInfo201.fuelType, fuelInfo201.source, result.lastInsertRowid)
+  }
   recalcFavorites(req.user.id)
   res.status(201).json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(result.lastInsertRowid)))
 })
 
-app.put('/api/charges/:id', requireAuth, (req, res) => {
+app.put('/api/charges/:id', requireAuth, async (req, res) => {
   const existing = db.prepare('SELECT id FROM charges WHERE id = ?').get(req.params.id)
   if (!existing) return res.status(404).json({ error: 'Session introuvable' })
   const c = req.body
@@ -277,9 +281,12 @@ app.put('/api/charges/:id', requireAuth, (req, res) => {
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
   const settings204 = db.prepare('SELECT fuel_price FROM settings ORDER BY account_id ASC LIMIT 1').get()
-  const fuelPrice204 = settings204?.fuel_price || 1.85
-  const savings204 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelPrice204)
-  if (savings204 !== null) db.prepare('UPDATE charges SET fuel_savings = ? WHERE id = ?').run(savings204, req.params.id)
+  const fuelInfo204 = await resolveFuelPrice(c.vehicleId, c.lat, c.lng, settings204?.fuel_price)
+  const savings204 = calcSavings(c.vehicleId, c.kwh, c.totalCost, fuelInfo204.price)
+  if (savings204 !== null) {
+    db.prepare('UPDATE charges SET fuel_savings=?, fuel_price_used=?, fuel_type_used=?, fuel_price_source=? WHERE id=?')
+      .run(savings204, fuelInfo204.price, fuelInfo204.fuelType, fuelInfo204.source, req.params.id)
+  }
   recalcFavorites(req.user.id)
   res.json(toClient(db.prepare('SELECT * FROM charges WHERE id = ?').get(req.params.id)))
 })
@@ -311,6 +318,7 @@ function saveList(accountId, type, value) {
 function toClient(c) {
   return {
     id: c.id, vehicleId: c.vehicle_id, locationId: c.location_id, fuelSavings: c.fuel_savings, solarSavings: c.solar_savings, v2cId: c.v2c_id, startTime: c.start_time||null,
+    fuelPriceUsed: c.fuel_price_used, fuelTypeUsed: c.fuel_type_used, fuelPriceSource: c.fuel_price_source,
     locationName: c.location_name, provider: c.provider, card: c.card,
     date: c.date, kwh: c.kwh, totalCost: c.total_cost,
     durationMin: c.duration_min, odometer: c.odometer, notes: c.notes,

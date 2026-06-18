@@ -273,13 +273,27 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
           </div>
         </div>
 
+        {/* Carburant — prix dynamique */}
+        <div>
+          <div className="section-label">Prix carburant</div>
+          <div className="card" style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:20 }}>⛽</span>
+              <div style={{ fontSize:12, color:'var(--text-secondary)', lineHeight:1.5 }}>
+                À chaque session, le prix SP95 (MG4) ou Gazole (Xpeng) est calculé automatiquement à partir de la moyenne des stations à proximité du lieu de charge (<span className="mono">data.gouv.fr</span>). La valeur utilisée est figée sur la session et visible dans sa fiche.
+              </div>
+            </div>
+            <Field label="Tarif de secours (€/L)" hint="Utilisé seulement si aucune station n'est trouvée à proximité, ou sans GPS">
+              <TextInput value={fuelPrice} onChange={setFuelPrice} placeholder="1.85" type="number" />
+            </Field>
+          </div>
+        </div>
+
         {/* Intégrations */}
         <div>
           <div className="section-label">Intégrations à venir</div>
           <div className="card" style={{ padding:0 }}>
-            {[
-              { icon:'⛽', name:'Prix carburant',  detail:'SP95/Diesel France (data.gouv.fr)' },
-            ].map((item,i,arr) => (
+            {[].map((item,i,arr) => (
               <div key={item.name} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderBottom:'1px solid var(--border)', opacity:0.6 }}>
                 <div style={{ fontSize:22, width:36, textAlign:'center' }}>{item.icon}</div>
                 <div style={{ flex:1 }}>

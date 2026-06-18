@@ -202,6 +202,27 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         </div>
       </div>
 
+      {isEdit && editCharge?.fuelPriceUsed != null && (
+        <div className="card" style={{ margin:'12px 16px 0', padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:20 }}>⛽</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12, fontWeight:600 }}>
+              {editCharge.fuelTypeUsed === 'gazole' ? 'Gazole' : 'SP95'} à {editCharge.fuelPriceUsed.toFixed(3)} €/L
+            </div>
+            <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>
+              {editCharge.fuelPriceSource === 'auto'
+                ? 'Moyenne des stations à proximité au moment de la charge'
+                : 'Tarif de secours (réglages) — aucune station trouvée à proximité'}
+            </div>
+          </div>
+          {editCharge.fuelSavings != null && (
+            <span style={{ fontSize:13, fontWeight:700, flexShrink:0, color: editCharge.fuelSavings>=0?'var(--green)':'var(--red)' }}>
+              {editCharge.fuelSavings>=0?'+':''}{editCharge.fuelSavings.toFixed(2)}€
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Vehicle */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'16px 16px 0' }}>
         {Object.values(VEHICLES).map(v => {
