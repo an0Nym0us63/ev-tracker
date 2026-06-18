@@ -120,8 +120,8 @@ function BatteryBar({ pct, color }) {
   const clamped = Math.min(Math.max(pct, 0), 100)
   const textInside = clamped > 16
   return (
-    <div style={{ position:'relative', height:24, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
-      <div style={{ height:'100%', width:`${clamped}%`, minWidth: textInside ? 0 : 0, background:`linear-gradient(90deg, ${color}99, ${color})`, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box' }}>
+    <div style={{ position:'relative', height:26, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
+      <div style={{ height:'100%', width:`${clamped}%`, background:color, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box' }}>
         {textInside && <span className="mono" style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
       </div>
       {!textInside && (
@@ -131,7 +131,8 @@ function BatteryBar({ pct, color }) {
   )
 }
 
-// Carte véhicule compacte : nom + statut, barre de batterie, autonomie en étiquette.
+// Carte véhicule compacte : nom + statut, barre de batterie + autonomie accolée
+// sur la même ligne (au lieu d'une ligne dédiée juste pour un chiffre).
 function VehicleCard({ vehicle, status, charging }) {
   return (
     <div className="card" style={{ padding:'14px 16px' }}>
@@ -142,12 +143,17 @@ function VehicleCard({ vehicle, status, charging }) {
         </div>
         <ChargeBadge charging={charging} pluggedIn={status.pluggedIn} />
       </div>
-      <BatteryBar pct={status.batteryLevel} color={vehicle.color} />
-      {status.rangeKm != null && (
-        <div style={{ marginTop:8, display:'flex', justifyContent:'flex-end' }}>
-          <span style={{ fontSize:10.5, color:'var(--muted)', background:'var(--surface2)', padding:'3px 9px', borderRadius:12 }}>📍 {status.rangeKm} km</span>
+      <div style={{ display:'flex', alignItems:'stretch', gap:8 }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <BatteryBar pct={status.batteryLevel} color={vehicle.color} />
         </div>
-      )}
+        {status.rangeKm != null && (
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'0 10px', borderRadius:8, background:'var(--surface2)', flexShrink:0 }}>
+            <span className="mono" style={{ fontSize:11.5, fontWeight:700, color:'var(--text)', lineHeight:1.1 }}>{status.rangeKm}</span>
+            <span style={{ fontSize:7.5, color:'var(--muted)', fontWeight:600, letterSpacing:'0.03em' }}>KM</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -274,17 +280,17 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
     const bounds = []
     if (homeLat && homeLng) {
       const icon = window.L.divIcon({ html:`<div style="width:32px;height:32px;border-radius:50%;background:#22c55e;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🏠</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16] })
-      window.L.marker([homeLat, homeLng], { icon }).addTo(map).bindPopup('<b>Domicile</b>')
+      window.L.marker([homeLat, homeLng], { icon, zIndexOffset:0 }).addTo(map).bindPopup('<b>Domicile</b>')
       bounds.push([homeLat, homeLng])
     }
     if (xpengLat && xpengLng) {
       const icon = window.L.divIcon({ html:`<div style="width:32px;height:32px;border-radius:50%;background:#7c5cfc;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🚙</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16] })
-      window.L.marker([xpengLat, xpengLng], { icon }).addTo(map).bindPopup('<b>Xpeng G6</b>')
+      window.L.marker([xpengLat, xpengLng], { icon, zIndexOffset:1000 }).addTo(map).bindPopup('<b>Xpeng G6</b>')
       bounds.push([xpengLat, xpengLng])
     }
     if (mg4Lat && mg4Lng) {
       const icon = window.L.divIcon({ html:`<div style="width:32px;height:32px;border-radius:50%;background:#4f8ef7;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🚗</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16] })
-      window.L.marker([mg4Lat, mg4Lng], { icon }).addTo(map).bindPopup('<b>MG4</b>')
+      window.L.marker([mg4Lat, mg4Lng], { icon, zIndexOffset:1000 }).addTo(map).bindPopup('<b>MG4</b>')
       bounds.push([mg4Lat, mg4Lng])
     }
     if (bounds.length === 1) map.setView(bounds[0], 15)
