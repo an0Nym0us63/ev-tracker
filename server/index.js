@@ -6,7 +6,7 @@ const https = require('https')
 const db = require('./db')
 const { signToken, requireAuth } = require('./auth')
 const { syncV2C, syncV2CHistory, addLog, checkHA30Days } = require('./v2c')
-const { getLiveVehicle, getLiveCharger, getSessionPowerHistory } = require('./ha')
+const { getLiveVehicle, getLiveCharger, getSessionPowerHistory, getVehicleStatus, refreshVehicleData } = require('./ha')
 const { resolveFuelPrice } = require('./fuel')
 
 function calcSavings(vehicleId, kwh, totalCost, fuelPrice) {
@@ -576,6 +576,24 @@ app.get('/api/live/session-power', requireAuth, async (req, res) => {
     const result = await getSessionPowerHistory()
     res.json(result)
   } catch(e) { res.status(500).json({ available: false, reason: e.message }) }
+})
+
+app.get('/api/live/vehicle-status', requireAuth, async (req, res) => {
+  const vehicleId = req.query.vehicle
+  if (!vehicleId) return res.status(400).json({ available: false, reason: 'vehicle requis' })
+  try {
+    const result = await getVehicleStatus(vehicleId)
+    res.json(result)
+  } catch(e) { res.status(500).json({ available: false, reason: e.message }) }
+})
+
+app.post('/api/live/vehicle-refresh', requireAuth, async (req, res) => {
+  const vehicleId = req.query.vehicle
+  if (!vehicleId) return res.status(400).json({ ok: false, reason: 'vehicle requis' })
+  try {
+    const result = await refreshVehicleData(vehicleId)
+    res.json(result)
+  } catch(e) { res.status(500).json({ ok: false, reason: e.message }) }
 })
 
 app.post('/api/v2c/sync/history', requireAuth, async (req, res) => {

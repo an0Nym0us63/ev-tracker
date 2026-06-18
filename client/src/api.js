@@ -90,4 +90,6 @@ export async function apiHACheck() { return req('POST', '/api/ha/check') }
 export async function apiGetLiveVehicle() { return req('GET', '/api/live/vehicle') }
 export async function apiGetLiveCharger() { return req('GET', '/api/live/charger') }
 export async function apiGetSessionPower() { return req('GET', '/api/live/session-power') }
+export async function apiGetVehicleStatus(vehicleId) { return req('GET', `/api/live/vehicle-status?vehicle=${vehicleId}`) }
+export async function apiRefreshVehicleData(vehicleId) { return req('POST', `/api/live/vehicle-refresh?vehicle=${vehicleId}`) }
 export async function apiWallboxRecomputeSolar() { return req('POST', '/api/wallbox/recompute-solar') }

@@ -37,6 +37,36 @@ function haFetch(haUrl, token, path) {
   })
 }
 
+// ─── POST to HA (service calls, e.g. button.press) ───────────────────────────
+function haPost(haUrl, token, path, body) {
+  return new Promise((resolve, reject) => {
+    let url
+    try { url = new URL(path, haUrl) } catch(e) { return reject(new Error('URL HA invalide')) }
+    const lib = url.protocol === 'https:' ? https : http
+    const data = JSON.stringify(body || {})
+    const req = lib.request(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data),
+      },
+      timeout: 10000,
+    }, (res) => {
+      let resData = ''
+      res.on('data', c => resData += c)
+      res.on('end', () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) return reject(new Error(`HTTP ${res.statusCode}`))
+        try { resolve(resData ? JSON.parse(resData) : {}) } catch(e) { resolve({}) }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')) })
+    req.write(data)
+    req.end()
+  })
+}
+
 // ─── Get history of an entity between two dates ──────────────────────────────
 async function getEntityHistory(haUrl, token, entityId, startIso, endIso) {
   const path = `/api/history/period/${encodeURIComponent(startIso)}?end_time=${encodeURIComponent(endIso)}&filter_entity_id=${encodeURIComponent(entityId)}&minimal_response`
@@ -212,4 +242,62 @@ async function getSessionPowerHistory() {
   }
 }
 
-module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle, getLiveCharger, getSessionPowerHistory }
+// ─── Infos véhicule (Enode) — par véhicule, même schéma pour MG4 plus tard ────
+// Pour l'instant seul Xpeng G6 est câblé. "refresh" presse le bouton HA qui
+// déclenche un rafraîchissement Enode (les données vivantes sont parfois figées
+// tant qu'on ne le demande pas explicitement) — pressé en one-shot à l'arrivée
+// sur la page Live côté client, pas à chaque poll de 5s.
+const VEHICLE_ENTITY_IDS = {
+  xpeng: {
+    battery:       'sensor.xpeng_g6_battery_level',
+    pluggedIn:     'binary_sensor.xpeng_g6_plugged_in',
+    powerState:    'sensor.xpeng_g6_power_delivery_state',
+    range:         'sensor.xpeng_g6_range',
+    location:      'device_tracker.xpeng_g6_location',
+    refreshButton: 'button.xpeng_g6_refresh_data',
+  },
+}
+
+async function getVehicleStatus(vehicleId) {
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  if (!s?.ha_enabled || !s?.ha_url || !s?.ha_token) {
+    return { available: false, reason: 'HA non configuré ou désactivé' }
+  }
+  const ids = VEHICLE_ENTITY_IDS[vehicleId]
+  if (!ids) return { available: false, reason: 'Véhicule non câblé' }
+  try {
+    const all = await getAllStates(s.ha_url, s.ha_token)
+    const map = {}
+    for (const e of all) map[e.entity_id] = e
+
+    const raw = (key) => { const ent = map[ids[key]]; return ent ? ent.state : null }
+    const num = (key) => { const n = parseFloat(raw(key)); return Number.isFinite(n) ? n : null }
+
+    return {
+      available:          true,
+      batteryLevel:        num('battery'),
+      pluggedIn:           raw('pluggedIn') === 'on',
+      powerDeliveryState:  raw('powerState'),
+      rangeKm:             num('range'),
+    }
+  } catch(e) {
+    return { available: false, reason: `Erreur HA: ${e.message}` }
+  }
+}
+
+async function refreshVehicleData(vehicleId) {
+  const s = db.prepare('SELECT * FROM settings ORDER BY account_id ASC LIMIT 1').get()
+  if (!s?.ha_enabled || !s?.ha_url || !s?.ha_token) {
+    return { ok: false, reason: 'HA non configuré ou désactivé' }
+  }
+  const ids = VEHICLE_ENTITY_IDS[vehicleId]
+  if (!ids?.refreshButton) return { ok: false, reason: 'Pas de bouton de rafraîchissement pour ce véhicule' }
+  try {
+    await haPost(s.ha_url, s.ha_token, '/api/services/button/press', { entity_id: ids.refreshButton })
+    return { ok: true }
+  } catch(e) {
+    return { ok: false, reason: `Erreur HA: ${e.message}` }
+  }
+}
+
+module.exports = { detectVehicleFromHA, computeMajorityVehicle, mapStateToVehicle, getEntityState, getLiveVehicle, getLiveCharger, getSessionPowerHistory, getVehicleStatus, refreshVehicleData }

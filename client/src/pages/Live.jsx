@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import ProfileMenu from '../components/ProfileMenu.jsx'
-import { apiGetLiveVehicle, apiGetLiveCharger, apiGetSessionPower } from '../api.js'
+import { apiGetLiveVehicle, apiGetLiveCharger, apiGetSessionPower, apiGetVehicleStatus, apiRefreshVehicleData } from '../api.js'
 import { VEHICLES } from '../utils.js'
 
 const POLL_INTERVAL_MS = 5000
@@ -31,6 +31,13 @@ function statusInfo(raw) {
 function fmtKw(w) {
   if (w === null || w === undefined) return '—'
   return (w / 1000).toFixed(1)
+}
+
+// Formatage générique en attendant la vraie liste de valeurs Enode (même
+// démarche que pour le statut V2C) — pour l'instant on affiche juste en propre.
+function fmtPowerState(raw) {
+  if (!raw) return '—'
+  return raw.replace(/[_:]/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase())
 }
 
 function fmtTime(t) {
@@ -87,6 +94,7 @@ function StatRow({ label, value, unit, color, divider=true }) {
 export default function Live({ account, onLogout, theme, onToggleTheme, onNavigate }) {
   const [vehicleData, setVehicleData] = useState(null)
   const [chargerData, setChargerData] = useState(null)
+  const [xpengStatus, setXpengStatus] = useState(null)
   const [powerHistory, setPowerHistory] = useState([])  // [{ t: ms, kw: number }]
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -125,6 +133,11 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
     } finally {
       setLoading(false)
     }
+
+    // Indépendant du reste : une panne ici ne doit pas casser l'affichage borne/véhicule.
+    try {
+      setXpengStatus(await apiGetVehicleStatus('xpeng'))
+    } catch { setXpengStatus({ available: false, reason: 'Erreur de connexion' }) }
   }, [])
 
   // Engine: fetch immediately, then poll every 5s. Pause when tab/app is hidden
@@ -132,6 +145,11 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
   useEffect(() => {
     fetchLive()
     intervalRef.current = setInterval(fetchLive, POLL_INTERVAL_MS)
+
+    // One-shot à l'arrivée sur la page : on demande à Enode (via le bouton HA)
+    // de rafraîchir les données véhicule. C'est fire-and-forget — le poll de
+    // 5s déjà en cours affichera la valeur mise à jour dès qu'HA l'aura reçue.
+    apiRefreshVehicleData('xpeng').catch(() => {})
 
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
@@ -269,6 +287,20 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
                 <StatRow label="⏱️ Durée session" value={chargerData.duration || '—'} />
                 <StatRow label="⚡ Intensité" value={chargerData.currentA ?? '—'} unit="A" />
                 <StatRow label="🏠 Puissance maison" value={fmtKw(chargerData.homePowerW)} unit="kW" divider={false} />
+              </div>
+            )}
+
+            {/* Infos véhicule (Enode) — Xpeng G6 pour l'instant, MG4 suivra le même schéma */}
+            {xpengStatus?.available && (
+              <div className="card" style={{ padding:'14px 16px 2px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                  <span style={{ fontSize:14 }}>{VEHICLES.xpeng.emoji}</span>
+                  <span style={{ fontSize:11.5, fontWeight:700, color:VEHICLES.xpeng.color }}>{VEHICLES.xpeng.name}</span>
+                </div>
+                <StatRow label="🔋 Batterie" value={xpengStatus.batteryLevel ?? '—'} unit="%" color={VEHICLES.xpeng.color} />
+                <StatRow label="📍 Autonomie" value={xpengStatus.rangeKm ?? '—'} unit="km" />
+                <StatRow label="🔌 Branché" value={xpengStatus.pluggedIn ? 'Oui' : 'Non'} />
+                <StatRow label="⚙️ État" value={fmtPowerState(xpengStatus.powerDeliveryState)} divider={false} />
               </div>
             )}
 
