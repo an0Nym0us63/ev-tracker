@@ -49,22 +49,6 @@ function fmtKw(w) {
   return (w / 1000).toFixed(1)
 }
 
-// Formatage générique en attendant la vraie liste de valeurs Enode (même
-// démarche que pour le statut V2C) — pour l'instant on affiche juste en propre.
-function fmtPowerState(raw) {
-  if (!raw) return '—'
-  return raw.replace(/[_:]/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase())
-}
-
-// MG4 n'a pas d'état texte unique comme Xpeng (power_delivery_state) — juste
-// deux booléens (branché / en charge) — on en déduit un libellé équivalent.
-function mg4StatusLabel(pluggedIn, charging) {
-  if (charging === true) return 'En charge'
-  if (pluggedIn === true) return 'Branché, à l\'arrêt'
-  if (pluggedIn === false) return 'Débranché'
-  return '—'
-}
-
 function fmtTime(t) {
   return new Date(t).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
 }
@@ -112,6 +96,58 @@ function StatRow({ label, value, unit, color, divider=true }) {
       <span className="mono" style={{ fontSize:15, fontWeight:700, color: color || 'var(--text)' }}>
         {value}{unit && <span style={{ fontSize:10.5, color:'var(--muted)', fontWeight:400, marginLeft:3 }}>{unit}</span>}
       </span>
+    </div>
+  )
+}
+
+// Pastille branché / en charge — remplace deux lignes de texte par un seul repère visuel.
+function ChargeBadge({ charging, pluggedIn }) {
+  let icon, label, color
+  if (charging)        { icon = '⚡'; label = 'En charge'; color = 'var(--green)' }
+  else if (pluggedIn)  { icon = '🔌'; label = 'Branché';   color = 'var(--amber)' }
+  else                 { icon = '🔌'; label = 'Débranché'; color = 'var(--muted)' }
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:10.5, fontWeight:700, color, background:`${color}1a`, padding:'4px 10px', borderRadius:20 }}>
+      {charging && <span style={{ width:5, height:5, borderRadius:'50%', background:color, animation:'livePulse 2s infinite', '--pulse-color':`${color}80` }} />}
+      {icon} {label}
+    </span>
+  )
+}
+
+// Barre de batterie — pourcentage écrit dans (ou juste après, si trop étroit) la barre.
+function BatteryBar({ pct, color }) {
+  if (pct == null) return <div style={{ fontSize:11.5, color:'var(--muted)' }}>Batterie inconnue</div>
+  const clamped = Math.min(Math.max(pct, 0), 100)
+  const textInside = clamped > 16
+  return (
+    <div style={{ position:'relative', height:24, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
+      <div style={{ height:'100%', width:`${clamped}%`, minWidth: textInside ? 0 : 0, background:`linear-gradient(90deg, ${color}99, ${color})`, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box' }}>
+        {textInside && <span className="mono" style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
+      </div>
+      {!textInside && (
+        <span className="mono" style={{ position:'absolute', left:8, top:0, height:'100%', display:'flex', alignItems:'center', fontSize:12, fontWeight:700, color:'var(--text)' }}>{clamped}%</span>
+      )}
+    </div>
+  )
+}
+
+// Carte véhicule compacte : nom + statut, barre de batterie, autonomie en étiquette.
+function VehicleCard({ vehicle, status, charging }) {
+  return (
+    <div className="card" style={{ padding:'14px 16px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontSize:14 }}>{vehicle.emoji}</span>
+          <span style={{ fontSize:12.5, fontWeight:700, color:vehicle.color }}>{vehicle.name}</span>
+        </div>
+        <ChargeBadge charging={charging} pluggedIn={status.pluggedIn} />
+      </div>
+      <BatteryBar pct={status.batteryLevel} color={vehicle.color} />
+      {status.rangeKm != null && (
+        <div style={{ marginTop:8, display:'flex', justifyContent:'flex-end' }}>
+          <span style={{ fontSize:10.5, color:'var(--muted)', background:'var(--surface2)', padding:'3px 9px', borderRadius:12 }}>📍 {status.rangeKm} km</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -367,40 +403,30 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
               </div>
             )}
 
-            {/* Infos véhicule (Enode) — Xpeng G6 pour l'instant, MG4 suivra le même schéma */}
+            {/* Infos véhicule (Enode / SAIC) — carte compacte : statut + jauge batterie + autonomie */}
             {xpengStatus?.available && (
-              <div className="card" style={{ padding:'14px 16px 2px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-                  <span style={{ fontSize:14 }}>{VEHICLES.xpeng.emoji}</span>
-                  <span style={{ fontSize:11.5, fontWeight:700, color:VEHICLES.xpeng.color }}>{VEHICLES.xpeng.name}</span>
-                </div>
-                <StatRow label="🔋 Batterie" value={xpengStatus.batteryLevel ?? '—'} unit="%" color={VEHICLES.xpeng.color} />
-                <StatRow label="📍 Autonomie" value={xpengStatus.rangeKm ?? '—'} unit="km" />
-                <StatRow label="🔌 Branché" value={xpengStatus.pluggedIn ? 'Oui' : 'Non'} />
-                <StatRow label="⚙️ État" value={fmtPowerState(xpengStatus.powerDeliveryState)} divider={false} />
-              </div>
+              <VehicleCard
+                vehicle={VEHICLES.xpeng}
+                status={xpengStatus}
+                charging={(xpengStatus.powerDeliveryState || '').toLowerCase() === 'charging'}
+              />
             )}
 
             {mg4Status?.available && (
-              <div className="card" style={{ padding:'14px 16px 2px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-                  <span style={{ fontSize:14 }}>{VEHICLES.mg4.emoji}</span>
-                  <span style={{ fontSize:11.5, fontWeight:700, color:VEHICLES.mg4.color }}>{VEHICLES.mg4.name}</span>
-                </div>
-                <StatRow label="🔋 Batterie" value={mg4Status.batteryLevel ?? '—'} unit="%" color={VEHICLES.mg4.color} />
-                <StatRow label="📍 Autonomie" value={mg4Status.rangeKm ?? '—'} unit="km" />
-                <StatRow label="🔌 Branché" value={mg4Status.pluggedIn ? 'Oui' : 'Non'} />
-                <StatRow label="⚙️ État" value={mg4StatusLabel(mg4Status.pluggedIn, mg4Status.charging)} divider={false} />
-              </div>
+              <VehicleCard
+                vehicle={VEHICLES.mg4}
+                status={mg4Status}
+                charging={mg4Status.charging === true}
+              />
             )}
 
-            {/* Carte de localisation — Domicile + Xpeng pour l'instant, MG4 suivra */}
+            {/* Carte de localisation — Domicile + Xpeng + MG4 */}
             {hasMapData && (
               <div className="card" style={{ padding:'14px 14px 12px' }}>
                 <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
                   Localisation
                 </div>
-                <div style={{ position:'relative', height:180, borderRadius:'var(--r-sm)', overflow:'hidden', border:'1px solid var(--border)' }}>
+                <div style={{ position:'relative', height:280, borderRadius:'var(--r-sm)', overflow:'hidden', border:'1px solid var(--border)' }}>
                   {!leafletReady ? (
                     <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface2)', color:'var(--muted)', fontSize:12 }}>Chargement…</div>
                   ) : (
