@@ -31,15 +31,49 @@ function fmtTime(t) {
   return new Date(t).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
 }
 
-function Kpi({ label, value, unit, color }) {
+// Jauge circulaire de puissance — élément central de la page : c'est la donnée
+// la plus "vivante" (change en direct), donc le point focal naturel du design.
+function PowerGauge({ valueKw, maxKw, color, statusLabel, sublabel, pulsing }) {
+  const size = 188, r = 78, strokeW = 13
+  const C = 2 * Math.PI * r
+  const pct = maxKw > 0 ? Math.min(Math.max((valueKw||0) / maxKw, 0), 1) : 0
+  const offset = C * (1 - pct)
   return (
-    <div className="card" style={{ padding:'12px 12px' }}>
-      <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>
-        {label}
+    <div style={{ position:'relative', width:size, height:size, margin:'4px auto 0' }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={strokeW} />
+        <circle
+          cx={size/2} cy={size/2} r={r} fill="none"
+          stroke={color} strokeWidth={strokeW} strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={offset}
+          transform={`rotate(-90 ${size/2} ${size/2})`}
+          style={{ transition:'stroke-dashoffset 0.7s ease, stroke 0.4s ease' }}
+        />
+      </svg>
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+        <div className="mono" style={{ fontSize:32, fontWeight:700, color:'var(--text)', lineHeight:1 }}>
+          {valueKw != null ? valueKw.toFixed(1) : '—'}
+        </div>
+        <div style={{ fontSize:10, color:'var(--muted)', fontWeight:600, letterSpacing:'0.05em', marginTop:1 }}>kW</div>
+        {statusLabel && (
+          <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:9 }}>
+            {pulsing && <span className="live-dot" style={{ '--pulse-color': `${color}80`, width:6, height:6, borderRadius:'50%', background:color, animation:'livePulse 2s infinite' }} />}
+            <span style={{ fontSize:11.5, fontWeight:700, color }}>{statusLabel}</span>
+          </div>
+        )}
+        {sublabel && <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:3, maxWidth:size-40, textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sublabel}</div>}
       </div>
-      <div className="mono" style={{ fontSize:18, fontWeight:700, color: color || 'var(--text)' }}>
-        {value}{unit && <span style={{ fontSize:11, color:'var(--muted)', fontWeight:400 }}> {unit}</span>}
-      </div>
+    </div>
+  )
+}
+
+function StatRow({ label, value, unit, color, divider=true }) {
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', padding:'10px 0', borderBottom: divider ? '1px solid var(--border)' : 'none' }}>
+      <span style={{ fontSize:12.5, color:'var(--muted)' }}>{label}</span>
+      <span className="mono" style={{ fontSize:15, fontWeight:700, color: color || 'var(--text)' }}>
+        {value}{unit && <span style={{ fontSize:10.5, color:'var(--muted)', fontWeight:400, marginLeft:3 }}>{unit}</span>}
+      </span>
     </div>
   )
 }
@@ -114,6 +148,14 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
   const st = statusInfo(chargerData?.status)
   const nothingConfigured = vehicleData && chargerData && !vehicleData.available && !chargerData.available
 
+  // Jauge : échelle 0→max, max par défaut 7.4kW (AC monophasé standard du V2C
+  // Trydan) mais s'élargit automatiquement si une puissance plus élevée est
+  // observée, pour ne jamais saturer visuellement à 100% à tort.
+  const currentKw = chargerData?.powerW != null ? chargerData.powerW/1000 : null
+  const maxObservedKw = powerHistory.length ? Math.max(...powerHistory.map(p=>p.kw)) : 0
+  const gaugeMaxKw = Math.max(7.4, maxObservedKw, currentKw||0)
+  const gaugeSublabel = vehicle ? vehicle.name : (chargerData?.plugged ? 'Véhicule branché' : null)
+
   return (
     <div className="page fade-up" style={{ paddingBottom:100, minHeight:'100dvh' }}>
       <div style={{ padding:'16px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -147,38 +189,40 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
 
         {!loading && !error && !nothingConfigured && (
           <>
-            {/* Statut borne + véhicule branché */}
-            <div className="card" style={{ padding:'16px 16px' }}>
+            {/* Statut borne + jauge de puissance — élément central de la page */}
+            <div className="card" style={{ padding:'16px 16px 18px' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>
                   Borne V2C Trydan
                 </div>
-                {chargerData?.available && (
+                {vehicle && (
                   <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-                    {st.dot && <span style={{ width:7, height:7, borderRadius:'50%', background:st.color, display:'inline-block', boxShadow:`0 0 8px ${st.color}` }} />}
-                    <span style={{ fontSize:12, fontWeight:700, color:st.color }}>{st.label}</span>
+                    <span style={{ fontSize:14 }}>{vehicle.emoji}</span>
+                    <span style={{ fontSize:11.5, fontWeight:700, color:vehicle.color }}>{vehicle.name}</span>
                   </div>
                 )}
               </div>
 
               {chargerData?.available ? (
-                <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:12 }}>
-                  <span style={{ fontSize:32 }}>{vehicle ? vehicle.emoji : '🔌'}</span>
-                  <div>
-                    {vehicle ? (
-                      <div style={{ fontSize:17, fontWeight:700, color:vehicle.color }}>{vehicle.name}</div>
-                    ) : (
-                      <div style={{ fontSize:15, fontWeight:600, color:'var(--muted)' }}>
-                        {chargerData.plugged ? 'Véhicule branché' : 'Aucun véhicule branché'}
-                      </div>
-                    )}
-                    {chargerData.chargeKm != null && chargerData.chargeKm > 0 && (
-                      <div style={{ fontSize:11, color:'var(--green)', marginTop:2 }}>+{chargerData.chargeKm.toFixed(1)} km gagnés cette session</div>
-                    )}
-                  </div>
-                </div>
+                <>
+                  <PowerGauge
+                    valueKw={currentKw}
+                    maxKw={gaugeMaxKw}
+                    color={st.color}
+                    statusLabel={st.label}
+                    sublabel={gaugeSublabel}
+                    pulsing={chargerData.charging}
+                  />
+                  {chargerData.chargeKm != null && chargerData.chargeKm > 0 && (
+                    <div style={{ textAlign:'center', marginTop:12 }}>
+                      <span style={{ fontSize:11, color:'var(--green)', background:'var(--green-dim)', padding:'4px 10px', borderRadius:20, fontWeight:600 }}>
+                        +{chargerData.chargeKm.toFixed(1)} km gagnés cette session
+                      </span>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div style={{ fontSize:12, color:'var(--muted)', marginTop:10 }}>{chargerData?.reason}</div>
+                <div style={{ fontSize:12, color:'var(--muted)', marginTop:10, textAlign:'center' }}>{chargerData?.reason}</div>
               )}
             </div>
 
@@ -188,13 +232,13 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
                 <div style={{ fontSize:9, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>
                   Puissance — session en cours
                 </div>
-                <div style={{ width:'100%', height:130 }}>
+                <div style={{ width:'100%', height:120 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={powerHistory} margin={{ top:6, right:6, left:-22, bottom:0 }}>
                       <defs>
                         <linearGradient id="livePowerGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                          <stop offset="0%" stopColor={st.color} stopOpacity={0.35} />
+                          <stop offset="100%" stopColor={st.color} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <XAxis dataKey="t" type="number" domain={['dataMin','dataMax']} tickFormatter={fmtTime}
@@ -205,22 +249,21 @@ export default function Live({ account, onLogout, theme, onToggleTheme, onNaviga
                         labelFormatter={(t)=> new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
                         contentStyle={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, fontSize:11 }}
                       />
-                      <Area type="monotone" dataKey="kw" stroke="var(--accent)" strokeWidth={2} fill="url(#livePowerGrad)" isAnimationActive={false} />
+                      <Area type="monotone" dataKey="kw" stroke={st.color} strokeWidth={2} fill="url(#livePowerGrad)" isAnimationActive={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             )}
 
-            {/* KPIs borne en temps réel */}
+            {/* Détails — liste épurée plutôt que des cartes séparées */}
             {chargerData?.available && (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                <Kpi label="Puissance de charge" value={fmtKw(chargerData.powerW)} unit="kW" color="var(--accent)" />
-                <Kpi label="Intensité" value={chargerData.currentA ?? '—'} unit="A" />
-                <Kpi label="Énergie session" value={chargerData.energyKwh != null ? chargerData.energyKwh.toFixed(2) : '—'} unit="kWh" color="var(--green)" />
-                <Kpi label="Durée session" value={chargerData.duration || '—'} />
-                <Kpi label="Puissance maison" value={fmtKw(chargerData.homePowerW)} unit="kW" />
-                <Kpi label="Puissance solaire" value={fmtKw(chargerData.solarPowerW)} unit="kW" color="var(--amber)" />
+              <div className="card" style={{ padding:'2px 16px' }}>
+                <StatRow label="Énergie session" value={chargerData.energyKwh != null ? chargerData.energyKwh.toFixed(2) : '—'} unit="kWh" color="var(--green)" />
+                <StatRow label="Durée session" value={chargerData.duration || '—'} />
+                <StatRow label="Intensité" value={chargerData.currentA ?? '—'} unit="A" />
+                <StatRow label="🏠 Puissance maison" value={fmtKw(chargerData.homePowerW)} unit="kW" />
+                <StatRow label="☀️ Puissance solaire" value={fmtKw(chargerData.solarPowerW)} unit="kW" color="var(--amber)" divider={false} />
               </div>
             )}
 
