@@ -318,6 +318,14 @@ async function refreshVehicleData(vehicleId) {
       await haPost(s.ha_url, s.ha_token, `/api/services/${domain}/${service}`, data || {})
       return { ok: true }
     }
+    if (ids.refreshSelect) {
+      // Cas MG4 (intégration SAIC iSmart) : pas de bouton ni de service dédié,
+      // juste un select "mode de rafraîchissement" dont une des options force
+      // une remontée de données fraîches.
+      const { entityId, option } = ids.refreshSelect
+      await haPost(s.ha_url, s.ha_token, '/api/services/select/select_option', { entity_id: entityId, option })
+      return { ok: true }
+    }
     return { ok: false, reason: 'Pas de rafraîchissement configuré pour ce véhicule' }
   } catch(e) {
     return { ok: false, reason: `Erreur HA: ${e.message}` }
