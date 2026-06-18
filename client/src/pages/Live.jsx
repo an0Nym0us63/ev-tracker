@@ -56,6 +56,15 @@ function fmtPowerState(raw) {
   return raw.replace(/[_:]/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase())
 }
 
+// MG4 n'a pas d'état texte unique comme Xpeng (power_delivery_state) — juste
+// deux booléens (branché / en charge) — on en déduit un libellé équivalent.
+function mg4StatusLabel(pluggedIn, charging) {
+  if (charging === true) return 'En charge'
+  if (pluggedIn === true) return 'Branché, à l\'arrêt'
+  if (pluggedIn === false) return 'Débranché'
+  return '—'
+}
+
 function fmtTime(t) {
   return new Date(t).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
 }
@@ -111,6 +120,7 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
   const [vehicleData, setVehicleData] = useState(null)
   const [chargerData, setChargerData] = useState(null)
   const [xpengStatus, setXpengStatus] = useState(null)
+  const [mg4Status, setMg4Status] = useState(null)
   const [powerHistory, setPowerHistory] = useState([])  // [{ t: ms, kw: number }]
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -161,6 +171,9 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
     try {
       setXpengStatus(await apiGetVehicleStatus('xpeng'))
     } catch { setXpengStatus({ available: false, reason: 'Erreur de connexion' }) }
+    try {
+      setMg4Status(await apiGetVehicleStatus('mg4'))
+    } catch { setMg4Status({ available: false, reason: 'Erreur de connexion' }) }
   }, [])
 
   // Engine: fetch immediately, then poll every 5s. Pause when tab/app is hidden
@@ -169,10 +182,12 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
     fetchLive()
     intervalRef.current = setInterval(fetchLive, POLL_INTERVAL_MS)
 
-    // One-shot à l'arrivée sur la page : on demande à Enode (via le bouton HA)
-    // de rafraîchir les données véhicule. C'est fire-and-forget — le poll de
-    // 5s déjà en cours affichera la valeur mise à jour dès qu'HA l'aura reçue.
+    // One-shot à l'arrivée sur la page : on demande aux intégrations véhicule de
+    // rafraîchir leurs données. Fire-and-forget — le poll de 5s déjà en cours
+    // affichera la valeur mise à jour dès que HA l'aura reçue. Pour MG4, ok:false
+    // tant que le mécanisme de refresh n'est pas confirmé (pas bloquant).
     apiRefreshVehicleData('xpeng').catch(() => {})
+    apiRefreshVehicleData('mg4').catch(() => {})
 
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
@@ -207,7 +222,8 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
   const mapStyle = theme === 'light' ? 'light' : 'dark'
   const homeLat = settings?.homeLat, homeLng = settings?.homeLng
   const xpengLat = xpengStatus?.lat, xpengLng = xpengStatus?.lng
-  const hasMapData = !!((homeLat && homeLng) || (xpengLat && xpengLng))
+  const mg4Lat = mg4Status?.lat, mg4Lng = mg4Status?.lng
+  const hasMapData = !!((homeLat && homeLng) || (xpengLat && xpengLng) || (mg4Lat && mg4Lng))
 
   useEffect(() => {
     if (!leafletReady || !mapRef.current || !hasMapData) return
@@ -230,9 +246,14 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
       window.L.marker([xpengLat, xpengLng], { icon }).addTo(map).bindPopup('<b>Xpeng G6</b>')
       bounds.push([xpengLat, xpengLng])
     }
+    if (mg4Lat && mg4Lng) {
+      const icon = window.L.divIcon({ html:`<div style="width:32px;height:32px;border-radius:50%;background:#4f8ef7;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🚗</div>`, className:'', iconSize:[32,32], iconAnchor:[16,16] })
+      window.L.marker([mg4Lat, mg4Lng], { icon }).addTo(map).bindPopup('<b>MG4</b>')
+      bounds.push([mg4Lat, mg4Lng])
+    }
     if (bounds.length === 1) map.setView(bounds[0], 15)
     else if (bounds.length > 1) map.fitBounds(bounds, { padding:[30,30], maxZoom:15 })
-  }, [leafletReady, mapStyle, homeLat, homeLng, xpengLat, xpengLng, hasMapData])
+  }, [leafletReady, mapStyle, homeLat, homeLng, xpengLat, xpengLng, mg4Lat, mg4Lng, hasMapData])
 
   useEffect(() => () => { if (mapInst.current) { mapInst.current.remove(); mapInst.current = null } }, [])
 
@@ -357,6 +378,19 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
                 <StatRow label="📍 Autonomie" value={xpengStatus.rangeKm ?? '—'} unit="km" />
                 <StatRow label="🔌 Branché" value={xpengStatus.pluggedIn ? 'Oui' : 'Non'} />
                 <StatRow label="⚙️ État" value={fmtPowerState(xpengStatus.powerDeliveryState)} divider={false} />
+              </div>
+            )}
+
+            {mg4Status?.available && (
+              <div className="card" style={{ padding:'14px 16px 2px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                  <span style={{ fontSize:14 }}>{VEHICLES.mg4.emoji}</span>
+                  <span style={{ fontSize:11.5, fontWeight:700, color:VEHICLES.mg4.color }}>{VEHICLES.mg4.name}</span>
+                </div>
+                <StatRow label="🔋 Batterie" value={mg4Status.batteryLevel ?? '—'} unit="%" color={VEHICLES.mg4.color} />
+                <StatRow label="📍 Autonomie" value={mg4Status.rangeKm ?? '—'} unit="km" />
+                <StatRow label="🔌 Branché" value={mg4Status.pluggedIn ? 'Oui' : 'Non'} />
+                <StatRow label="⚙️ État" value={mg4StatusLabel(mg4Status.pluggedIn, mg4Status.charging)} divider={false} />
               </div>
             )}
 

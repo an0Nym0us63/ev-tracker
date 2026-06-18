@@ -256,6 +256,14 @@ const VEHICLE_ENTITY_IDS = {
     location:      'device_tracker.xpeng_g6_location',
     refreshButton: 'button.xpeng_g6_refresh_data',
   },
+  mg4: {
+    battery:    'sensor.lsjwh4098pn226047_soc',
+    pluggedIn:  'binary_sensor.lsjwh4098pn226047_charger_connected',
+    charging:   'binary_sensor.lsjwh4098pn226047_battery_charging',
+    range:      'sensor.lsjwh4098pn226047_range',
+    location:   'device_tracker.lsjwh4098pn226047_vehicle_position',
+    // refresh : à confirmer (service HA "force" plutôt qu'un bouton — voir refreshVehicleData)
+  },
 }
 
 async function getVehicleStatus(vehicleId) {
@@ -280,8 +288,9 @@ async function getVehicleStatus(vehicleId) {
     return {
       available:          true,
       batteryLevel:        num('battery'),
-      pluggedIn:           raw('pluggedIn') === 'on',
-      powerDeliveryState:  raw('powerState'),
+      pluggedIn:           ids.pluggedIn  ? raw('pluggedIn') === 'on' : null,
+      charging:            ids.charging   ? raw('charging')  === 'on' : null,
+      powerDeliveryState:  ids.powerState ? raw('powerState') : null,
       rangeKm:             num('range'),
       lat, lng,
       locationZone:        raw('location'),
@@ -297,10 +306,19 @@ async function refreshVehicleData(vehicleId) {
     return { ok: false, reason: 'HA non configuré ou désactivé' }
   }
   const ids = VEHICLE_ENTITY_IDS[vehicleId]
-  if (!ids?.refreshButton) return { ok: false, reason: 'Pas de bouton de rafraîchissement pour ce véhicule' }
+  if (!ids) return { ok: false, reason: 'Véhicule non câblé' }
   try {
-    await haPost(s.ha_url, s.ha_token, '/api/services/button/press', { entity_id: ids.refreshButton })
-    return { ok: true }
+    if (ids.refreshButton) {
+      await haPost(s.ha_url, s.ha_token, '/api/services/button/press', { entity_id: ids.refreshButton })
+      return { ok: true }
+    }
+    if (ids.refreshService) {
+      // { domain:'saic_ismart', service:'force_refresh', data:{...} } par ex.
+      const { domain, service, data } = ids.refreshService
+      await haPost(s.ha_url, s.ha_token, `/api/services/${domain}/${service}`, data || {})
+      return { ok: true }
+    }
+    return { ok: false, reason: 'Pas de rafraîchissement configuré pour ce véhicule' }
   } catch(e) {
     return { ok: false, reason: `Erreur HA: ${e.message}` }
   }
