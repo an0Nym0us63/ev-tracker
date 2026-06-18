@@ -130,11 +130,13 @@ function BatteryBar({ pct, color, charging, pluggedIn }) {
     <div style={{ position:'relative', borderRadius:8, ...ringStyle }}>
       <div style={{ position:'relative', height:26, borderRadius:8, background:'var(--surface2)', overflow:'hidden' }}>
         <div style={{ position:'relative', height:'100%', width:`${clamped}%`, background:color, transition:'width 0.6s ease', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight: textInside ? 8 : 0, boxSizing:'border-box', overflow:'hidden' }}>
-          {/* En charge : hachures qui défilent, façon batterie qui se remplit */}
+          {/* En charge : reflet lumineux qui balaie la barre de gauche à droite, en boucle */}
           {charging && (
-            <div style={{ position:'absolute', inset:0,
-              background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.35) 0px, rgba(255,255,255,0.35) 6px, transparent 6px, transparent 16px)',
-              backgroundSize:'32px 100%', animation:'batteryChargeStripes 0.8s linear infinite' }} />
+            <div style={{ position:'absolute', inset:0, overflow:'hidden', borderRadius:'inherit' }}>
+              <div style={{ position:'absolute', top:0, bottom:0, width:'60%',
+                background:'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%)',
+                animation:'batterySweep 1.8s ease-in-out infinite' }} />
+            </div>
           )}
           {textInside && <span className="mono" style={{ position:'relative', fontSize:12, fontWeight:700, color:'#fff' }}>{clamped}%</span>}
         </div>
