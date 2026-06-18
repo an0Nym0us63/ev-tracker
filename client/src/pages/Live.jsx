@@ -436,7 +436,7 @@ export default function Live({ account, settings, onLogout, theme, onToggleTheme
                   {!leafletReady ? (
                     <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--surface2)', color:'var(--muted)', fontSize:12 }}>Chargement…</div>
                   ) : (
-                    <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+                    <div ref={mapRef} style={{ width:'100%', height:'100%', touchAction:'none', overscrollBehavior:'contain' }} />
                   )}
                 </div>
               </div>

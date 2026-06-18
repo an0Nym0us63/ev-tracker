@@ -189,7 +189,7 @@ export default function MapView({ charges, settings, theme, filters, applyFilter
             <span style={{ fontSize:32 }}>🗺️</span>Aucune session avec localisation.
           </div>
         ) : (
-          <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+          <div ref={mapRef} style={{ width:'100%', height:'100%', touchAction:'none', overscrollBehavior:'contain' }} />
         )}
 
       </div>
