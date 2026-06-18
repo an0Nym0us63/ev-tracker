@@ -75,6 +75,17 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
   const avgSp95   = sp95Prices.length   ? sp95Prices.reduce((a,b)=>a+b,0)/sp95Prices.length     : null
   const avgGazole = gazolePrices.length ? gazolePrices.reduce((a,b)=>a+b,0)/gazolePrices.length : null
 
+  // Évolution du prix carburant dans le temps (un point par session, respecte le filtre temporel actif)
+  const sp95Series = useMemo(() => filtered
+    .filter(c => c.fuelTypeUsed === 'sp95' && c.fuelPriceUsed != null)
+    .map(c => ({ t: new Date(c.date).getTime(), date: c.date, price: c.fuelPriceUsed }))
+    .sort((a,b) => a.t - b.t), [filtered])
+  const gazoleSeries = useMemo(() => filtered
+    .filter(c => c.fuelTypeUsed === 'gazole' && c.fuelPriceUsed != null)
+    .map(c => ({ t: new Date(c.date).getTime(), date: c.date, price: c.fuelPriceUsed }))
+    .sort((a,b) => a.t - b.t), [filtered])
+  const hasFuelEvolution = (sp95Series.length + gazoleSeries.length) >= 2
+
   // Solar savings — includes Wallbox (now has solar_savings from one-time recompute)
   const totalSolar    = filtered.reduce((s,c)=>s+(c.solarSavings||0),0)
   const homeCharges   = filtered.filter(c=>c.locationId==='home')
@@ -377,6 +388,42 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
                   </div>
                 )}
               </div>
+
+              {/* Évolution du prix carburant dans le temps */}
+              {hasFuelEvolution && (
+                <div style={{ marginTop:14 }}>
+                  <div style={{ fontSize:11, color:'var(--muted)', marginBottom:6 }}>Évolution du prix carburant</div>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <LineChart margin={{ top:4, right:8, left:-18, bottom:0 }}>
+                      <XAxis dataKey="t" type="number" domain={['dataMin','dataMax']} scale="time"
+                        tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false}
+                        tickFormatter={t => new Date(t).toLocaleDateString('fr-FR',{ day:'2-digit', month:'short' })} />
+                      <YAxis tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false}
+                        domain={['auto','auto']} tickFormatter={v => v.toFixed(2)} width={34} />
+                      <Tooltip content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null
+                        const p = payload[0].payload
+                        return (
+                          <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:11 }}>
+                            <div style={{ color:'var(--muted)', marginBottom:4 }}>{new Date(p.t).toLocaleDateString('fr-FR',{ day:'2-digit', month:'short', year:'numeric' })}</div>
+                            <div style={{ color: payload[0].name==='SP95' ? 'var(--mg4)' : 'var(--xpeng)', fontWeight:700 }}>{payload[0].name}: {p.price.toFixed(3)} €/L</div>
+                          </div>
+                        )
+                      }} />
+                      {sp95Series.length > 0 && (
+                        <Line data={sp95Series} dataKey="price" name="SP95" type="monotone" stroke="var(--mg4)" strokeWidth={2} dot={sp95Series.length<15} connectNulls />
+                      )}
+                      {gazoleSeries.length > 0 && (
+                        <Line data={gazoleSeries} dataKey="price" name="Gazole" type="monotone" stroke="var(--xpeng)" strokeWidth={2} dot={gazoleSeries.length<15} connectNulls />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div style={{ display:'flex', gap:14, justifyContent:'center', marginTop:2 }}>
+                    {sp95Series.length > 0 && <span style={{ fontSize:9, color:'var(--mg4)', fontWeight:600 }}>● SP95</span>}
+                    {gazoleSeries.length > 0 && <span style={{ fontSize:9, color:'var(--xpeng)', fontWeight:600 }}>● Gazole</span>}
+                  </div>
+                </div>
+              )}
 
               {/* Bar: EV cost vs what thermal would have cost */}
               {totalFuel > 0 && (() => {
