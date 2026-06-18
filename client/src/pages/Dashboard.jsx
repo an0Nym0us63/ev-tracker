@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie, AreaChart, Area, YAxis } from 'recharts'
 import { computeStats, filterByPeriod, getChartData, getProviderStats, getMonthlyAvgByVehicle, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
-import { apiGetAlerts, apiGetLiveCharger } from '../api.js'
+import { apiGetAlerts, apiGetLiveCharger, apiGetLiveVehicle } from '../api.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
@@ -150,9 +150,11 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const [activeVehicle, setActiveVehicle] = useState(null)
   const [alerts, setAlerts] = useState([])
   const [liveCharging, setLiveCharging] = useState(null)
+  const [liveVehicle, setLiveVehicle] = useState(null)
 
   useEffect(() => { apiGetAlerts().then(setAlerts).catch(()=>{}) }, [charges])
   useEffect(() => { apiGetLiveCharger().then(setLiveCharging).catch(()=>{}) }, [charges])
+  useEffect(() => { apiGetLiveVehicle().then(setLiveVehicle).catch(()=>{}) }, [charges])
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
@@ -339,20 +341,41 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
       )}
 
       {/* Bandeau session de charge en cours (détecté via la borne V2C / HA) */}
-      {liveCharging?.available && liveCharging.charging && (
-        <div onClick={()=>onNavigate('live')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(34,197,94,0.08)', border:'1.5px solid rgba(34,197,94,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
-          <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--green)', display:'inline-block', boxShadow:'0 0 8px var(--green)', flexShrink:0 }} />
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>⚡ Charge en cours</div>
-            <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>
-              {liveCharging.powerW != null ? `${(liveCharging.powerW/1000).toFixed(1)} kW` : ''}
-              {liveCharging.energyKwh != null ? ` · ${liveCharging.energyKwh.toFixed(2)} kWh` : ''}
-              {liveCharging.duration ? ` · ${liveCharging.duration}` : ''}
+      {liveCharging?.available && liveCharging.charging && (() => {
+        const lv = liveVehicle?.vehicleId ? VEHICLES[liveVehicle.vehicleId] : null
+        return (
+          <div onClick={()=>onNavigate('live')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(34,197,94,0.08)', border:'1.5px solid rgba(34,197,94,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--green)', display:'inline-block', boxShadow:'0 0 8px var(--green)', flexShrink:0 }} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>
+                ⚡ Charge en cours{lv ? <span style={{ color:lv.color }}> · {lv.emoji} {lv.name}</span> : ''}
+              </div>
+              <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>
+                {liveCharging.powerW != null ? `${(liveCharging.powerW/1000).toFixed(1)} kW` : ''}
+                {liveCharging.energyKwh != null ? ` · ${liveCharging.energyKwh.toFixed(2)} kWh` : ''}
+                {liveCharging.duration ? ` · ${liveCharging.duration}` : ''}
+              </div>
             </div>
+            <span style={{ color:'var(--green)', fontSize:16 }}>›</span>
           </div>
-          <span style={{ color:'var(--green)', fontSize:16 }}>›</span>
-        </div>
-      )}
+        )
+      })()}
+
+      {/* Bandeau véhicule branché mais pas en charge (prêt / en pause / attente) */}
+      {liveCharging?.available && liveCharging.plugged && !liveCharging.charging && (() => {
+        const lv = liveVehicle?.vehicleId ? VEHICLES[liveVehicle.vehicleId] : null
+        return (
+          <div onClick={()=>onNavigate('live')} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--amber)', display:'inline-block', flexShrink:0 }} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'var(--amber)' }}>
+                🔌 Véhicule branché{lv ? <span style={{ color:lv.color }}> · {lv.emoji} {lv.name}</span> : ''}
+              </div>
+            </div>
+            <span style={{ color:'var(--amber)', fontSize:16 }}>›</span>
+          </div>
+        )
+      })()}
 
       {/* Period banners — 2x2 grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:'14px 16px 0' }}>
