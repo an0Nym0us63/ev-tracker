@@ -184,11 +184,11 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const chartData = useMemo(() => getChartData(filtered, activePeriod || 'all'), [filtered, activePeriod])
   const isDailyChart = activePeriod === 'month' || activePeriod === '30d'
 
-  const sorted = useMemo(() => [...charges].sort((a,b) => {
+  const sorted = useMemo(() => [...globallyFiltered].sort((a,b) => {
     const dateCmp = b.date.localeCompare(a.date)
     if (dateCmp !== 0) return dateCmp
     return (b.startTime||'').localeCompare(a.startTime||'')
-  }), [charges])
+  }), [globallyFiltered])
   const recentFiltered = useMemo(() => {
     let c = sorted
     if (activePeriod) c = c.filter(x => filterByPeriod([x], activePeriod).length > 0)
@@ -211,15 +211,20 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const avgCostDC = dcCharges.length ? (dcCharges.reduce((s,c)=>s+(c.totalCost||0),0)/dcCharges.length).toFixed(2) : '—'
   const maxSession = filtered.length ? Math.max(...filtered.map(c=>c.kwh)).toFixed(1) : '—'
   const avgPrice   = stats.avgPrice > 0 ? stats.avgPrice.toFixed(3) : '—'
-  const lastCharge  = activeVehicle
-    ? sorted.find(c => c.vehicleId === activeVehicle)
-    : sorted[0]
+
+  // Dernière charge / dernière AC / dernière DC — doit refléter TOUS les filtres
+  // actifs (Filtres globaux + période/véhicule de l'accueil), pas juste le véhicule.
+  const sortedFiltered = useMemo(() => [...filtered].sort((a,b) => {
+    const dateCmp = b.date.localeCompare(a.date)
+    if (dateCmp !== 0) return dateCmp
+    return (b.startTime||'').localeCompare(a.startTime||'')
+  }), [filtered])
+  const lastCharge = sortedFiltered[0]
   const streak = lastCharge ? Math.floor((now-new Date(lastCharge.date+'T00:00:00'))/86400000) : null
 
   // Last AC (home) and DC (external) charge days
-  const filteredForStreak = activeVehicle ? sorted.filter(c=>c.vehicleId===activeVehicle) : sorted
-  const lastAC = filteredForStreak.find(c => c.locationId === 'home')
-  const lastDC = filteredForStreak.find(c => c.locationId !== 'home')
+  const lastAC = sortedFiltered.find(c => c.locationId === 'home')
+  const lastDC = sortedFiltered.find(c => c.locationId !== 'home')
   const daysAC = lastAC ? Math.floor((now-new Date(lastAC.date+'T00:00:00'))/86400000) : null
   const daysDC = lastDC ? Math.floor((now-new Date(lastDC.date+'T00:00:00'))/86400000) : null
   // Savings from DB (computed at save time with user's fuel price)
