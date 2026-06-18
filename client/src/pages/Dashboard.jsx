@@ -584,28 +584,24 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
                     <OperatorLogo name={logoName} size={36} style={{ width:36, height:36, borderRadius:9, objectFit:'cover' }} />
                   </div>
                 </div>
-                <div style={{ flex:1, minWidth:0, padding:'10px 0' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
-                    {c.provider && <span style={{ fontSize:11, fontWeight:600, padding:'2px 7px', borderRadius:20,
+                <div style={{ flex:1, minWidth:0, padding:'10px 0', display:'flex', flexDirection:'column', justifyContent:'center', gap:4 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
+                  <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+                    {c.provider && <span style={{ fontSize:10.5, fontWeight:600, padding:'2px 7px', borderRadius:20,
                       background: isHome?'rgba(34,197,94,0.1)':'rgba(79,142,247,0.1)',
                       color: isHome?'var(--green)':'var(--accent)',
                       border:`1px solid ${isHome?'rgba(34,197,94,0.2)':'rgba(79,142,247,0.2)'}` }}>{c.provider}</span>}
+                    <span style={{ fontSize:10.5, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface2)', color:'var(--text-secondary)', border:'1px solid var(--border)' }}>{formatDate(c.date)}</span>
                   </div>
-                  <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
-                    {formatDate(c.date)}{c.durationMin ? ` · ${formatDuration(c.durationMin)}` : ''}
-                  </div>
-                  {c.card ? (
-                    <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', alignItems:'center', gap:5 }}>
-                      <CardLogo name={c.card} size={11} />
-                      <span>{c.card}</span>
-                    </div>
-                  ) : null}
+                  {c.durationMin ? <div style={{ fontSize:11, color:'var(--muted)' }}>{formatDuration(c.durationMin)}</div> : null}
                 </div>
-                <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:2 }}>
-                  <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh} kWh</div>
-                  <span className="mono" style={{ fontSize:12, fontWeight:700, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</span>
-                  <div style={{ display:'flex', gap:3, flexWrap:'wrap', justifyContent:'flex-end', marginTop:2 }}>
+                <div style={{ textAlign:'right', flexShrink:0, padding:'10px 16px 10px 8px', display:'flex', flexDirection:'column', justifyContent:'center', gap:3 }}>
+                  <div className="mono" style={{ fontSize:14, fontWeight:700 }}>{c.kwh}<span style={{ fontSize:9, color:'var(--muted)', fontWeight:400, marginLeft:2 }}>kWh</span></div>
+                  <div style={{ display:'flex', alignItems:'center', gap:4, justifyContent:'flex-end' }}>
+                    {c.card && <CardLogo name={c.card} size={11} />}
+                    <span className="mono" style={{ fontSize:12, fontWeight:700, color: isHome?'var(--green)':'var(--amber)' }}>{formatCost(c.totalCost)}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:3, flexWrap:'wrap', justifyContent:'flex-end' }}>
                     {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background: c.fuelSavings >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)' }}>🚗 {c.fuelSavings >= 0 ? '+' : ''}{c.fuelSavings.toFixed(2)}€</span>}
                     {c.solarSavings >= 0.01 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(251,191,36,0.12)', color:'var(--amber)' }}>☀️ {c.solarSavings.toFixed(2)}€</span>}
                   </div>

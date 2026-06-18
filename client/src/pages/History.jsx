@@ -115,43 +115,42 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
                       </div>
 
                       {/* Main content */}
-                      <div style={{ flex:1, minWidth:0, padding:'10px 0 10px 0' }}>
-                        {/* Row 1: vehicle + provider tag */}
-                        <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                          <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
+                      <div style={{ flex:1, minWidth:0, padding:'10px 0', display:'flex', flexDirection:'column', justifyContent:'center', gap:5 }}>
+                        {/* Row 1: vehicle name alone */}
+                        <span style={{ fontSize:13, fontWeight:700, color:v.color }}>{v.name}</span>
+                        {/* Row 2: provider + date, grouped as badges */}
+                        <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
                           {c.provider && (
-                            <span style={{ fontSize:11, fontWeight:600, padding:'2px 7px', borderRadius:20,
+                            <span style={{ fontSize:10.5, fontWeight:600, padding:'2px 7px', borderRadius:20,
                               background: isHome ? 'rgba(34,197,94,0.1)' : 'rgba(79,142,247,0.1)',
                               color: isHome ? 'var(--green)' : 'var(--accent)',
                               border: `1px solid ${isHome ? 'rgba(34,197,94,0.2)' : 'rgba(79,142,247,0.2)'}` }}>
                               {c.provider}
                             </span>
                           )}
+                          <span style={{ fontSize:10.5, fontWeight:600, padding:'2px 7px', borderRadius:20, background:'var(--surface2)', color:'var(--text-secondary)', border:'1px solid var(--border)' }}>
+                            {day.getDate()} {day.toLocaleDateString('fr-FR',{month:'short'})}
+                            {c.startTime && <span style={{ marginLeft:4, fontFamily:"'JetBrains Mono',monospace" }}>{c.startTime}</span>}
+                          </span>
                         </div>
-                        {/* Row 2: details */}
-                        <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', flexWrap:'wrap', alignItems:'center', gap:'0 6px' }}>
+                        {/* Row 3: technical details */}
+                        <div style={{ fontSize:11, color:'var(--muted)', display:'flex', flexWrap:'wrap', alignItems:'center', gap:'0 6px' }}>
                           {c.durationMin ? <span>{formatDuration(c.durationMin)}</span> : null}
                           {c.powerKw ? <span>{c.powerKw} kW</span> : null}
                           {(c.connectorTypes||[]).length > 0 ? <span>{c.connectorTypes.join(', ')}</span> : null}
                         </div>
-                        {/* Row 3: card */}
-                        {c.card ? (
-                          <div style={{ fontSize:11, color:'var(--muted)', marginTop:3, display:'flex', alignItems:'center', gap:5 }}>
-                            <CardLogo name={c.card} size={12} />
-                            <span>{c.card}</span>
-                          </div>
-                        ) : null}
                       </div>
 
-                      {/* Right: date + kWh + cost */}
-                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', justifyContent:'center', padding:'10px 14px 10px 8px', flexShrink:0, gap:2 }}>
-                        <div style={{ fontSize:11, color:'var(--muted)', fontWeight:500 }}>
-                          {day.getDate()} {day.toLocaleDateString('fr-FR',{month:'short'})}
-                          {c.startTime && <span style={{ marginLeft:4, fontFamily:"'JetBrains Mono',monospace", fontSize:10 }}>{c.startTime}</span>}
+                      {/* Right: kWh + coût (avec logo carte) + gains */}
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', justifyContent:'center', padding:'10px 14px 10px 8px', flexShrink:0, gap:3 }}>
+                        <div className="mono" style={{ fontSize:15, fontWeight:700 }}>
+                          {c.kwh}<span style={{ fontSize:10, color:'var(--muted)', fontWeight:400, marginLeft:2 }}>kWh</span>
                         </div>
-                        <div className="mono" style={{ fontSize:15, fontWeight:700 }}>{c.kwh} kWh</div>
-                        <span className="mono" style={{ fontSize:13, fontWeight:700, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{(c.totalCost||0).toFixed(2)} €</span>
-                        <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'flex-end', marginTop:2 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                          {c.card && <CardLogo name={c.card} size={12} />}
+                          <span className="mono" style={{ fontSize:13, fontWeight:700, color: isHome ? 'var(--green)' : 'var(--amber)' }}>{(c.totalCost||0).toFixed(2)} €</span>
+                        </div>
+                        <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'flex-end' }}>
                           {c.fuelSavings != null && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background: c.fuelSavings >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', color: c.fuelSavings >= 0 ? 'var(--green)' : 'var(--red)' }}>🚗 {c.fuelSavings >= 0 ? '+' : ''}{c.fuelSavings.toFixed(2)}€</span>}
                           {c.solarSavings >= 0.01 && <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:10, background:'rgba(251,191,36,0.12)', color:'var(--amber)' }}>☀️ {c.solarSavings.toFixed(2)}€</span>}
                         </div>
