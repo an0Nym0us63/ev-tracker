@@ -75,16 +75,40 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
   const avgSp95   = sp95Prices.length   ? sp95Prices.reduce((a,b)=>a+b,0)/sp95Prices.length     : null
   const avgGazole = gazolePrices.length ? gazolePrices.reduce((a,b)=>a+b,0)/gazolePrices.length : null
 
-  // Évolution du prix carburant dans le temps (un point par session, respecte le filtre temporel actif)
-  const sp95Series = useMemo(() => filtered
-    .filter(c => c.fuelTypeUsed === 'sp95' && c.fuelPriceUsed != null)
-    .map(c => ({ t: new Date(c.date).getTime(), date: c.date, price: c.fuelPriceUsed }))
-    .sort((a,b) => a.t - b.t), [filtered])
-  const gazoleSeries = useMemo(() => filtered
-    .filter(c => c.fuelTypeUsed === 'gazole' && c.fuelPriceUsed != null)
-    .map(c => ({ t: new Date(c.date).getTime(), date: c.date, price: c.fuelPriceUsed }))
-    .sort((a,b) => a.t - b.t), [filtered])
-  const hasFuelEvolution = (sp95Series.length + gazoleSeries.length) >= 2
+  // Évolution du prix carburant dans le temps — un seul jeu de données fusionné
+  // (point commun par date) pour que l'axe Y et le tooltip prennent en compte
+  // les deux courbes correctement (les lignes ne doivent pas avoir leur propre
+  // tableau "data" séparé, sinon recharts ne sait calculer ni l'échelle ni le
+  // tooltip partagé).
+  const fuelEvolutionData = useMemo(() => {
+    const byTime = {}
+    filtered.forEach(c => {
+      if (c.fuelPriceUsed == null || !c.fuelTypeUsed) return
+      const t = new Date(c.date).getTime()
+      if (!byTime[t]) byTime[t] = { t }
+      byTime[t][c.fuelTypeUsed] = c.fuelPriceUsed
+    })
+    return Object.values(byTime).sort((a,b) => a.t - b.t)
+  }, [filtered])
+  const hasSp95Evolution   = fuelEvolutionData.some(d => d.sp95   != null)
+  const hasGazoleEvolution = fuelEvolutionData.some(d => d.gazole != null)
+  const hasFuelEvolution   = fuelEvolutionData.length >= 2 && (hasSp95Evolution || hasGazoleEvolution)
+  // 5 ticks espacés régulièrement sur l'axe du temps, pour éviter la bouillie de dates
+  const fuelEvolutionTicks = useMemo(() => {
+    if (fuelEvolutionData.length < 2) return []
+    const tMin = fuelEvolutionData[0].t, tMax = fuelEvolutionData[fuelEvolutionData.length-1].t
+    const n = Math.min(5, fuelEvolutionData.length)
+    if (n < 2) return [tMin]
+    return Array.from({ length:n }, (_,i) => Math.round(tMin + (tMax-tMin)*i/(n-1)))
+  }, [fuelEvolutionData])
+  const fuelEvolutionYDomain = useMemo(() => {
+    const vals = fuelEvolutionData.flatMap(d => [d.sp95, d.gazole]).filter(v => v != null)
+    if (!vals.length) return [0, 2]
+    const min = Math.min(...vals), max = Math.max(...vals)
+    const pad = Math.max(0.02, (max-min) * 0.15)
+    return [Math.floor((min-pad)*100)/100, Math.ceil((max+pad)*100)/100]
+  }, [fuelEvolutionData])
+
 
   // Solar savings — includes Wallbox (now has solar_savings from one-time recompute)
   const totalSolar    = filtered.reduce((s,c)=>s+(c.solarSavings||0),0)
@@ -394,33 +418,38 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
                 <div style={{ marginTop:14 }}>
                   <div style={{ fontSize:11, color:'var(--muted)', marginBottom:6 }}>Évolution du prix carburant</div>
                   <ResponsiveContainer width="100%" height={140}>
-                    <LineChart margin={{ top:4, right:8, left:-18, bottom:0 }}>
+                    <LineChart data={fuelEvolutionData} margin={{ top:4, right:8, left:-10, bottom:0 }}>
                       <XAxis dataKey="t" type="number" domain={['dataMin','dataMax']} scale="time"
-                        tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false}
+                        ticks={fuelEvolutionTicks} tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false}
                         tickFormatter={t => new Date(t).toLocaleDateString('fr-FR',{ day:'2-digit', month:'short' })} />
-                      <YAxis tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false}
-                        domain={['auto','auto']} tickFormatter={v => v.toFixed(2)} width={34} />
-                      <Tooltip content={({ active, payload }) => {
+                      <YAxis tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false}
+                        domain={fuelEvolutionYDomain} tickFormatter={v => v.toFixed(2)} width={38} />
+                      <Tooltip content={({ active, payload, label }) => {
                         if (!active || !payload?.length) return null
-                        const p = payload[0].payload
+                        const entries = payload.filter(p => p.value != null)
+                        if (!entries.length) return null
                         return (
                           <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:11 }}>
-                            <div style={{ color:'var(--muted)', marginBottom:4 }}>{new Date(p.t).toLocaleDateString('fr-FR',{ day:'2-digit', month:'short', year:'numeric' })}</div>
-                            <div style={{ color: payload[0].name==='SP95' ? 'var(--mg4)' : 'var(--xpeng)', fontWeight:700 }}>{payload[0].name}: {p.price.toFixed(3)} €/L</div>
+                            <div style={{ color:'var(--muted)', marginBottom:4 }}>{new Date(label).toLocaleDateString('fr-FR',{ day:'2-digit', month:'short', year:'numeric' })}</div>
+                            {entries.map(p => (
+                              <div key={p.dataKey} style={{ color: p.dataKey==='sp95' ? 'var(--mg4)' : 'var(--xpeng)', fontWeight:700 }}>
+                                {p.dataKey==='sp95' ? 'SP95' : 'Gazole'}: {p.value.toFixed(3)} €/L
+                              </div>
+                            ))}
                           </div>
                         )
                       }} />
-                      {sp95Series.length > 0 && (
-                        <Line data={sp95Series} dataKey="price" name="SP95" type="monotone" stroke="var(--mg4)" strokeWidth={2} dot={sp95Series.length<15} connectNulls />
+                      {hasSp95Evolution && (
+                        <Line dataKey="sp95" name="SP95" type="monotone" stroke="var(--mg4)" strokeWidth={2} dot={fuelEvolutionData.length<15} connectNulls />
                       )}
-                      {gazoleSeries.length > 0 && (
-                        <Line data={gazoleSeries} dataKey="price" name="Gazole" type="monotone" stroke="var(--xpeng)" strokeWidth={2} dot={gazoleSeries.length<15} connectNulls />
+                      {hasGazoleEvolution && (
+                        <Line dataKey="gazole" name="Gazole" type="monotone" stroke="var(--xpeng)" strokeWidth={2} dot={fuelEvolutionData.length<15} connectNulls />
                       )}
                     </LineChart>
                   </ResponsiveContainer>
                   <div style={{ display:'flex', gap:14, justifyContent:'center', marginTop:2 }}>
-                    {sp95Series.length > 0 && <span style={{ fontSize:9, color:'var(--mg4)', fontWeight:600 }}>● SP95</span>}
-                    {gazoleSeries.length > 0 && <span style={{ fontSize:9, color:'var(--xpeng)', fontWeight:600 }}>● Gazole</span>}
+                    {hasSp95Evolution   && <span style={{ fontSize:9, color:'var(--mg4)', fontWeight:600 }}>● SP95</span>}
+                    {hasGazoleEvolution && <span style={{ fontSize:9, color:'var(--xpeng)', fontWeight:600 }}>● Gazole</span>}
                   </div>
                 </div>
               )}
