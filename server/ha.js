@@ -110,7 +110,7 @@ const CHARGER_ENTITY_IDS = {
   plugged:       'binary_sensor.v2c_trydan_branche',
   charging:      'binary_sensor.v2c_trydan_charge_en_cours',
   sessionActive: 'binary_sensor.v2c_trydan_session_en_cours',
-  status:        'sensor.v2c_trydan_etat_de_charge',
+  status:        'sensor.v2c_trydan_statut',
   powerW:        'sensor.v2c_trydan_puissance_de_charge_2',
   energyKwh:     'sensor.v2c_trydan_energie_de_charge_2',
   duration:      'sensor.v2c_trydan_temps_de_charge_2',

@@ -7,19 +7,25 @@ import { VEHICLES } from '../utils.js'
 const POLL_INTERVAL_MS = 5000
 
 const STATUS_MAP = {
-  charging:     { label: 'En charge',   color: 'var(--green)',  dot: true },
-  paused:       { label: 'En pause',    color: 'var(--amber)',  dot: false },
-  ready:        { label: 'Prêt',        color: 'var(--accent)', dot: false },
-  disconnected: { label: 'Déconnecté',  color: 'var(--muted)',  dot: false },
-  error:        { label: 'Erreur',      color: 'var(--red)',    dot: false },
-  scheduled:    { label: 'Programmé',   color: 'var(--accent)', dot: false },
+  charging:             { label: 'En charge',           color: 'var(--green)' },
+  connected:            { label: 'Branché, prêt',       color: 'var(--accent)' },
+  waiting_solar:        { label: 'Attente surplus PV',  color: 'var(--amber)' },
+  session_waiting:      { label: 'Session en attente',  color: 'var(--amber)' },
+  paused:               { label: 'Pause manuelle',      color: 'var(--amber)' },
+  stop_mode:            { label: 'En mode arrêt',       color: 'var(--muted)' },
+  unplugged:            { label: 'Débranché',           color: 'var(--muted)' },
+  locked:               { label: 'Verrouillé',          color: 'var(--muted)' },
+  ventilation_required: { label: 'Ventilation requise', color: 'var(--red)' },
+  fault:                { label: 'Défaut système',      color: 'var(--red)' },
+  error:                { label: 'Erreur (terre)',      color: 'var(--red)' },
+  unknown:              { label: 'Inconnu',             color: 'var(--muted)' },
 }
 
 function statusInfo(raw) {
-  if (!raw) return { label: '—', color: 'var(--muted)', dot: false }
+  if (!raw) return { label: '—', color: 'var(--muted)' }
   const known = STATUS_MAP[raw.toLowerCase()]
   if (known) return known
-  return { label: raw.charAt(0).toUpperCase() + raw.slice(1), color: 'var(--muted)', dot: false }
+  return { label: raw.charAt(0).toUpperCase() + raw.slice(1), color: 'var(--muted)' }
 }
 
 function fmtKw(w) {
