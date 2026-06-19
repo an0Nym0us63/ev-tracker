@@ -144,7 +144,7 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
               <Chip active={vehicles.length===0} label="Tous" onClick={()=>setFilters(f=>({...f,vehicles:[]}))} />
               {[{id:'mg4',label:'MG4',color:'var(--mg4)'},{id:'xpeng',label:'Xpeng G6',color:'var(--xpeng)'}].map(v => (
                 <Chip key={v.id} active={vehicles.includes(v.id)} label={v.label} color={v.color}
-                  onClick={()=>setFilters(f=>({...f,vehicles:f.vehicles.includes(v.id)?f.vehicles.filter(x=>x!==v.id):[...f.vehicles,v.id]}))} />
+                  onClick={()=>setFilters(f=>({...f,vehicles:f.vehicles.includes(v.id)?[]:[v.id]}))} />
               ))}
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
               <Chip active={locations.length===0} label="Tous" onClick={()=>setFilters(f=>({...f,locations:[]}))} />
               {[{id:'home',label:'🏠 Maison',color:'var(--green)'},{id:'ext',label:'📍 Externe',color:'var(--amber)'}].map(l => (
                 <Chip key={l.id} active={locations.includes(l.id)} label={l.label} color={l.color}
-                  onClick={()=>setFilters(f=>({...f,locations:f.locations.includes(l.id)?f.locations.filter(x=>x!==l.id):[...f.locations,l.id]}))} />
+                  onClick={()=>setFilters(f=>({...f,locations:f.locations.includes(l.id)?[]:[l.id]}))} />
               ))}
             </div>
           </div>
