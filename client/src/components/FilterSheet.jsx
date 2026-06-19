@@ -1,6 +1,7 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
 import OperatorLogo from './OperatorLogo.jsx'
+import { getPeriodWindow } from '../utils.js'
 import CardLogo from './CardLogo.jsx'
 
 function Chip({ active, label, onClick, color='var(--accent)' }) {
@@ -83,7 +84,7 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
   const { period, customFrom, customTo, vehicles, providers, cards, locations } = filters
 
   function reset() {
-    setFilters({ period:'all', customFrom:'', customTo:'', vehicles:[], providers:[], cards:[], locations:[] })
+    setFilters({ period:'all', periodOffset:0, customFrom:'', customTo:'', vehicles:[], providers:[], cards:[], locations:[] })
   }
 
   const activeCount = [
@@ -183,7 +184,7 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
 
 export function useFilters() {
   const [filters, setFilters] = React.useState({
-    period:'all', customFrom:'', customTo:'',
+    period:'all', periodOffset:0, customFrom:'', customTo:'',
     vehicles:[], providers:[], cards:[], locations:[]
   })
   const [showFilters, setShowFilters] = React.useState(false)
@@ -206,13 +207,17 @@ export function useFilters() {
         if (filters.customFrom && c.date < filters.customFrom) return false
         if (filters.customTo   && c.date > filters.customTo)   return false
       } else if (filters.period !== 'all') {
-        const now = new Date()
-        let cutoff = new Date()
-        if (filters.period==='month')  cutoff = new Date(now.getFullYear(), now.getMonth(), 1)
-        if (filters.period==='year')   cutoff = new Date(now.getFullYear(), 0, 1)
-        if (filters.period==='30d')    cutoff.setDate(now.getDate()-30)
-        if (filters.period==='12m')    cutoff.setMonth(now.getMonth()-12)
-        if (c.date < cutoff.toISOString().slice(0,10)) return false
+        const offset = filters.periodOffset || 0
+        const win = getPeriodWindow(filters.period, offset)
+        if (win) {
+          const fromStr = win.from.toISOString().slice(0,10)
+          const toStr   = win.to.toISOString().slice(0,10)
+          if (c.date < fromStr || c.date > toStr) return false
+        } else {
+          const now = new Date(), cutoff = new Date()
+          if (filters.period==='12m')    cutoff.setMonth(now.getMonth()-12)
+          if (c.date < cutoff.toISOString().slice(0,10)) return false
+        }
       }
       return true
     })

@@ -20,14 +20,49 @@ export function computeStats(charges, vehicleId = null) {
   return { totalKwh, totalCost, count, avgPrice, homeKwh, extKwh }
 }
 
-export function filterByPeriod(charges, period) {
+// Retourne { from: Date, to: Date, label: string } pour une période + offset
+export function getPeriodWindow(period, offset = 0) {
+  const now = new Date()
+  let from, to, label
+
+  if (period === 'month') {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+    from = new Date(d.getFullYear(), d.getMonth(), 1)
+    to   = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    label = d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })
+    label = label.charAt(0).toUpperCase() + label.slice(1)
+  } else if (period === 'year') {
+    const y = now.getFullYear() + offset
+    from = new Date(y, 0, 1)
+    to   = new Date(y, 11, 31)
+    label = String(y)
+  } else if (period === '30d') {
+    const shift = offset * 30
+    from = new Date(now); from.setDate(now.getDate() - 30 + shift)
+    to   = new Date(now); to.setDate(now.getDate() + shift)
+    label = `${from.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})} – ${to.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`
+  } else if (period === '7d') {
+    const shift = offset * 7
+    from = new Date(now); from.setDate(now.getDate() - 7 + shift)
+    to   = new Date(now); to.setDate(now.getDate() + shift)
+    label = `${from.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})} – ${to.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`
+  } else {
+    return null
+  }
+  return { from, to, label }
+}
+
+export function filterByPeriod(charges, period, offset = 0) {
   if (period === 'all') return charges
+  const win = getPeriodWindow(period, offset)
+  if (win) {
+    const fromStr = win.from.toISOString().slice(0, 10)
+    const toStr   = win.to.toISOString().slice(0, 10)
+    return charges.filter(c => c.date >= fromStr && c.date <= toStr)
+  }
+  // Fallback pour les autres périodes (12m, 3m, custom)
   const now = new Date(), cutoff = new Date()
-  if (period === '30d')   cutoff.setDate(now.getDate() - 30)
   if (period === '12m')   cutoff.setMonth(now.getMonth() - 12)
-  if (period === '7d')    cutoff.setDate(now.getDate() - 7)
-  if (period === 'month') cutoff.setDate(1)
-  if (period === 'year')  { cutoff.setMonth(0); cutoff.setDate(1) }
   if (period === '3m')    cutoff.setMonth(now.getMonth() - 3)
   return charges.filter(c => new Date(c.date) >= cutoff)
 }

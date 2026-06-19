@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts'
-import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogramSplit, VEHICLES, formatCost } from '../utils.js'
+import { computeStats, filterByPeriod, getPeriodWindow, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogramSplit, VEHICLES, formatCost } from '../utils.js'
+import PeriodNav from '../components/PeriodNav.jsx'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
@@ -51,6 +52,33 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
   const period  = filters.period === 'all' ? 'all' : filters.period
 
   const filtered = useMemo(() => applyFilters(charges), [charges, filters])
+
+  // Période précédente — pour la section comparaison
+  const prevFiltered = useMemo(() => {
+    const period = filters.period
+    const offset = (filters.periodOffset || 0) - 1
+    if (!['month','year','30d','7d'].includes(period)) return null
+    const win = getPeriodWindow(period, offset)
+    if (!win) return null
+    const from = win.from.toISOString().slice(0,10)
+    const to   = win.to.toISOString().slice(0,10)
+    const base = applyFilters(charges) // garde les filtres véhicule/lieu/etc.
+    // On refiltre juste la fenêtre de date
+    const allWithFilters = charges.filter(c => {
+      const tmp = applyFilters([c])
+      return tmp.length > 0
+    })
+    return charges.filter(c => {
+      if (c.date < from || c.date > to) return false
+      // Même filtres véhicule/lieu
+      if (filters.vehicles.length > 0 && !filters.vehicles.includes(c.vehicleId)) return false
+      if (filters.locations.length > 0) {
+        const loc = c.locationId === 'home' ? 'home' : 'ext'
+        if (!filters.locations.includes(loc)) return false
+      }
+      return true
+    })
+  }, [charges, filters])
 
   const stats      = useMemo(() => computeStats(filtered),         [filtered])
   const statsMg4   = useMemo(() => computeStats(filtered, 'mg4'),  [filtered])
@@ -214,9 +242,48 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
+      <PeriodNav filters={filters} setFilters={setFilters} />
+
       {filtered.length === 0 ? (
         <div style={{ padding:'40px 16px', textAlign:'center', color:'var(--muted)', fontSize:13 }}>Aucune session sur cette période.</div>
       ) : (<>
+
+      {/* Comparaison période précédente */}
+      {prevFiltered && prevFiltered.length >= 0 && (() => {
+        const curr = computeStats(filtered)
+        const prev = computeStats(prevFiltered)
+        const delta = (a, b, unit='', inv=false) => {
+          if (b === 0 && a === 0) return null
+          const d = a - b
+          const pct = b !== 0 ? Math.round(d/b*100) : null
+          const pos = inv ? d < 0 : d >= 0
+          return { d, pct, pos, label: `${d >= 0 ? '+' : ''}${unit === '€' ? d.toFixed(0) : d.toFixed(1)}${unit}${pct !== null ? ` (${d >= 0 ? '+' : ''}${pct}%)` : ''}` }
+        }
+        const rows = [
+          { label:'Sessions',   curr:curr.count,         prev:prev.count,         unit:'',   fmt:v=>v },
+          { label:'kWh',        curr:curr.totalKwh,      prev:prev.totalKwh,      unit:' kWh', fmt:v=>v.toFixed(1) },
+          { label:'Coût',       curr:curr.totalCost,     prev:prev.totalCost,     unit:'€',  fmt:v=>v.toFixed(0), inv:true },
+          { label:'Économies',  curr:filtered.reduce((s,c)=>s+(c.fuelSavings||0),0), prev:prevFiltered.reduce((s,c)=>s+(c.fuelSavings||0),0), unit:'€', fmt:v=>v.toFixed(0) },
+        ]
+        return (
+          <div style={{ margin:'10px 16px 0', padding:'12px 14px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)' }}>
+            <div style={{ fontSize:10, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:10 }}>vs période précédente</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:6 }}>
+              {rows.map(r => {
+                const d = delta(r.curr, r.prev, r.unit, r.inv)
+                return (
+                  <div key={r.label} style={{ textAlign:'center' }}>
+                    <div style={{ fontSize:9, color:'var(--muted)', marginBottom:3 }}>{r.label}</div>
+                    <div className="mono" style={{ fontSize:13, fontWeight:700 }}>{r.fmt(r.curr)}<span style={{ fontSize:9, color:'var(--muted)', marginLeft:1 }}>{r.unit}</span></div>
+                    {d && <div style={{ fontSize:9, fontWeight:700, color: d.pos ? 'var(--green)' : 'var(--red)', marginTop:2 }}>{d.label}</div>}
+                    {!d && <div style={{ fontSize:9, color:'var(--muted)', marginTop:2 }}>—</div>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
         {/* Main KPIs 2x2 */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:'12px 16px 0' }}>

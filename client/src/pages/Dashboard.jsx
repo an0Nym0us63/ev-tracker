@@ -6,7 +6,7 @@ import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
-import CO2Tile from '../components/CO2Tile.jsx'
+import PeriodNav from '../components/PeriodNav.jsx'
 import SavingsTile from '../components/SavingsTile.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
@@ -337,7 +337,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
-      {/* Alertes dynamiques depuis le serveur */}
+      <PeriodNav filters={filters} setFilters={setFilters} />
       {alerts.length > 0 && (
         <div onClick={()=>onNavigateAlert && onNavigateAlert(alerts)} style={{ margin:'10px 16px 0', padding:'12px 14px', background:'rgba(245,158,11,0.08)', border:'1.5px solid rgba(245,158,11,0.35)', borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
           <span style={{ fontSize:20 }}>⚠️</span>
