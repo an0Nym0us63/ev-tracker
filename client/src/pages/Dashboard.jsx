@@ -546,6 +546,13 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         ))}
       </div>
 
+      {/* CO2 évité — juste avant les graphes */}
+      {totalCO2 > 0 && (
+        <div style={{ margin:'14px 16px 0' }}>
+          <CO2Tile kg={totalCO2} />
+        </div>
+      )}
+
       {/* Adaptive chart */}
       {chartData.length > 0 && (
         <div style={{ margin:'14px 16px 0' }}>
@@ -583,13 +590,6 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
       {filtered.filter(c=>c.locationId!=='home').length > 0 && (
         <div style={{ margin:'10px 16px 0' }}>
           <ProviderChart charges={filtered} />
-        </div>
-      )}
-
-      {/* CO2 évité */}
-      {totalCO2 > 0 && (
-        <div style={{ margin:'14px 16px 0' }}>
-          <CO2Tile kg={totalCO2} />
         </div>
       )}
 
