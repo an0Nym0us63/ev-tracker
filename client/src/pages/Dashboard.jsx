@@ -547,15 +547,15 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         ))}
       </div>
 
-      {/* CO2 évité + économies — juste avant les graphes */}
-      {totalCO2 > 0 && (
+      {/* Économies + CO2 — juste avant les graphes */}
+      {savings > 0 && (
         <div style={{ margin:'14px 16px 0' }}>
-          <CO2Tile kg={totalCO2} />
+          <SavingsTile euros={savings} />
         </div>
       )}
-      {savings > 0 && (
+      {totalCO2 > 0 && (
         <div style={{ margin:'8px 16px 0' }}>
-          <SavingsTile euros={savings} />
+          <CO2Tile kg={totalCO2} />
         </div>
       )}
 

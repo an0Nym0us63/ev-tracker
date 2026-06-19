@@ -433,11 +433,11 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
                 </div>
               )}
 
-              {/* Ligne 3 : CO₂ évité — pleine largeur avec carrousel d'équivalences */}
-              {totalCO2Saved > 0 && <CO2Tile kg={totalCO2Saved} />}
+              {/* Ligne 3 : Économies en € avec équivalences concrètes */}
+              {totalFuel > 0 && <SavingsTile euros={totalFuel} />}
 
-              {/* Ligne 4 : Économies en € avec équivalences concrètes */}
-              {totalFuel > 0 && <div style={{ marginTop:8 }}><SavingsTile euros={totalFuel} /></div>}
+              {/* Ligne 4 : CO₂ évité — pleine largeur avec carrousel d'équivalences */}
+              {totalCO2Saved > 0 && <div style={{ marginTop:8 }}><CO2Tile kg={totalCO2Saved} /></div>}
 
               {/* Évolution du prix carburant dans le temps */}
               {hasFuelEvolution && (
