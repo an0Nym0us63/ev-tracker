@@ -7,6 +7,7 @@ import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
 import CO2Tile from '../components/CO2Tile.jsx'
+import SavingsTile from '../components/SavingsTile.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
@@ -546,10 +547,15 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         ))}
       </div>
 
-      {/* CO2 évité — juste avant les graphes */}
+      {/* CO2 évité + économies — juste avant les graphes */}
       {totalCO2 > 0 && (
         <div style={{ margin:'14px 16px 0' }}>
           <CO2Tile kg={totalCO2} />
+        </div>
+      )}
+      {savings > 0 && (
+        <div style={{ margin:'8px 16px 0' }}>
+          <SavingsTile euros={savings} />
         </div>
       )}
 

@@ -43,6 +43,7 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
 }
 
 import CO2Tile from '../components/CO2Tile.jsx'
+import SavingsTile from '../components/SavingsTile.jsx'
 
 export default function Stats({ charges, filters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
   const [habitsBreakdown, setHabitsBreakdown] = React.useState('none') // 'none' | 'location' | 'vehicle'
@@ -434,6 +435,9 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
 
               {/* Ligne 3 : CO₂ évité — pleine largeur avec carrousel d'équivalences */}
               {totalCO2Saved > 0 && <CO2Tile kg={totalCO2Saved} />}
+
+              {/* Ligne 4 : Économies en € avec équivalences concrètes */}
+              {totalFuel > 0 && <div style={{ marginTop:8 }}><SavingsTile euros={totalFuel} /></div>}
 
               {/* Évolution du prix carburant dans le temps */}
               {hasFuelEvolution && (
