@@ -69,7 +69,18 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
   const totalCostAll = filtered.reduce((s,c)=>s+(c.totalCost||0),0)
   const equivalentFuel = totalFuel + totalCostAll
 
-  // Prix carburant moyen utilisé (SP95/Gazole), selon le filtre actif
+  // CO2 évité — thermique vs réseau électrique français (~52g/kWh nucléaire)
+  const CO2_GRID_KG_PER_KWH = 0.052  // mix FR, source RTE
+  const CO2_PER_LITRE = { mg4: 2.28, xpeng: 2.65 }  // SP95: 2.28 kg/L, Gazole: 2.65 kg/L
+  const VEHICLE_CFG   = { mg4: { kwhPer100: 14.5, litresPer100: 6.0 }, xpeng: { kwhPer100: 16.0, litresPer100: 7.5 } }
+  const totalCO2Saved = filtered.reduce((sum, c) => {
+    const v = VEHICLE_CFG[c.vehicleId]
+    if (!v || !c.kwh) return sum
+    const litres     = (c.kwh / v.kwhPer100) * v.litresPer100
+    const co2Therm   = litres * (CO2_PER_LITRE[c.vehicleId] || 2.28)
+    const co2Grid    = c.kwh * CO2_GRID_KG_PER_KWH
+    return sum + (co2Therm - co2Grid)
+  }, 0)
   const sp95Prices   = filtered.filter(c => c.fuelTypeUsed === 'sp95'   && c.fuelPriceUsed != null).map(c => c.fuelPriceUsed)
   const gazolePrices = filtered.filter(c => c.fuelTypeUsed === 'gazole' && c.fuelPriceUsed != null).map(c => c.fuelPriceUsed)
   const avgSp95   = sp95Prices.length   ? sp95Prices.reduce((a,b)=>a+b,0)/sp95Prices.length     : null
@@ -395,6 +406,18 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
                     <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--amber)' }}>{totalSolar.toFixed(1)} €</div>
                     <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{solarPct}% charges maison avec PV</div>
                     <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>soit ~{(totalSolar/0.14).toFixed(0)} kWh solaire</div>
+                  </div>
+                )}
+                {totalCO2Saved > 0 && (
+                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(34,197,94,0.06)', borderRadius:'var(--r-sm)', border:'1px solid rgba(34,197,94,0.18)' }}>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🌿 CO₂ évité</div>
+                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--green)' }}>
+                      {totalCO2Saved >= 1000
+                        ? `${(totalCO2Saved/1000).toFixed(2)} t`
+                        : `${totalCO2Saved.toFixed(1)} kg`}
+                    </div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>vs équivalent thermique</div>
+                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>réseau FR ~52g/kWh</div>
                   </div>
                 )}
                 {avgSp95 != null && (
