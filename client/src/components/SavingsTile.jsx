@@ -57,18 +57,18 @@ export default function SavingsTile({ euros }) {
 
   const eq = equivs[idx]
   return (
-    <div style={{ padding:'12px 14px', background:'rgba(245,158,11,0.07)', borderRadius:'var(--r-sm)', border:'1px solid rgba(245,158,11,0.25)', userSelect:'none' }}
+    <div style={{ padding:'12px 14px', background:'rgba(34,197,94,0.06)', borderRadius:'var(--r-sm)', border:'1px solid rgba(34,197,94,0.18)', userSelect:'none' }}
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
         <div style={{ fontSize:10, color:'var(--muted)', fontWeight:600 }}>💰 Économies vs thermique</div>
-        <div className="mono" style={{ fontSize:16, fontWeight:700, color:'var(--amber)' }}>
+        <div className="mono" style={{ fontSize:16, fontWeight:700, color:'var(--green)' }}>
           {Math.round(euros).toLocaleString('fr-FR')} €
         </div>
       </div>
       <div style={{ opacity: fade ? 1 : 0, transition:'opacity 0.18s ease', minHeight:44, display:'flex', alignItems:'center', gap:10 }}>
         <span style={{ fontSize:22, flexShrink:0 }}>{eq.icon}</span>
         <div>
-          <span className="mono" style={{ fontSize:15, fontWeight:700, color:'var(--amber)' }}>{eq.val} </span>
+          <span className="mono" style={{ fontSize:15, fontWeight:700, color:'var(--green)' }}>{eq.val} </span>
           <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{eq.unit}</span>
           <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:1 }}>{eq.detail}</div>
         </div>
@@ -76,7 +76,7 @@ export default function SavingsTile({ euros }) {
       <div style={{ display:'flex', justifyContent:'center', gap:5, marginTop:10 }}>
         {equivs.map((_, i) => (
           <div key={i} onClick={() => { clearInterval(timerRef.current); goTo(i) }}
-            style={{ width: i === idx ? 14 : 5, height:5, borderRadius:3, background: i === idx ? 'var(--amber)' : 'var(--border)', transition:'all 0.3s', cursor:'pointer' }} />
+            style={{ width: i === idx ? 14 : 5, height:5, borderRadius:3, background: i === idx ? 'var(--green)' : 'var(--border)', transition:'all 0.3s', cursor:'pointer' }} />
         ))}
       </div>
     </div>
