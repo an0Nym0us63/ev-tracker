@@ -37,7 +37,7 @@ async function getFuelPricesNear(lat, lng) {
   for (const km of radii) {
     const where = `within_distance(geom, geom'POINT(${lng} ${lat})', ${km}km)`
     const url = `https://${HOST}/api/explore/v2.1/catalog/datasets/${DATASET}/records`
-      + `?where=${encodeURIComponent(where)}&select=sp95_prix,gazole_prix,adresse,ville&limit=100`
+      + `?where=${encodeURIComponent(where)}&select=sp95_prix,e10_prix,gazole_prix,adresse,ville&limit=100`
     try {
       const data = await httpGetJson(url)
       const results = data?.results || []
@@ -48,13 +48,18 @@ async function getFuelPricesNear(lat, lng) {
           console.log(`  - ${loc} | SP95=${r.sp95_prix ?? '—'} SP95-E10=${r.sp95_e10_prix ?? '—'} Gazole=${r.gazole_prix ?? '—'}`)
         })
 
-        if (results.length) console.log(`[fuel] Champs premier résultat:`, Object.keys(results[0]).join(', '))
-        const sp95Vals = results.flatMap(r => [r.sp95_prix, r.e10_prix, r.sp95_e10_prix])
+        console.log(`[fuel] Rayon ${km}km autour de (${lat}, ${lng}) — ${results.length} station(s) :`)
+        results.forEach(r => {
+          const loc = [r.adresse, r.ville].filter(Boolean).join(', ') || '(inconnu)'
+          console.log(`  - ${loc} | SP95=${r.sp95_prix ?? '—'} E10=${r.e10_prix ?? '—'} Gazole=${r.gazole_prix ?? '—'}`)
+        })
+        // SP95 (E5) et E10 regroupés — même catégorie essence, prix proches
+        const sp95Vals = results.flatMap(r => [r.sp95_prix, r.e10_prix])
         const sp95Avg   = avg(sp95Vals)
         const gazoleAvg = avg(results.map(r => r.gazole_prix))
         const sp95Count = sp95Vals.filter(v => Number.isFinite(Number(v)) && Number(v) > 0).length
-        if (sp95Count < 3) console.log(`[fuel] ⚠️  Seulement ${sp95Count} prix SP95/E10 — moyenne peu représentative`)
-        console.log(`[fuel] → moyenne SP95=${sp95Avg} Gazole=${gazoleAvg}`)
+        if (sp95Count < 3) console.log(`[fuel] ⚠️  Seulement ${sp95Count} prix essence — moyenne peu représentative`)
+        console.log(`[fuel] → moyenne essence=${sp95Avg} Gazole=${gazoleAvg}`)
         if (sp95Avg !== null || gazoleAvg !== null) {
           return { available: true, sp95Avg, gazoleAvg, stationCount: results.length, radiusKm: km }
         }
