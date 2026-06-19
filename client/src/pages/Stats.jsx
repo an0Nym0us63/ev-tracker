@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts'
 import { computeStats, filterByPeriod, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogramSplit, VEHICLES, formatCost } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
@@ -37,6 +37,82 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
           <div className="mono" style={{ fontSize:12, fontWeight:700, color, lineHeight:1.25, overflowWrap:'break-word' }}>{valDC}{valDC!=='—'?` ${suffix}`:''}</div>
           <div style={{ fontSize:8, color:'var(--amber)', marginTop:2 }}>⚡ DC</div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function fmt(n) {
+  if (n >= 1000000) return `${(n/1000000).toFixed(1)} M`
+  if (n >= 10000)   return `${Math.round(n/1000)} k`
+  if (n >= 1000)    return `${(n/1000).toFixed(1)} k`
+  return Math.round(n).toString()
+}
+
+function getEquivalents(kg) {
+  return [
+    { icon:'🌳', val: fmt(kg/22),        unit:'arbres',        detail:'absorbant ce CO₂ en 1 an' },
+    { icon:'🚗', val: fmt(kg/0.12),      unit:'km',            detail:'non parcourus en voiture thermique' },
+    { icon:'✈️', val: fmt(kg/1000),      unit:'vols',          detail:'Paris → New York évités' },
+    { icon:'🍔', val: fmt(kg/2.5),       unit:'hamburgers',    detail:'en émissions évitées' },
+    { icon:'🛁', val: fmt(kg/0.5),       unit:'bains',         detail:'en émissions évitées' },
+    { icon:'☕', val: fmt(kg/0.06),      unit:'expressos',     detail:'en émissions évitées' },
+    { icon:'🧀', val: fmt(kg/13.5),      unit:'kg de fromage', detail:'en empreinte carbone' },
+    { icon:'🚄', val: fmt(kg/0.006),     unit:'km en TGV',     detail:'parcourus avec ce CO₂' },
+    { icon:'📱', val: fmt(kg/0.005),     unit:'charges téléphone', detail:'économisées' },
+    { icon:'🏠', val: fmt(kg/16),        unit:'jours',         detail:'de consommation d\'un foyer moyen' },
+  ]
+}
+
+function CO2Tile({ kg }) {
+  const [idx, setIdx] = useState(0)
+  const [fade, setFade] = useState(true)
+  const timerRef = useRef(null)
+  const touchStartX = useRef(null)
+  const equivs = getEquivalents(kg)
+  const n = equivs.length
+
+  const goTo = (i) => {
+    setFade(false)
+    setTimeout(() => { setIdx((i + n) % n); setFade(true) }, 180)
+  }
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => goTo(idx + 1), 5000)
+    return () => clearInterval(timerRef.current)
+  }, [idx])
+
+  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
+  const onTouchEnd = (e) => {
+    if (touchStartX.current == null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(dx) > 40) { clearInterval(timerRef.current); goTo(dx < 0 ? idx + 1 : idx - 1) }
+    touchStartX.current = null
+  }
+
+  const eq = equivs[idx]
+  return (
+    <div style={{ padding:'12px 14px', background:'rgba(34,197,94,0.06)', borderRadius:'var(--r-sm)', border:'1px solid rgba(34,197,94,0.18)', userSelect:'none' }}
+      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+        <div style={{ fontSize:10, color:'var(--muted)', fontWeight:600 }}>🌿 CO₂ évité vs thermique</div>
+        <div className="mono" style={{ fontSize:16, fontWeight:700, color:'var(--green)' }}>
+          {kg >= 1000 ? `${(kg/1000).toFixed(2)} t` : `${kg.toFixed(1)} kg`}
+        </div>
+      </div>
+      <div style={{ opacity: fade ? 1 : 0, transition:'opacity 0.18s ease', minHeight:44, display:'flex', alignItems:'center', gap:10 }}>
+        <span style={{ fontSize:22, flexShrink:0 }}>{eq.icon}</span>
+        <div>
+          <span className="mono" style={{ fontSize:15, fontWeight:700, color:'var(--green)' }}>{eq.val} </span>
+          <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{eq.unit}</span>
+          <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:1 }}>{eq.detail}</div>
+        </div>
+      </div>
+      <div style={{ display:'flex', justifyContent:'center', gap:5, marginTop:10 }}>
+        {equivs.map((_, i) => (
+          <div key={i} onClick={() => { clearInterval(timerRef.current); goTo(i) }}
+            style={{ width: i === idx ? 14 : 5, height:5, borderRadius:3, background: i === idx ? 'var(--green)' : 'var(--border)', transition:'all 0.3s', cursor:'pointer' }} />
+        ))}
       </div>
     </div>
   )
@@ -391,8 +467,8 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
             <SectionLabel>Économies réalisées</SectionLabel>
             <div className="card" style={{ padding:'16px' }}>
 
-              {/* Summary pills */}
-              <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+              {/* Ligne 1 : gain thermique + gain solaire */}
+              <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
                 {totalFuel !== 0 && (
                   <div style={{ flex:1, minWidth:120, padding:'10px 14px', background: totalFuel >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', borderRadius:'var(--r-sm)', border: `1px solid ${totalFuel >= 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
                     <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🚗 vs thermique</div>
@@ -408,33 +484,30 @@ export default function Stats({ charges, filters, applyFilters, account, onLogou
                     <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>soit ~{(totalSolar/0.14).toFixed(0)} kWh solaire</div>
                   </div>
                 )}
-                {totalCO2Saved > 0 && (
-                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(34,197,94,0.06)', borderRadius:'var(--r-sm)', border:'1px solid rgba(34,197,94,0.18)' }}>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🌿 CO₂ évité</div>
-                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--green)' }}>
-                      {totalCO2Saved >= 1000
-                        ? `${(totalCO2Saved/1000).toFixed(2)} t`
-                        : `${totalCO2Saved.toFixed(1)} kg`}
-                    </div>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>vs équivalent thermique</div>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:1 }}>réseau FR ~52g/kWh</div>
-                  </div>
-                )}
-                {avgSp95 != null && (
-                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(79,142,247,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(79,142,247,0.2)' }}>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>⛽ SP95 moyen</div>
-                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--mg4)' }}>{avgSp95.toFixed(3)} €/L</div>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{sp95Prices.length} session{sp95Prices.length>1?'s':''}</div>
-                  </div>
-                )}
-                {avgGazole != null && (
-                  <div style={{ flex:1, minWidth:120, padding:'10px 14px', background:'rgba(124,92,252,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(124,92,252,0.2)' }}>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🛢️ Gazole moyen</div>
-                    <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--xpeng)' }}>{avgGazole.toFixed(3)} €/L</div>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{gazolePrices.length} session{gazolePrices.length>1?'s':''}</div>
-                  </div>
-                )}
               </div>
+
+              {/* Ligne 2 : SP95 moyen + Gazole moyen côte à côte */}
+              {(avgSp95 != null || avgGazole != null) && (
+                <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+                  {avgSp95 != null && (
+                    <div style={{ flex:1, padding:'10px 14px', background:'rgba(79,142,247,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(79,142,247,0.2)' }}>
+                      <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>⛽ SP95 moyen</div>
+                      <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--mg4)' }}>{avgSp95.toFixed(3)} €/L</div>
+                      <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{sp95Prices.length} session{sp95Prices.length>1?'s':''}</div>
+                    </div>
+                  )}
+                  {avgGazole != null && (
+                    <div style={{ flex:1, padding:'10px 14px', background:'rgba(124,92,252,0.08)', borderRadius:'var(--r-sm)', border:'1px solid rgba(124,92,252,0.2)' }}>
+                      <div style={{ fontSize:10, color:'var(--muted)', marginBottom:4 }}>🛢️ Gazole moyen</div>
+                      <div className="mono" style={{ fontSize:18, fontWeight:700, color:'var(--xpeng)' }}>{avgGazole.toFixed(3)} €/L</div>
+                      <div style={{ fontSize:10, color:'var(--muted)', marginTop:2 }}>{gazolePrices.length} session{gazolePrices.length>1?'s':''}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Ligne 3 : CO₂ évité — pleine largeur avec carrousel d'équivalences */}
+              {totalCO2Saved > 0 && <CO2Tile kg={totalCO2Saved} />}
 
               {/* Évolution du prix carburant dans le temps */}
               {hasFuelEvolution && (
