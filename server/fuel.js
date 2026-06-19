@@ -42,24 +42,11 @@ async function getFuelPricesNear(lat, lng) {
       const data = await httpGetJson(url)
       const results = data?.results || []
       if (results.length) {
-        console.log(`[fuel] Rayon ${km}km autour de (${lat}, ${lng}) — ${results.length} station(s) :`)
-        results.forEach(r => {
-          const loc = [r.adresse, r.ville].filter(Boolean).join(', ') || '(inconnu)'
-          console.log(`  - ${loc} | SP95=${r.sp95_prix ?? '—'} SP95-E10=${r.sp95_e10_prix ?? '—'} Gazole=${r.gazole_prix ?? '—'}`)
-        })
-
-        console.log(`[fuel] Rayon ${km}km autour de (${lat}, ${lng}) — ${results.length} station(s) :`)
-        results.forEach(r => {
-          const loc = [r.adresse, r.ville].filter(Boolean).join(', ') || '(inconnu)'
-          console.log(`  - ${loc} | SP95=${r.sp95_prix ?? '—'} E10=${r.e10_prix ?? '—'} Gazole=${r.gazole_prix ?? '—'}`)
-        })
-        // SP95 (E5) et E10 regroupés — même catégorie essence, prix proches
-        const sp95Vals = results.flatMap(r => [r.sp95_prix, r.e10_prix])
+        const sp95Vals  = results.flatMap(r => [r.sp95_prix, r.e10_prix])
         const sp95Avg   = avg(sp95Vals)
         const gazoleAvg = avg(results.map(r => r.gazole_prix))
         const sp95Count = sp95Vals.filter(v => Number.isFinite(Number(v)) && Number(v) > 0).length
-        if (sp95Count < 3) console.log(`[fuel] ⚠️  Seulement ${sp95Count} prix essence — moyenne peu représentative`)
-        console.log(`[fuel] → moyenne essence=${sp95Avg} Gazole=${gazoleAvg}`)
+        console.log(`[fuel] ${results.length} stations dans ${km}km — ${sp95Count} prix essence, moyenne SP95/E10=${sp95Avg} Gazole=${gazoleAvg}`)
         if (sp95Avg !== null || gazoleAvg !== null) {
           return { available: true, sp95Avg, gazoleAvg, stationCount: results.length, radiusKm: km }
         }

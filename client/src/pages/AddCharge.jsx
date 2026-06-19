@@ -386,7 +386,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         </button>
 
         {isEdit && (
-          <button onClick={()=>onSave({ __delete:true, id:editCharge.id })} style={{ background:'none', color:'var(--red)', fontSize:13, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'12px 16px', cursor:'pointer' }}>
+          <button onClick={()=>{ if (window.confirm('Supprimer cette session de charge ? Cette action est irréversible.')) onSave({ __delete:true, id:editCharge.id }) }} style={{ background:'none', color:'var(--red)', fontSize:13, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'12px 16px', cursor:'pointer' }}>
             Supprimer cette charge
           </button>
         )}
