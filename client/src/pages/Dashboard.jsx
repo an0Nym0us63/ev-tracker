@@ -6,6 +6,7 @@ import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import AppLogo from '../components/AppLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
+import CO2Tile from '../components/CO2Tile.jsx'
 
 const PROVIDER_COLORS = ['#4f8ef7','#7c5cfc','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
 
@@ -173,6 +174,15 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
     if (activeVehicle) c = c.filter(x => x.vehicleId === activeVehicle)
     return c
   }, [globallyFiltered, activePeriod, activeVehicle])
+
+  // CO2 évité — même formule que Stats
+  const CO2_GRID = 0.052
+  const CO2_L    = { mg4:2.28, xpeng:2.65 }
+  const VEH_CFG  = { mg4:{kwhPer100:14.5,litresPer100:6.0}, xpeng:{kwhPer100:16.0,litresPer100:7.5} }
+  const totalCO2 = globallyFiltered.reduce((sum,c) => {
+    const v = VEH_CFG[c.vehicleId]; if (!v||!c.kwh) return sum
+    return sum + (c.kwh/v.kwhPer100)*v.litresPer100*(CO2_L[c.vehicleId]||2.28) - c.kwh*CO2_GRID
+  }, 0)
 
   // Period-only (for vehicle cards comparison)
   const periodFiltered = useMemo(() => {
@@ -576,7 +586,13 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         </div>
       )}
 
-      {/* Recent sessions */}
+      {/* CO2 évité */}
+      {totalCO2 > 0 && (
+        <div style={{ margin:'14px 16px 0' }}>
+          <CO2Tile kg={totalCO2} />
+        </div>
+      )}
+
       <div style={{ margin:'14px 16px 0' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
           <div className="section-label" style={{ marginBottom:0 }}>Dernières sessions</div>
