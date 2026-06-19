@@ -147,7 +147,7 @@ function ProviderChart({ charges }) {
   )
 }
 
-export default function Dashboard({ charges, account, onNavigate, onNavigateAlert, onLogout, theme, onToggleTheme, filters, applyFilters }) {
+export default function Dashboard({ charges, account, onNavigate, onNavigateAlert, onLogout, theme, onToggleTheme, filters, setFilters, applyFilters }) {
   const [activePeriod,  setActivePeriod]  = useState(null)
   const [activeVehicle, setActiveVehicle] = useState(null)
   const [alerts, setAlerts] = useState([])

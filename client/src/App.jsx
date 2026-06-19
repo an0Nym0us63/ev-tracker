@@ -198,10 +198,10 @@ export default function App() {
         transition: pulling ? 'none' : 'transform 0.2s ease',
         willChange:'transform',
       }}>
-        {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} />}
+        {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} setFilters={setFilters} />}
         {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
-        {page === 'stats'    && <Stats     charges={charges} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
+        {page === 'stats'    && <Stats     charges={charges} filters={filters} setFilters={setFilters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'live'     && <Live account={account} settings={settings} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}

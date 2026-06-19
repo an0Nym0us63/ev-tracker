@@ -46,7 +46,7 @@ function AcDcTile({ label, valAC, valDC, suffix, color }) {
 import CO2Tile from '../components/CO2Tile.jsx'
 import SavingsTile from '../components/SavingsTile.jsx'
 
-export default function Stats({ charges, filters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
+export default function Stats({ charges, filters, setFilters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
   const [habitsBreakdown, setHabitsBreakdown] = React.useState('none') // 'none' | 'location' | 'vehicle'
 
   const period  = filters.period === 'all' ? 'all' : filters.period
