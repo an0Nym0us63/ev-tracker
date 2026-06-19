@@ -69,6 +69,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
   const isEdit = !!editCharge
   const today  = new Date().toISOString().split('T')[0]
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [vehicleId,    setVehicleId]    = useState(editCharge?.vehicleId    || account.vehicleId)
   const [locationId,   setLocationId]   = useState(editCharge?.locationId   || 'home')
   const [card,         setCard]         = useState(editCharge?.card         || (locationId === 'home' && !isEdit ? 'V2C' : ''))
@@ -386,11 +387,30 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         </button>
 
         {isEdit && (
-          <button onClick={()=>{ if (window.confirm('Supprimer cette session de charge ? Cette action est irréversible.')) onSave({ __delete:true, id:editCharge.id }) }} style={{ background:'none', color:'var(--red)', fontSize:13, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'12px 16px', cursor:'pointer' }}>
+          <button onClick={()=>setShowDeleteConfirm(true)} style={{ background:'none', color:'var(--red)', fontSize:13, fontWeight:600, border:'1px solid rgba(239,68,68,0.3)', borderRadius:'var(--r-sm)', padding:'12px 16px', cursor:'pointer' }}>
             Supprimer cette charge
           </button>
         )}
       </div>
+
+      {/* Modale de confirmation de suppression */}
+      {showDeleteConfirm && (
+        <div onClick={()=>setShowDeleteConfirm(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center', padding:'0 0 32px' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'var(--surface)', borderRadius:'var(--r)', padding:'24px 20px 20px', width:'100%', maxWidth:480, margin:'0 16px', boxShadow:'0 -4px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize:18, marginBottom:8 }}>🗑️</div>
+            <div style={{ fontSize:15, fontWeight:700, marginBottom:6 }}>Supprimer cette session ?</div>
+            <div style={{ fontSize:12.5, color:'var(--muted)', marginBottom:20 }}>Cette action est irréversible. Les données de cette charge seront définitivement supprimées.</div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setShowDeleteConfirm(false)} style={{ flex:1, padding:'12px', borderRadius:'var(--r-sm)', background:'var(--surface2)', border:'1px solid var(--border)', color:'var(--text)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                Annuler
+              </button>
+              <button onClick={()=>{ setShowDeleteConfirm(false); onSave({ __delete:true, id:editCharge.id }) }} style={{ flex:1, padding:'12px', borderRadius:'var(--r-sm)', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.4)', color:'var(--red)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
