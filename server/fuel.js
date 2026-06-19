@@ -37,13 +37,20 @@ async function getFuelPricesNear(lat, lng) {
   for (const km of radii) {
     const where = `within_distance(geom, geom'POINT(${lng} ${lat})', ${km}km)`
     const url = `https://${HOST}/api/explore/v2.1/catalog/datasets/${DATASET}/records`
-      + `?where=${encodeURIComponent(where)}&select=sp95_prix,gazole_prix&limit=100`
+      + `?where=${encodeURIComponent(where)}&select=sp95_prix,gazole_prix,nom,adresse&limit=100`
     try {
       const data = await httpGetJson(url)
       const results = data?.results || []
       if (results.length) {
+        console.log(`[fuel] Rayon ${km}km autour de (${lat}, ${lng}) — ${results.length} station(s) :`)
+        results.forEach(r => {
+          const nom = r.nom || r.adresse || '(inconnu)'
+          const adr = (r.adresse && r.adresse !== nom) ? ' / ' + r.adresse : ''
+          console.log(`  - ${nom}${adr} | SP95=${r.sp95_prix ?? '—'} Gazole=${r.gazole_prix ?? '—'}`)
+        })
         const sp95Avg   = avg(results.map(r => r.sp95_prix))
         const gazoleAvg = avg(results.map(r => r.gazole_prix))
+        console.log(`[fuel] → moyenne SP95=${sp95Avg} Gazole=${gazoleAvg}`)
         if (sp95Avg !== null || gazoleAvg !== null) {
           return { available: true, sp95Avg, gazoleAvg, stationCount: results.length, radiusKm: km }
         }
