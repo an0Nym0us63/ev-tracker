@@ -65,6 +65,27 @@ export function getPeriodWindow(period, offset = 0) {
   return { from, to, label }
 }
 
+// Fenêtre d'une période relative à une date d'ancrage (pas à aujourd'hui)
+// Utilisé par les tuiles Dashboard quand on navigue dans le temps.
+export function getRelativeWindow(period, anchor) {
+  const to = new Date(anchor)
+  let from
+  if (period === 'month') {
+    from = new Date(to.getFullYear(), to.getMonth(), 1)
+    to.setDate(new Date(to.getFullYear(), to.getMonth()+1, 0).getDate())
+  } else if (period === 'year') {
+    from = new Date(to.getFullYear(), 0, 1)
+    to.setMonth(11); to.setDate(31)
+  } else if (period === '30d') {
+    from = new Date(to); from.setDate(to.getDate() - 29)
+  } else if (period === '12m') {
+    from = new Date(to); from.setMonth(to.getMonth() - 11); from.setDate(1)
+  } else {
+    return null
+  }
+  return { from, to }
+}
+
 export function filterByPeriod(charges, period, offset = 0) {
   if (period === 'all') return charges
   const win = getPeriodWindow(period, offset)

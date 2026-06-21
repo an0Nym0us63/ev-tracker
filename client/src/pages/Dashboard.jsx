@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie, AreaChart, Area, YAxis } from 'recharts'
-import { computeStats, filterByPeriod, getChartData, getProviderStats, getMonthlyAvgByVehicle, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
+import { computeStats, filterByPeriod, getPeriodWindow, getRelativeWindow, getChartData, getProviderStats, getMonthlyAvgByVehicle, formatCost, formatDate, formatDuration, VEHICLES } from '../utils.js'
 import { apiGetAlerts, apiGetLiveCharger, apiGetLiveVehicle } from '../api.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
@@ -165,9 +165,34 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
   const globallyFiltered = useMemo(() => applyFilters ? applyFilters(charges) : charges, [charges, filters, applyFilters])
 
   // Banner stats — always global (within the globally-filtered set)
-  const periodStats = useMemo(() => PERIODS.map(p => ({
-    ...p, stats: computeStats(filterByPeriod(globallyFiltered, p.id, filters.periodOffset || 0))
-  })), [globallyFiltered])
+  // Ancre = fin de la fenêtre naviguée (ou aujourd'hui si offset=0/pas de nav)
+  const navAnchor = useMemo(() => {
+    const offset = filters.periodOffset || 0
+    const period = filters.period
+    if (offset !== 0 && ['week','month','3m','year','30d','7d'].includes(period)) {
+      const win = getPeriodWindow(period, offset)
+      return win ? win.to : new Date()
+    }
+    return new Date()
+  }, [filters.period, filters.periodOffset])
+
+  // Charges sans filtre période (garde véhicule/lieu/etc.) pour les pills
+  const chargesNoPeriod = useMemo(() => charges.filter(c => {
+    if (filters.vehicles?.length > 0 && !filters.vehicles.includes(c.vehicleId)) return false
+    if (filters.locations?.length > 0) {
+      const loc = c.locationId === 'home' ? 'home' : 'ext'
+      if (!filters.locations.includes(loc)) return false
+    }
+    return true
+  }), [charges, filters.vehicles, filters.locations])
+
+  const periodStats = useMemo(() => PERIODS.map(p => {
+    const win = getRelativeWindow(p.id, navAnchor)
+    if (!win) return { ...p, stats: computeStats([]) }
+    const from = win.from.toISOString().slice(0,10)
+    const to   = win.to.toISOString().slice(0,10)
+    return { ...p, stats: computeStats(chargesNoPeriod.filter(c => c.date >= from && c.date <= to)) }
+  }), [chargesNoPeriod, navAnchor])
 
   // Main filtered
   const filtered = useMemo(() => {
@@ -387,8 +412,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
         )
       })()}
 
-      {/* Period banners — 2x2 grid, masqués quand on navigue dans le temps (periodOffset actif) */}
-      {(filters.periodOffset || 0) === 0 && (
+      {/* Period banners — 2x2 grid */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:'14px 16px 0' }}>
         {periodStats.map(p => {
           const active = activePeriod === p.id
@@ -414,7 +438,6 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
           )
         })}
       </div>
-      )}
 
       {/* Filter context */}
       {(activePeriod || activeVehicle) && (
