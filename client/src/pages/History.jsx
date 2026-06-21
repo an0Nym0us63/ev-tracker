@@ -3,8 +3,9 @@ import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
+import PeriodNav from '../components/PeriodNav.jsx'
 
-export default function History({ charges, onEdit, alertFilter, onClearAlertFilter, filters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
+export default function History({ charges, onEdit, alertFilter, onClearAlertFilter, filters, setFilters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
 
   // Apply alertFilter (from dashboard notification) or normal filters
   const alertIds = useMemo(() => {
@@ -52,6 +53,8 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
         <div style={{ fontSize:20, fontWeight:700 }}>Historique</div>
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
+
+      <PeriodNav filters={filters} setFilters={setFilters} />
 
       {/* Alert filter banner */}
       {alertFilter && (

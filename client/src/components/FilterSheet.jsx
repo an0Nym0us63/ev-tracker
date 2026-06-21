@@ -96,11 +96,12 @@ export default function FilterSheet({ onClose, filters, setFilters, config }) {
   ].filter(Boolean).length
 
   const periods = [
-    { id:'all', l:'Tout' },
+    { id:'all',   l:'Tout' },
+    { id:'week',  l:'Cette semaine' },
     { id:'month', l:'Ce mois' },
-    { id:'year', l:'Cette année' },
-    { id:'30d', l:'30 jours' },
-    { id:'12m', l:'12 mois' },
+    { id:'3m',    l:'3 mois' },
+    { id:'year',  l:'Cette année' },
+    { id:'12m',   l:'12 mois' },
     { id:'custom', l:'📅 Plage' },
   ]
 

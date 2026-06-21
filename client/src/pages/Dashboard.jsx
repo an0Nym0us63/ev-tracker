@@ -167,12 +167,12 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
 
   // Banner stats — always global (within the globally-filtered set)
   const periodStats = useMemo(() => PERIODS.map(p => ({
-    ...p, stats: computeStats(filterByPeriod(globallyFiltered, p.id))
+    ...p, stats: computeStats(filterByPeriod(globallyFiltered, p.id, filters.periodOffset || 0))
   })), [globallyFiltered])
 
   // Main filtered
   const filtered = useMemo(() => {
-    let c = activePeriod ? filterByPeriod(globallyFiltered, activePeriod) : globallyFiltered
+    let c = activePeriod ? filterByPeriod(globallyFiltered, activePeriod, filters.periodOffset || 0) : globallyFiltered
     if (activeVehicle) c = c.filter(x => x.vehicleId === activeVehicle)
     return c
   }, [globallyFiltered, activePeriod, activeVehicle])
@@ -188,7 +188,7 @@ export default function Dashboard({ charges, account, onNavigate, onNavigateAler
 
   // Period-only (for vehicle cards comparison)
   const periodFiltered = useMemo(() => {
-    return activePeriod ? filterByPeriod(globallyFiltered, activePeriod) : globallyFiltered
+    return activePeriod ? filterByPeriod(globallyFiltered, activePeriod, filters.periodOffset || 0) : globallyFiltered
   }, [globallyFiltered, activePeriod])
 
   const stats      = useMemo(() => computeStats(filtered),          [filtered])

@@ -25,7 +25,15 @@ export function getPeriodWindow(period, offset = 0) {
   const now = new Date()
   let from, to, label
 
-  if (period === 'month') {
+  if (period === 'week') {
+    const d = new Date(now)
+    const day = d.getDay() || 7 // lundi = 1, dimanche = 7
+    d.setDate(d.getDate() - day + 1 + offset * 7) // lundi de la semaine
+    from = new Date(d); from.setHours(0,0,0,0)
+    to   = new Date(d); to.setDate(from.getDate() + 6); to.setHours(23,59,59,999)
+    const opts = { day:'numeric', month:'short' }
+    label = `${from.toLocaleDateString('fr-FR',opts)} – ${to.toLocaleDateString('fr-FR',opts)}`
+  } else if (period === 'month') {
     const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
     from = new Date(d.getFullYear(), d.getMonth(), 1)
     to   = new Date(d.getFullYear(), d.getMonth() + 1, 0)
@@ -36,6 +44,11 @@ export function getPeriodWindow(period, offset = 0) {
     from = new Date(y, 0, 1)
     to   = new Date(y, 11, 31)
     label = String(y)
+  } else if (period === '3m') {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset * 3, 1)
+    from = new Date(d.getFullYear(), d.getMonth(), 1)
+    to   = new Date(d.getFullYear(), d.getMonth() + 3, 0)
+    label = `${from.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})} – ${to.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}`
   } else if (period === '30d') {
     const shift = offset * 30
     from = new Date(now); from.setDate(now.getDate() - 30 + shift)
