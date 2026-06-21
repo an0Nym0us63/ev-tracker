@@ -7,6 +7,7 @@ import { getToken, clearToken, apiMe, apiGetCharges, apiAddCharge, apiUpdateChar
 import Login from './pages/Login.jsx'
 import Logs from './pages/Logs.jsx'
 import BottomNav from './components/BottomNav.jsx'
+import PeriodNav from './components/PeriodNav.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AddCharge from './pages/AddCharge.jsx'
 import History from './pages/History.jsx'
@@ -198,11 +199,15 @@ export default function App() {
         transition: pulling ? 'none' : 'transform 0.2s ease',
         willChange:'transform',
       }}>
+        {/* PeriodNav global — sticky au top, visible pour home/history/stats/map */}
+        {['home','history','stats','map'].includes(page) && (
+          <PeriodNav filters={filters} setFilters={setFilters} />
+        )}
         {page === 'home'     && <Dashboard charges={charges} account={account} onNavigate={navigate} onNavigateAlert={navigateWithAlert} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} filters={filters} applyFilters={applyFilters} setFilters={setFilters} />}
         {page === 'history'  && <History   charges={charges} onEdit={c=>navigate('edit',c)} alertFilter={alertFilter} onClearAlertFilter={()=>setAlertFilter(null)} filters={filters} setFilters={setFilters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'add'      && <AddCharge account={account} lists={lists} settings={settings} onSave={handleSave} editCharge={editCharge} onBack={()=>{ setPage(editCharge?'history':'home'); setEditCharge(null) }} />}
         {page === 'stats'    && <Stats     charges={charges} filters={filters} setFilters={setFilters} applyFilters={applyFilters} account={account} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
-        {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} applyFilters={applyFilters} account={account} onLogout={handleLogout} onToggleTheme={toggleTheme} onNavigate={navigate} />}
+        {page === 'map'      && <MapView   charges={charges} settings={settings} theme={theme} filters={filters} setFilters={setFilters} applyFilters={applyFilters} account={account} onLogout={handleLogout} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'live'     && <Live account={account} settings={settings} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} />}
         {page === 'logs'     && <Logs onBack={()=>navigate('home')} />}
         {page === 'settings' && <Settings  account={account} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} onSettingsSaved={setSettings} onAccountUpdate={setAccount} onBack={()=>setPage('home')} />}

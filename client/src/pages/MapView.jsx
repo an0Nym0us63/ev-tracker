@@ -108,7 +108,7 @@ function loadLeaflet() {
   })
 }
 
-export default function MapView({ charges, settings, theme, filters, applyFilters, account, onLogout, onToggleTheme, onNavigate }) {
+export default function MapView({ charges, settings, theme, filters, setFilters, applyFilters, account, onLogout, onToggleTheme, onNavigate }) {
   const mapRef  = useRef(null)
   const mapInst = useRef(null)
   const tileRef = useRef(null)

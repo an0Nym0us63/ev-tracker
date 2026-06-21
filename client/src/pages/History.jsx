@@ -3,7 +3,6 @@ import { VEHICLES, LOCATIONS, formatDuration } from '../utils.js'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
-import PeriodNav from '../components/PeriodNav.jsx'
 
 export default function History({ charges, onEdit, alertFilter, onClearAlertFilter, filters, setFilters, applyFilters, account, onLogout, theme, onToggleTheme, onNavigate }) {
 
@@ -54,7 +53,6 @@ export default function History({ charges, onEdit, alertFilter, onClearAlertFilt
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
-      <PeriodNav filters={filters} setFilters={setFilters} />
 
       {/* Alert filter banner */}
       {alertFilter && (

@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts'
 import { computeStats, filterByPeriod, getPeriodWindow, getChartData, getProviderStats, getCardStats, getMonthlyAvgByVehicle, getWeekdayDistribution, getPowerHistogramSplit, VEHICLES, formatCost } from '../utils.js'
-import PeriodNav from '../components/PeriodNav.jsx'
 import OperatorLogo from '../components/OperatorLogo.jsx'
 import CardLogo from '../components/CardLogo.jsx'
 import ProfileMenu from '../components/ProfileMenu.jsx'
@@ -242,7 +241,6 @@ export default function Stats({ charges, filters, setFilters, applyFilters, acco
         <ProfileMenu account={account} onNavigate={onNavigate} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
       </div>
 
-      <PeriodNav filters={filters} setFilters={setFilters} />
 
       {filtered.length === 0 ? (
         <div style={{ padding:'40px 16px', textAlign:'center', color:'var(--muted)', fontSize:13 }}>Aucune session sur cette période.</div>
