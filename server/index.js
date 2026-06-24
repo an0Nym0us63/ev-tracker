@@ -282,6 +282,14 @@ app.put('/api/charges/:id', requireAuth, async (req, res) => {
   `).run(c.vehicleId, c.locationId, c.locationName||null, c.provider||null, c.card||null, c.date, c.kwh, c.totalCost, c.durationMin||null, c.odometer||null, c.notes||null, c.lat||null, c.lng||null, c.locationApproximate?1:0, c.ocmId||null, c.powerKw||null, c.connectorTypes?.length ? JSON.stringify(c.connectorTypes) : null, c.startTime||null, req.params.id)
   if (c.provider) saveList(req.user.id, 'providers', c.provider)
   if (c.card)     saveList(req.user.id, 'cards', c.card)
+
+  // Gain solaire : override manuel si fourni explicitement, sinon recalcul auto
+  if (c.solarSavings !== undefined && c.solarSavings !== null) {
+    const val = parseFloat(c.solarSavings)
+    if (Number.isFinite(val)) {
+      db.prepare('UPDATE charges SET solar_savings=? WHERE id=?').run(val, req.params.id)
+    }
+  }
   const settings204 = db.prepare('SELECT fuel_price, home_lat, home_lng FROM settings ORDER BY account_id ASC LIMIT 1').get()
   const lat204 = c.lat || (c.locationId === 'home' ? settings204?.home_lat : null)
   const lng204 = c.lng || (c.locationId === 'home' ? settings204?.home_lng : null)

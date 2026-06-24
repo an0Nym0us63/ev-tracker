@@ -76,6 +76,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
   const [date,         setDate]         = useState(editCharge?.date         || today)
   const [kwh,          setKwh]          = useState(editCharge?.kwh?.toString()       || '')
   const [totalCost,    setTotalCost]    = useState(editCharge?.totalCost?.toString() || '')
+  const [solarSavings, setSolarSavings] = useState(editCharge?.solarSavings != null ? editCharge.solarSavings.toFixed(2) : '')
   const [hours,        setHours]        = useState(editCharge ? Math.floor((editCharge.durationMin||0)/60).toString() : '')
   const [minutes,      setMinutes]      = useState(editCharge ? ((editCharge.durationMin||0)%60).toString() : '')
   const [notes,        setNotes]        = useState(editCharge?.notes || '')
@@ -164,6 +165,7 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
       durationMin: durationMin || null,
     startTime: startTime || null,
       notes: notes.trim(),
+      solarSavings: solarSavings !== '' ? parseFloat(solarSavings) : null,
       lat:                 gpsLocation?.lat  || null,
       lng:                 gpsLocation?.lng  || null,
       locationApproximate: gpsLocation?.approximate || false,
@@ -366,6 +368,13 @@ export default function AddCharge({ account, lists, settings, onSave, onBack, ed
         <Field label="Coût total" hint={errors.cost?'⚠ Coût requis':undefined}>
           <NumInput value={totalCost} onChange={v=>{setTotalCost(v);setErrors(e=>({...e,cost:false}))}} placeholder="6.72" unit="€" error={errors.cost} />
         </Field>
+
+        {/* Gain solaire — modifiable uniquement en édition, sessions maison */}
+        {isEdit && editCharge.locationId === 'home' && (
+          <Field label="☀️ Gain solaire" hint="Laissez vide pour ne pas modifier">
+            <NumInput value={solarSavings} onChange={setSolarSavings} placeholder="0.00" unit="€" />
+          </Field>
+        )}
 
         {pricePerKwh !== null && (
           <div style={{ background:'rgba(34,197,94,0.07)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:'var(--r-sm)', padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
