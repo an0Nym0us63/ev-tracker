@@ -713,37 +713,38 @@ export default function Stats({ charges, filters, setFilters, applyFilters, acco
 
         {/* Histogramme répartition par coût €/kWh */}
         {priceHisto.some(b => b.count > 0) && (
-          <div className="card" style={{ padding:'14px 16px' }}>
-            <div className="section-label">Répartition par coût unitaire</div>
-            <div style={{ fontSize:10.5, color:'var(--muted)', marginBottom:10 }}>Nombre de sessions par tranche de 5 cts/kWh</div>
-            <ResponsiveContainer width="100%" height={130}>
-              <BarChart data={priceHisto} margin={{ top:4, right:4, left:-28, bottom:0 }} barSize={14}>
-                <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false}
-                  interval={1} />
-                <YAxis tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={({ active, payload, label }) => active && payload?.length ? (
-                  <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:11 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>{label} €/kWh</div>
-                    <div>{payload[0].value} session{payload[0].value > 1 ? 's' : ''}</div>
-                    {payload[0].payload.kwhSum > 0 && <div style={{ color:'var(--muted)' }}>{payload[0].payload.kwhSum.toFixed(1)} kWh total</div>}
-                    {payload[0].payload.homeCount > 0 && <div style={{ color:'var(--green)' }}>🏠 {payload[0].payload.homeCount} maison</div>}
-                    {payload[0].payload.extCount > 0 && <div style={{ color:'var(--amber)' }}>⚡ {payload[0].payload.extCount} externe</div>}
-                  </div>
-                ) : null} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
-                <Bar dataKey="count" radius={[3,3,0,0]}>
-                  {priceHisto.map((b, i) => (
-                    <Cell key={i} fill={b.extCount > b.homeCount ? 'var(--amber)' : 'var(--accent)'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={{ display:'flex', gap:12, justifyContent:'center', marginTop:6 }}>
-              <span style={{ fontSize:10, color:'var(--muted)', display:'flex', alignItems:'center', gap:4 }}>
-                <span style={{ width:8, height:8, borderRadius:2, background:'var(--accent)', display:'inline-block' }} /> Maison majoritaire
-              </span>
-              <span style={{ fontSize:10, color:'var(--muted)', display:'flex', alignItems:'center', gap:4 }}>
-                <span style={{ width:8, height:8, borderRadius:2, background:'var(--amber)', display:'inline-block' }} /> Externe majoritaire
-              </span>
+          <div style={{ padding:'12px 16px 0' }}>
+            <SectionLabel>Répartition par coût unitaire</SectionLabel>
+            <div className="card" style={{ padding:'14px 16px' }}>
+              <div style={{ fontSize:10, color:'var(--muted)', marginBottom:10 }}>Nombre de sessions par tranche de 5 cts/kWh</div>
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={priceHisto} margin={{ top:4, right:4, left:-28, bottom:0 }} barSize={14}>
+                  <XAxis dataKey="label" tick={{ fill:'var(--muted)', fontSize:8 }} axisLine={false} tickLine={false} interval={1} />
+                  <YAxis tick={{ fill:'var(--muted)', fontSize:9 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={({ active, payload, label }) => active && payload?.length ? (
+                    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:11 }}>
+                      <div style={{ fontWeight:700, marginBottom:4 }}>{label} €/kWh</div>
+                      <div>{payload[0].value} session{payload[0].value > 1 ? 's' : ''}</div>
+                      {payload[0].payload.kwhSum > 0 && <div style={{ color:'var(--muted)' }}>{payload[0].payload.kwhSum.toFixed(1)} kWh total</div>}
+                      {payload[0].payload.homeCount > 0 && <div style={{ color:'var(--green)' }}>🏠 {payload[0].payload.homeCount} maison</div>}
+                      {payload[0].payload.extCount > 0 && <div style={{ color:'var(--amber)' }}>⚡ {payload[0].payload.extCount} externe</div>}
+                    </div>
+                  ) : null} cursor={{ fill:'rgba(255,255,255,0.03)' }} />
+                  <Bar dataKey="count" radius={[3,3,0,0]}>
+                    {priceHisto.map((b, i) => (
+                      <Cell key={i} fill={b.extCount > b.homeCount ? 'var(--amber)' : 'var(--accent)'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ display:'flex', gap:12, justifyContent:'center', marginTop:6 }}>
+                <span style={{ fontSize:10, color:'var(--muted)', display:'flex', alignItems:'center', gap:4 }}>
+                  <span style={{ width:8, height:8, borderRadius:2, background:'var(--accent)', display:'inline-block' }} /> Maison majoritaire
+                </span>
+                <span style={{ fontSize:10, color:'var(--muted)', display:'flex', alignItems:'center', gap:4 }}>
+                  <span style={{ width:8, height:8, borderRadius:2, background:'var(--amber)', display:'inline-block' }} /> Externe majoritaire
+                </span>
+              </div>
             </div>
           </div>
         )}
