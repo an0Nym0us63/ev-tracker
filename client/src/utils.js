@@ -262,6 +262,27 @@ export function getWeekdayDistribution(charges) {
 }
 
 // ─── Power distribution histogram (kW buckets), split by location & vehicle ────
+export function getPriceHistogram(charges) {
+  // Tranches de 5 cts de 0 à 0.70 €/kWh + une tranche ">0.70"
+  const N = 15 // 14 tranches [0–0.70] + 1 tranche >0.70
+  const buckets = Array.from({ length: N }, (_, i) => ({
+    label: i < N-1 ? (i * 0.05).toFixed(2) : '>0.70',
+    min: i * 0.05,
+    max: i < N-1 ? (i+1) * 0.05 : Infinity,
+    count: 0, kwhSum: 0, homeCount: 0, extCount: 0,
+  }))
+  charges.forEach(c => {
+    if (!c.kwh || c.kwh <= 0 || c.totalCost == null) return
+    const rate = c.totalCost / c.kwh
+    const idx = Math.min(Math.floor(rate / 0.05), N-1)
+    buckets[idx].count++
+    buckets[idx].kwhSum += c.kwh
+    if (c.locationId === 'home') buckets[idx].homeCount++
+    else buckets[idx].extCount++
+  })
+  return buckets.filter(b => b.count > 0 || b.min <= 0.70) // garde la forme, retire les vides au-delà de 0.70
+}
+
 export function getPowerHistogramSplit(charges) {
   const homeBuckets = [
     { label:'<2',   min:0, max:2,        count:0, mg4Count:0, xpengCount:0 },
