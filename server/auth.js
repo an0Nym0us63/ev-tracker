@@ -9,12 +9,19 @@ function requireAuth(req, res, next) {
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : null
   if (!token) return res.status(401).json({ error: 'Non authentifié' })
+  let user
   try {
-    req.user = jwt.verify(token, JWT_SECRET)
-    next()
+    user = jwt.verify(token, JWT_SECRET)
   } catch {
-    res.status(401).json({ error: 'Token invalide ou expiré' })
+    return res.status(401).json({ error: 'Token invalide ou expiré' })
   }
+  // Un jeton vit 30 jours : sans cette verification, un compte supprime dans
+  // les Reglages garderait l'acces jusqu'a son expiration.
+  const db = require('./db')
+  if (!db.prepare('SELECT 1 FROM accounts WHERE id = ?').get(user.id))
+    return res.status(401).json({ error: 'Compte supprimé' })
+  req.user = user
+  next()
 }
 
 module.exports = { signToken, requireAuth, JWT_SECRET }

@@ -39,6 +39,16 @@ export async function apiMe() {
   return req('GET', '/api/auth/me')
 }
 
+// Inscription ouverte seulement tant qu'aucun compte n'existe.
+export async function apiRegistrationOpen() {
+  return (await req('GET', '/api/auth/registration')).open
+}
+
+// ─── Comptes (Reglages) ───────────────────────────────────────────────────────
+export async function apiGetAccounts()      { return req('GET',    '/api/accounts') }
+export async function apiCreateAccount(a)   { return req('POST',   '/api/accounts', a) }
+export async function apiDeleteAccount(id)  { return req('DELETE', `/api/accounts/${id}`) }
+
 // ─── Charges ──────────────────────────────────────────────────────────────────
 export async function apiGetCharges()       { return req('GET',    '/api/charges') }
 export async function apiAddCharge(c)       { return req('POST',   '/api/charges', c) }

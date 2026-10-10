@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { apiLogin, apiRegister } from '../api.js'
+import React, { useState, useEffect } from 'react'
+import { apiLogin, apiRegister, apiRegistrationOpen } from '../api.js'
 import { VEHICLES } from '../utils.js'
 import AppLogo from '../components/AppLogo.jsx'
 
@@ -44,6 +44,16 @@ export default function Login({ onLogin }) {
   const [regVehicle, setRegVehicle] = useState('mg4')
   const [regErr,     setRegErr]     = useState('')
   const [regLoad,    setRegLoad]    = useState(false)
+  // L'inscription n'est ouverte que sur une installation vierge (aucun
+  // compte) : sinon, n'importe qui arrivant sur la page pouvait s'en creer un.
+  // Les comptes suivants se creent depuis les Reglages. Tant qu'on ne sait pas,
+  // l'onglet reste cache.
+  const [regOpen, setRegOpen] = useState(false)
+  useEffect(() => {
+    apiRegistrationOpen()
+      .then(open => { setRegOpen(open); if (open) setMode('register') })
+      .catch(() => setRegOpen(false))
+  }, [])
 
   async function handleLogin() {
     setLoginErr(''); setLoginLoad(true)
@@ -88,12 +98,14 @@ export default function Login({ onLogin }) {
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px', background:'var(--bg)' }}>
       <div style={{ width:'100%', maxWidth:380 }}>
         <Logo />
-        <div style={{ display:'flex', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:3, marginBottom:24 }}>
-          <button onClick={() => setMode('login')}    style={tabStyle(mode==='login')}>Connexion</button>
-          <button onClick={() => setMode('register')} style={tabStyle(mode==='register')}>Créer un compte</button>
-        </div>
+        {regOpen && (
+          <div style={{ display:'flex', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r-sm)', padding:3, marginBottom:24 }}>
+            <button onClick={() => setMode('login')}    style={tabStyle(mode==='login')}>Connexion</button>
+            <button onClick={() => setMode('register')} style={tabStyle(mode==='register')}>Créer un compte</button>
+          </div>
+        )}
 
-        {mode === 'login' ? (
+        {mode === 'login' || !regOpen ? (
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
             <Field label="Nom"><TextInput value={loginName} onChange={setLoginName} placeholder="Ton nom" /></Field>
             <Field label="Mot de passe"><TextInput value={loginPw} onChange={setLoginPw} placeholder="••••••••" type="password" /></Field>

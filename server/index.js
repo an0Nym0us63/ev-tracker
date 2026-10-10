@@ -27,16 +27,90 @@ const CLIENT_DIST = path.join(__dirname, '../client/dist')
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-app.post('/api/auth/register', (req, res) => {
-  const { name, password, vehicleId } = req.body
-  if (!name?.trim() || !password || !vehicleId) return res.status(400).json({ error: 'Champs manquants' })
-  if (password.length < 4) return res.status(400).json({ error: 'Mot de passe trop court' })
-  if (db.prepare('SELECT id FROM accounts WHERE name = ?').get(name.trim()))
-    return res.status(409).json({ error: 'Ce nom est déjà pris' })
+// Inscription libre SEULEMENT tant qu'aucun compte n'existe (premiere
+// installation : sinon personne ne pourrait creer le premier). Ensuite, un
+// compte se cree depuis les Reglages, par quelqu'un de deja connecte.
+function registrationOpen() {
+  return db.prepare('SELECT COUNT(*) AS n FROM accounts').get().n === 0
+}
+
+// Verifie les champs d'un nouveau compte ; rend un message d'erreur ou null.
+function accountInputError({ name, password, vehicleId }) {
+  if (!name?.trim() || !password || !vehicleId) return 'Champs manquants'
+  if (password.length < 4) return 'Mot de passe trop court'
+  if (db.prepare('SELECT id FROM accounts WHERE name = ?').get(name.trim())) return 'Ce nom est déjà pris'
+  return null
+}
+
+function insertAccount({ name, password, vehicleId }) {
   const hash = bcrypt.hashSync(password, 10)
   const result = db.prepare('INSERT INTO accounts (name, password_hash, vehicle_id) VALUES (?, ?, ?)').run(name.trim(), hash, vehicleId)
-  const account = db.prepare('SELECT id, name, vehicle_id, profile_color FROM accounts WHERE id = ?').get(result.lastInsertRowid)
+  return db.prepare('SELECT id, name, vehicle_id, profile_color FROM accounts WHERE id = ?').get(result.lastInsertRowid)
+}
+
+app.get('/api/auth/registration', (req, res) => {
+  res.json({ open: registrationOpen() })
+})
+
+app.post('/api/auth/register', (req, res) => {
+  if (!registrationOpen()) return res.status(403).json({ error: 'Inscription fermée — un compte se crée depuis les Réglages' })
+  const err = accountInputError(req.body)
+  if (err) return res.status(err === 'Ce nom est déjà pris' ? 409 : 400).json({ error: err })
+  const account = insertAccount(req.body)
   res.json({ token: signToken(account), account: { id: account.id, name: account.name, vehicleId: account.vehicle_id, profileColor: account.profile_color || '' } })
+})
+
+// ─── Comptes (Reglages) ───────────────────────────────────────────────────────
+
+app.get('/api/accounts', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.id, a.name, a.vehicle_id, a.profile_color, a.created_at,
+           (SELECT COUNT(*) FROM charges c WHERE c.account_id = a.id) AS charges
+    FROM accounts a ORDER BY a.created_at ASC, a.id ASC`).all()
+  res.json(rows.map(a => ({ id: a.id, name: a.name, vehicleId: a.vehicle_id, profileColor: a.profile_color || '',
+    createdAt: a.created_at, charges: a.charges, me: a.id === req.user.id })))
+})
+
+app.post('/api/accounts', requireAuth, (req, res) => {
+  const err = accountInputError(req.body)
+  if (err) return res.status(err === 'Ce nom est déjà pris' ? 409 : 400).json({ error: err })
+  const a = insertAccount(req.body)
+  res.status(201).json({ id: a.id, name: a.name, vehicleId: a.vehicle_id })
+})
+
+// Supprimer un compte ne supprime PAS ses donnees : la base efface en cascade
+// tout ce qui porte son account_id (recharges, listes, favoris, journal, et les
+// reglages communs V2C / Home Assistant, ranges sous le premier compte). Tout
+// est donc d'abord transfere au compte qui supprime. On ne se supprime pas
+// soi-meme : il resterait toujours au moins un compte pour se connecter.
+app.delete('/api/accounts/:id', requireAuth, (req, res) => {
+  const id = Number(req.params.id)
+  const to = req.user.id
+  if (id === to) return res.status(400).json({ error: 'Impossible de supprimer ton propre compte' })
+  const victim = db.prepare('SELECT id, name FROM accounts WHERE id = ?').get(id)
+  if (!victim) return res.status(404).json({ error: 'Compte introuvable' })
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('accounts') AND name NOT LIKE 'sqlite_%'").all()
+    .map(t => t.name)
+    .filter(t => db.pragma(`table_info(${t})`).some(c => c.name === 'account_id'))
+  const moved = {}
+  db.transaction(() => {
+    for (const t of tables) {
+      if (t === 'settings') {
+        // Une seule ligne de reglages par compte : celle du compte supprime
+        // (les reglages communs, s'il est le premier) remplace celle du destinataire.
+        if (db.prepare('SELECT 1 FROM settings WHERE account_id = ?').get(id)) {
+          db.prepare('DELETE FROM settings WHERE account_id = ?').run(to)
+          moved[t] = db.prepare('UPDATE settings SET account_id = ? WHERE account_id = ?').run(to, id).changes
+        }
+        continue
+      }
+      // OR IGNORE : une ligne qui ferait doublon chez le destinataire (meme
+      // valeur de liste, meme session V2C) reste en arriere et part avec le compte.
+      moved[t] = db.prepare(`UPDATE OR IGNORE ${t} SET account_id = ? WHERE account_id = ?`).run(to, id).changes
+    }
+    db.prepare('DELETE FROM accounts WHERE id = ?').run(id)
+  })()
+  res.json({ ok: true, deleted: victim.name, moved })
 })
 
 app.post('/api/auth/login', (req, res) => {

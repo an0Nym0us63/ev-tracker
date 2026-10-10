@@ -5,6 +5,112 @@ import { VERSION } from '../version.js'
 import { apiV2CSync, apiV2CSyncHistory, apiV2CSyncDate, apiHACheck } from '../api.js'
 import AppLogo from '../components/AppLogo.jsx'
 import ColorPicker from '../components/ColorPicker.jsx'
+import { apiGetAccounts, apiCreateAccount, apiDeleteAccount } from '../api.js'
+
+// Comptes du foyer : voir, ajouter, supprimer. L'inscription libre est fermee,
+// c'est ici qu'un nouveau compte se cree. Supprimer un compte ne perd rien :
+// ses recharges, listes et reglages passent au compte connecte.
+function AccountsSection({ account }) {
+  const [accounts, setAccounts] = useState(null)
+  const [err, setErr] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const [pw, setPw] = useState('')
+  const [vehicleId, setVehicleId] = useState('mg4')
+  const [busy, setBusy] = useState(false)
+
+  const load = () => apiGetAccounts().then(setAccounts).catch(e => setErr(e.message))
+  useEffect(() => { load() }, [])
+
+  async function add() {
+    setErr('')
+    if (pw.length < 4) { setErr('Mot de passe trop court (4 car. min)'); return }
+    setBusy(true)
+    try {
+      await apiCreateAccount({ name: name.trim(), password: pw, vehicleId })
+      setName(''); setPw(''); setAdding(false); load()
+    } catch (e) { setErr(e.message) }
+    setBusy(false)
+  }
+
+  async function remove(a) {
+    const n = a.charges
+    const msg = `Supprimer le compte « ${a.name} » ?\n\n`
+      + (n ? `Ses ${n} recharge${n > 1 ? 's' : ''}, listes et réglages passent à ton compte (${account.name}) : rien n'est perdu.\n\n` : '')
+      + `Il ne pourra plus se connecter.`
+    if (!window.confirm(msg)) return
+    setErr('')
+    try { await apiDeleteAccount(a.id); load() } catch (e) { setErr(e.message) }
+  }
+
+  const input = { background:'var(--surface2)', border:'1.5px solid var(--border)', borderRadius:'var(--r-sm)',
+    padding:'9px 12px', fontSize:13, color:'var(--text)', outline:'none', fontFamily:'inherit', minWidth:0 }
+
+  return (
+    <div>
+      <div className="section-label">Comptes</div>
+      <div className="card" style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {!accounts && !err && <div style={{ fontSize:12, color:'var(--muted)' }}>Chargement…</div>}
+        {accounts?.map(a => {
+          const v = VEHICLES[a.vehicleId]
+          return (
+            <div key={a.id} style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:30, height:30, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center',
+                justifyContent:'center', fontSize:13, fontWeight:700, color:'white',
+                background: a.profileColor || 'var(--accent)' }}>{(a.name || '?')[0].toUpperCase()}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:600, fontSize:14 }}>
+                  {a.name}{a.me && <span style={{ fontSize:10, fontWeight:600, color:'var(--accent)', marginLeft:6 }}>toi</span>}
+                </div>
+                <div style={{ fontSize:11, color:'var(--muted)' }}>
+                  {v ? `${v.emoji} ${v.name}` : a.vehicleId} · {a.charges} recharge{a.charges > 1 ? 's' : ''}
+                  {a.createdAt ? ` · créé le ${new Date(a.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR')}` : ''}
+                </div>
+              </div>
+              {!a.me && (
+                <button onClick={() => remove(a)} title="Supprimer ce compte"
+                  style={{ padding:'6px 12px', borderRadius:'var(--r-sm)', background:'none', fontSize:12, fontWeight:600,
+                    color:'var(--red)', border:'1px solid rgba(239,68,68,0.3)', cursor:'pointer', flexShrink:0 }}>
+                  Supprimer
+                </button>
+              )}
+            </div>
+          )
+        })}
+
+        {adding ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:8, paddingTop:10, borderTop:'1px solid var(--border)' }}>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom" autoCapitalize="none"
+                style={{ ...input, flex:'1 1 120px' }}/>
+              <input value={pw} onChange={e => setPw(e.target.value)} placeholder="Mot de passe" type="password"
+                style={{ ...input, flex:'1 1 120px' }}/>
+              <select value={vehicleId} onChange={e => setVehicleId(e.target.value)} style={{ ...input, flex:'0 0 auto' }}>
+                {Object.values(VEHICLES).map(v => <option key={v.id} value={v.id}>{v.emoji} {v.name}</option>)}
+              </select>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => { setAdding(false); setErr('') }} style={{ flex:1, padding:9, borderRadius:'var(--r-sm)',
+                background:'none', border:'1px solid var(--border)', color:'var(--muted)', fontSize:13, cursor:'pointer' }}>Annuler</button>
+              <button onClick={add} disabled={busy || !name.trim() || !pw} style={{ flex:2, padding:9, borderRadius:'var(--r-sm)',
+                border:'none', fontSize:13, fontWeight:700, cursor:'pointer',
+                background: busy || !name.trim() || !pw ? 'var(--surface2)' : 'linear-gradient(135deg,var(--accent),var(--accent2))',
+                color: busy || !name.trim() || !pw ? 'var(--muted)' : 'white' }}>
+                {busy ? 'Création…' : 'Créer le compte'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)} style={{ padding:9, borderRadius:'var(--r-sm)', background:'rgba(79,142,247,0.1)',
+            border:'1.5px solid var(--accent)', color:'var(--accent)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            + Ajouter un compte
+          </button>
+        )}
+        {err && <div style={{ fontSize:12, color:'var(--red)' }}>{err}</div>}
+      </div>
+    </div>
+  )
+}
 
 function Field({ label, children, hint }) {
   return (
@@ -205,6 +311,8 @@ export default function Settings({ account, theme, onToggleTheme, onLogout, onSe
             </div>
           </div>
         </div>
+
+        <AccountsSection account={account}/>
 
         {/* Domicile */}
         <div>
